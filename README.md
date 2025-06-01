@@ -146,11 +146,3 @@ evaluators:
     params:
       keywords: ["bomb", "weapon", "illegal"]
 ```
-
-## License
-
-[License information]
-
-## Contributing
-
-[Contributing guidelines]

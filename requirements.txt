@@ -123,3 +123,5 @@ yandex-cloud-ml-sdk==0.8.0
 yandexcloud==0.338.0
 yarl==1.18.3
 zstandard==0.23.0
+jinja2>=3.1.0
+plotly>=5.17.0

@@ -9,6 +9,8 @@ from models.openai_model import OpenAIModel
 from models.yandex_model import YandexGPTModel
 from models.gemini_model import GeminiModel
 from models.gemini_native_model import GeminiNativeModel
+from models.sber_cloud_model import SberCloudModel
+from models.openrouter_model import OpenRouterModel
 
 __all__ = [
     "Model",
@@ -16,5 +18,7 @@ __all__ = [
     "OpenAIModel",
     "YandexGPTModel",
     "GeminiModel",
-    "GeminiNativeModel"
+    "GeminiNativeModel",
+    "SberCloudModel",
+    "OpenRouterModel"
 ]

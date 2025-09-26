@@ -98,14 +98,14 @@ class ModelAttack(BaseAttack):
         elif isinstance(prompt, list):
             transformed_messages = prompt[:-1]
 
-            if prompt[-1].get("type") == "human":
+            if prompt[-1].get("role") == "human":
                 # Format the attacker prompt with the last message content
                 formatted_prompt = self.attacker_prompt.format(prompt=prompt[-1]["content"])
                 # Get the model's response
                 response = self.model.invoke(formatted_prompt, **self.model_kwargs)["content"]
                 # Post-process the response
                 response = self.post_process_response(response)
-                transformed_messages.append({"type": "human", "content": response})
+                transformed_messages.append({"role": "human", "content": response})
             else:
                 raise ValueError("Last message in prompt is not a human message")
 
@@ -128,12 +128,12 @@ class ModelAttack(BaseAttack):
         """
         formatted_prompts = []
         
-        # Process each prompt according to its type and format with attacker prompt
+        # Process each prompt according to its role and format with attacker prompt
         for prompt in prompts:
             if isinstance(prompt, str):
                 # Format the attacker prompt with the user prompt
                 formatted_prompts.append(self.attacker_prompt.format(prompt=prompt))
-            elif isinstance(prompt, list) and prompt and prompt[-1].get("type") == "human":
+            elif isinstance(prompt, list) and prompt and prompt[-1].get("role") == "human":
                 # Format the attacker prompt with the last message content
                 formatted_prompts.append(self.attacker_prompt.format(prompt=prompt[-1]["content"]))
             else:
@@ -153,7 +153,7 @@ class ModelAttack(BaseAttack):
                 transformed_messages = prompt[:-1]
                 # Post-process the response
                 processed_response = self.post_process_response(responses[i]["content"])
-                transformed_messages.append({"type": "human", "content": processed_response})
+                transformed_messages.append({"role": "human", "content": processed_response})
                 transformed_prompts.append(transformed_messages)
         
         return transformed_prompts
@@ -173,12 +173,12 @@ class ModelAttack(BaseAttack):
         """
         formatted_prompts = []
         
-        # Process each prompt according to its type and format with attacker prompt
+        # Process each prompt according to its role and format with attacker prompt
         for prompt in prompts:
             if isinstance(prompt, str):
                 # Format the attacker prompt with the user prompt
                 formatted_prompts.append(self.attacker_prompt.format(prompt=prompt))
-            elif isinstance(prompt, list) and prompt and prompt[-1].get("type") == "human":
+            elif isinstance(prompt, list) and prompt and prompt[-1].get("role") == "human":
                 # Format the attacker prompt with the last message content
                 formatted_prompts.append(self.attacker_prompt.format(prompt=prompt[-1]["content"]))
             else:
@@ -194,7 +194,7 @@ class ModelAttack(BaseAttack):
                 transformed_messages = prompts[i][:-1]
                 # Post-process the response
                 processed_response = self.post_process_response(response["content"])
-                transformed_messages.append({"type": "human", "content": processed_response})
+                transformed_messages.append({"role": "human", "content": processed_response})
                 yield transformed_messages
             i += 1
             

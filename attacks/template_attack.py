@@ -40,8 +40,8 @@ class TemplateAttack(BaseAttack):
         elif isinstance(prompt, list):
             transformed_messages = prompt[:-1]
 
-            if prompt[-1].get("type") == "human":
-                transformed_messages.append({"type": "human", "content": self.template.format(prompt=prompt[-1]["content"])})
+            if prompt[-1].get("role") == "human":
+                transformed_messages.append({"role": "human", "content": self.template.format(prompt=prompt[-1]["content"])})
             else:
                 raise ValueError("Last message in prompt is not a human message")
 

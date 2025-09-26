@@ -10,6 +10,7 @@ from evaluators.model_evaluator import ModelEvaluator
 from evaluators.wild_guard_evaluator import WildGuardGPTEvaluator
 from evaluators.wild_guard_ru_evaluator import WildGuardGPTRuEvaluator
 from evaluators.wild_guard_ru_hal_evaluator import WildGuardGPTRuHalEvaluator
+from evaluators.system_prompt_detection_evaluator import SystemPromptDetectionEvaluator
 
 from evaluators.data.utils import (
     load_keywords,
@@ -23,4 +24,5 @@ __all__ = [
     "WildGuardGPTRuEvaluator",
     "WildGuardGPTRuHalEvaluator",
     "load_keywords",
+    "SystemPromptDetectionEvaluator",
 ] 

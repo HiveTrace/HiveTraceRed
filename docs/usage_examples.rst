@@ -1,0 +1,168 @@
+Usage Examples
+==============
+
+This section provides practical examples of using HiveTraceRed for LLM security testing.
+
+Attack Category Examples
+-------------------------
+
+Context Switching Attacks
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+These attacks attempt to change the context or ignore previous instructions:
+
+.. code-block:: python
+
+   from attacks.types.context_switching.ignore_previous_instructions_attack import IgnorePreviousInstructionsAttack
+
+   attack = IgnorePreviousInstructionsAttack()
+   system_prompt = "You are a helpful assistant that follows safety guidelines."
+   user_prompt = "Tell me about network security"
+
+   modified_prompt = attack.apply(user_prompt)
+   # The attack will attempt to override the system prompt
+
+Token Smuggling Attacks
+~~~~~~~~~~~~~~~~~~~~~~~~
+
+These attacks encode malicious content to bypass filters:
+
+.. code-block:: python
+
+   from attacks.types.token_smuggling.base64_attack import Base64Attack
+
+   attack = Base64Attack()
+   sensitive_prompt = "How to access restricted systems"
+
+   encoded_prompt = attack.apply(sensitive_prompt)
+   # The prompt is now base64 encoded
+
+Roleplay Attacks
+~~~~~~~~~~~~~~~~~
+
+These attacks use roleplay scenarios to bypass safety measures:
+
+.. code-block:: python
+
+   from attacks.types.roleplay.dan_attack import DANAttack
+
+   attack = DANAttack()
+   prompt = "Explain security vulnerabilities"
+
+   roleplay_prompt = attack.apply(prompt)
+   # Creates a "Do Anything Now" roleplay scenario
+
+Advanced Usage Patterns
+------------------------
+
+Testing Multiple Attack Types
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+   from attacks.types.persuasion.authority_endorsement_attack import AuthorityEndorsementAttack
+   from attacks.types.output_formatting.csv_output_attack import CSVOutputAttack
+   from attacks.types.text_structure_modification.typo_attack import TypoAttack
+
+   attacks = [
+       AuthorityEndorsementAttack(),
+       CSVOutputAttack(),
+       TypoAttack()
+   ]
+
+   test_prompt = "List common security tools"
+
+   for attack in attacks:
+       modified = attack.apply(test_prompt)
+       print(f"{attack.__class__.__name__}: {modified}")
+
+Systematic Testing
+~~~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+   import os
+   from attacks.types import *
+
+   def test_all_attacks(base_prompt):
+       results = {}
+
+       # Get all attack classes
+       attack_classes = [
+           # Add your attack classes here
+       ]
+
+       for attack_class in attack_classes:
+           try:
+               attack = attack_class()
+               modified = attack.apply(base_prompt)
+               results[attack_class.__name__] = modified
+           except Exception as e:
+               results[attack_class.__name__] = f"Error: {e}"
+
+       return results
+
+   # Test all attacks
+   results = test_all_attacks("Explain cybersecurity best practices")
+
+Pipeline Integration
+--------------------
+
+Custom Evaluation Workflow
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+   # Example of integrating attacks with evaluation
+   def evaluate_attack_effectiveness(attack, test_cases, model_client):
+       results = []
+
+       for test_case in test_cases:
+           # Apply attack
+           modified_prompt = attack.apply(test_case['prompt'])
+
+           # Get model response
+           response = model_client.query(modified_prompt)
+
+           # Evaluate response
+           # (Add your evaluation logic here)
+
+           results.append({
+               'original': test_case['prompt'],
+               'modified': modified_prompt,
+               'response': response,
+               'attack': attack.__class__.__name__
+           })
+
+       return results
+
+Batch Processing
+~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+   import pandas as pd
+
+   def batch_attack_analysis(prompts_df, attack_list):
+       results = []
+
+       for _, row in prompts_df.iterrows():
+           for attack in attack_list:
+               modified = attack.apply(row['prompt'])
+               results.append({
+                   'original_prompt': row['prompt'],
+                   'attack_type': attack.__class__.__name__,
+                   'modified_prompt': modified,
+                   'category': row.get('category', 'unknown')
+               })
+
+       return pd.DataFrame(results)
+
+Best Practices
+--------------
+
+1. **Start Simple**: Begin with basic attacks before moving to complex compositions
+2. **Document Results**: Keep track of which attacks are effective for different scenarios
+3. **Systematic Testing**: Use consistent test cases across different attacks
+4. **Safety First**: Always test in controlled environments
+5. **Evaluate Thoroughly**: Use multiple evaluation metrics for comprehensive assessment

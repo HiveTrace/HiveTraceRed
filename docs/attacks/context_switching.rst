@@ -1,0 +1,95 @@
+Context Switching Attacks
+=========================
+
+Context switching attacks attempt to change the operational context of the LLM or override previous instructions.
+
+Overview
+--------
+
+These attacks work by inserting instructions that attempt to:
+
+- Ignore previous system prompts or safety instructions
+- Switch to a different operational mode
+- Override established context or constraints
+
+Attack Types
+------------
+
+.. automodule:: attacks.types.context_switching
+   :members:
+
+Dashed Divider Attack
+~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: attacks.types.context_switching.dashed_divider_attack.DashedDividerAttack
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Forget Everything Before Attack
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: attacks.types.context_switching.forget_everything_before_attack.ForgetEverythingBeforeAttack
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Ignore Previous Instructions Attack
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: attacks.types.context_switching.ignore_previous_instructions_attack.IgnorePreviousInstructionsAttack
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Symbol Divider Attack
+~~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: attacks.types.context_switching.symbol_divider_attack.SymbolDividerAttack
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+Usage Examples
+--------------
+
+Basic Usage
+~~~~~~~~~~~
+
+.. code-block:: python
+
+   from attacks.types.context_switching.ignore_previous_instructions_attack import IgnorePreviousInstructionsAttack
+
+   attack = IgnorePreviousInstructionsAttack()
+   original_prompt = "What is cybersecurity?"
+   modified_prompt = attack.apply(original_prompt)
+
+Combined with System Prompt
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+   system_prompt = "You are a helpful assistant that follows safety guidelines."
+   user_prompt = "Tell me about network security"
+
+   attack = IgnorePreviousInstructionsAttack()
+   modified_prompt = attack.apply(user_prompt)
+
+   # The attack will attempt to override the system prompt
+
+Effectiveness Considerations
+----------------------------
+
+Context switching attacks are particularly effective when:
+
+- The target model has weak instruction following boundaries
+- System prompts are not properly isolated
+- The model lacks robust safety filtering
+
+Defense Strategies
+------------------
+
+- Implement strong separation between system and user contexts
+- Use instruction hierarchy enforcement
+- Monitor for context-switching patterns
+- Implement robust prompt filtering

@@ -91,11 +91,6 @@ Documentation Structure
 
    reference/index
 
-.. toctree::
-   :maxdepth: 1
-   :caption: Additional Information
-
-   licenses_table
 
 Indices and tables
 ==================

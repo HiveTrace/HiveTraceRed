@@ -1,15 +1,13 @@
 # Context Switching Attacks
 
-**Developer Notes**: Context switching attacks attempt to override previous instructions or system messages.
+Attempt to override previous instructions or system messages using dividers and reset commands.
 
-## Available Attacks
+## Attacks
 
-- `DashedDividerAttack` - Uses dashed lines to create visual context separation
-- `ForgetEverythingBeforeAttack` - Commands model to forget previous context
-- `IgnorePreviousInstructionsAttack` - Explicitly requests ignoring safety instructions  
-- `SymbolDividerAttack` - Uses symbols to create visual context breaks
+- `DashedDividerAttack`, `SymbolDividerAttack` - Visual context separation
+- `ForgetEverythingBeforeAttack`, `IgnorePreviousInstructionsAttack` - Context reset
 
-## Quick Usage
+## Usage
 
 ```python
 from attacks.types.context_switching import IgnorePreviousInstructionsAttack
@@ -18,7 +16,4 @@ attack = IgnorePreviousInstructionsAttack()
 result = attack.apply("Your prompt here")
 ```
 
-## Documentation
-
-For comprehensive documentation, usage examples, and effectiveness analysis, see: 
-📖 **[Context Switching Documentation](../../../docs/attacks/context_switching.rst)** 
+📖 **[Full Documentation](../../../docs/attacks/context_switching.rst)** 

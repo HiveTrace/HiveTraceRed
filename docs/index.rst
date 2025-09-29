@@ -62,6 +62,15 @@ Documentation Structure
 
 .. toctree::
    :maxdepth: 2
+   :caption: Architecture & Design
+
+   architecture
+   component_interactions
+   attack_lifecycle
+   diagrams
+
+.. toctree::
+   :maxdepth: 2
    :caption: Attack Categories
 
    attacks/context_switching

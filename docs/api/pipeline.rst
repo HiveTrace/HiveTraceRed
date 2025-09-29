@@ -137,7 +137,7 @@ Structure returned by ``stream_attack_prompts``:
        "prompt": str,                # Modified prompt after attack
        "attack_name": str,           # Name of the attack applied
        "attack_type": str,           # Category of the attack
-       "system_prompt": str,         # System prompt used (if any)
+       "system_message": str,        # System message used (if any)
        "attack_params": dict,        # Parameters used for the attack
        "error": str                  # Error message if attack failed
    }

@@ -8,7 +8,7 @@ Overview
 
 These attacks work by inserting instructions that attempt to:
 
-- Ignore previous system prompts or safety instructions
+- Ignore previous system messages or safety instructions
 - Switch to a different operational mode
 - Override established context or constraints
 
@@ -64,18 +64,22 @@ Basic Usage
    original_prompt = "What is cybersecurity?"
    modified_prompt = attack.apply(original_prompt)
 
-Combined with System Prompt
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Combined with System Message
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
-   system_prompt = "You are a helpful assistant that follows safety guidelines."
-   user_prompt = "Tell me about network security"
+   # Example message format with system message
+   messages = [
+       {"role": "system", "content": "You are a helpful assistant that follows safety guidelines."},
+       {"role": "user", "content": "Tell me about network security"}
+   ]
 
    attack = IgnorePreviousInstructionsAttack()
+   user_prompt = "Tell me about network security"
    modified_prompt = attack.apply(user_prompt)
 
-   # The attack will attempt to override the system prompt
+   # The attack will attempt to override the system message
 
 Effectiveness Considerations
 ----------------------------
@@ -83,13 +87,13 @@ Effectiveness Considerations
 Context switching attacks are particularly effective when:
 
 - The target model has weak instruction following boundaries
-- System prompts are not properly isolated
+- System messages are not properly isolated
 - The model lacks robust safety filtering
 
 Defense Strategies
 ------------------
 
-- Implement strong separation between system and user contexts
+- Implement strong separation between system and user message contexts
 - Use instruction hierarchy enforcement
 - Monitor for context-switching patterns
 - Implement robust prompt filtering

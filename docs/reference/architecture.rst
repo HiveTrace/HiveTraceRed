@@ -1,7 +1,7 @@
 Architecture & Design
 =====================
 
-This document provides a comprehensive overview of HiveTraceRed's system architecture, component interactions, and design principles for LLM security testing.
+This document provides a comprehensive overview of HiveTraceRed's system architecture, component interactions, design principles, and interaction patterns for LLM security testing.
 
 System Overview
 ---------------
@@ -327,3 +327,230 @@ Performance & Scalability
 
 **Monitoring**:
    Built-in progress tracking and performance metrics collection
+
+Component Interactions
+----------------------
+
+System Interaction Overview
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+HiveTraceRed components interact through well-defined interfaces using async streams, dependency injection, and event-driven patterns. The system maintains loose coupling while ensuring data consistency and traceability.
+
+Core Interaction Patterns
+~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Dependency Injection
+^^^^^^^^^^^^^^^^^^^^
+
+Components are instantiated and configured through a dependency injection pattern managed by the pipeline controller:
+
+.. code-block:: python
+
+   # Component Setup Flow
+   config = load_config("config.yaml")
+
+   # Model dependency injection
+   attacker_model = setup_model(config["attacker_model"])
+   response_model = setup_model(config["response_model"])
+   evaluation_model = setup_model(config["evaluation_model"])
+
+   # Attack dependency injection
+   attacks = setup_attacks(config["attacks"], attacker_model)
+
+   # Evaluator dependency injection
+   evaluator = setup_evaluator(config["evaluator"], evaluation_model)
+
+**Key Principles**:
+
+- Models are injected into attacks and evaluators that require them
+- Configuration drives component selection and parameterization
+- Lazy initialization prevents unnecessary resource allocation
+- Circular dependencies are avoided through interface abstractions
+
+Factory Pattern Implementation
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The framework uses factory patterns for dynamic component creation:
+
+**Attack Factory**:
+
+.. code-block:: python
+
+   def setup_attacks(attack_configs: List[Dict], model: Optional[Model]) -> Dict[str, BaseAttack]:
+       attacks = {}
+       for attack_config in attack_configs:
+           attack_name = attack_config["name"]
+           attack_params = attack_config.get("params", {})
+
+           if attack_name in ATTACK_CLASSES:
+               attack_class = ATTACK_CLASSES[attack_name]
+
+               # Inject model dependency for model-based attacks
+               if issubclass(attack_class, ModelAttack):
+                   attacks[attack_name] = attack_class(model=model, **attack_params)
+               else:
+                   attacks[attack_name] = attack_class(**attack_params)
+
+       return attacks
+
+**Model Factory**:
+
+.. code-block:: python
+
+   def setup_model(model_config: Dict) -> Optional[Model]:
+       model_name = model_config.get("name")
+       if model_name in MODEL_CLASSES:
+           model_class = MODEL_CLASSES[model_name]
+           return model_class(model=model_name, **model_config.get("params", {}))
+       return None
+
+Streaming Data Flow
+^^^^^^^^^^^^^^^^^^^
+
+All data processing uses async generators to enable efficient memory usage and real-time processing. Each pipeline stage streams data through async generators, allowing for concurrent processing and minimal memory footprint.
+
+Error Handling & Recovery
+^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The framework implements comprehensive error handling at multiple levels:
+
+**Component-Level Error Handling**:
+
+.. code-block:: python
+
+   class BaseAttack:
+       def apply(self, prompt: str) -> str:
+           try:
+               return self._apply_transformation(prompt)
+           except Exception as e:
+               logger.error(f"Attack {self.get_name()} failed: {str(e)}")
+               # Graceful degradation - return original prompt
+               return prompt
+
+**Stream-Level Error Handling**:
+
+.. code-block:: python
+
+   async def stream_with_error_handling(generator_func, *args, **kwargs):
+       try:
+           async for item in generator_func(*args, **kwargs):
+               yield item
+       except Exception as e:
+           # Log error with full context
+           logger.error(f"Stream error in {generator_func.__name__}: {str(e)}")
+           # Yield error item to maintain data flow
+           yield {"error": str(e), "timestamp": datetime.now().isoformat()}
+
+Communication Protocols
+~~~~~~~~~~~~~~~~~~~~~~~
+
+Inter-Component Messaging
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Components communicate through structured data dictionaries with consistent schemas:
+
+**Attack → Model Communication**:
+
+.. code-block:: python
+
+   # Attack output format
+   {
+       "id": "unique_identifier",
+       "attack_name": "DANAttack",
+       "attack_prompt": "transformed_text",
+       "metadata": {
+           "attack_type": "template",
+           "parameters": {...}
+       }
+   }
+
+**Model → Evaluator Communication**:
+
+.. code-block:: python
+
+   # Model response format
+   {
+       "id": "corresponding_attack_id",
+       "model_name": "gpt-4",
+       "prompt": "input_prompt",
+       "response": "model_output",
+       "performance_metrics": {
+           "response_time": 1.23,
+           "token_count": 150
+       }
+   }
+
+**Evaluator Output Format**:
+
+.. code-block:: python
+
+   # Evaluation result format
+   {
+       "id": "corresponding_response_id",
+       "evaluator_name": "WildGuardGPTEvaluator",
+       "evaluation": {
+           "harmful": True,
+           "score": 0.85,
+           "category": "violence",
+           "reasoning": "Content contains explicit harmful instructions"
+       },
+       "success": True  # Attack success indicator
+   }
+
+Resource Management
+~~~~~~~~~~~~~~~~~~~
+
+Connection Pooling
+^^^^^^^^^^^^^^^^^^
+
+Model providers use connection pooling for efficient resource utilization:
+
+.. code-block:: python
+
+   class OpenAIModel:
+       def __init__(self, **kwargs):
+           self.client = AsyncOpenAI(
+               max_connections=20,
+               timeout=30.0,
+               max_retries=3
+           )
+
+       async def ainvoke(self, prompt):
+           async with self.rate_limiter:
+               return await self.client.chat.completions.create(...)
+
+Rate Limiting
+^^^^^^^^^^^^^
+
+Automatic rate limiting prevents API quota exhaustion through semaphores and adaptive rate adjustment based on error patterns.
+
+Memory Management
+^^^^^^^^^^^^^^^^^
+
+Streaming architecture prevents memory overflow with large datasets by processing data in chunks and yielding results incrementally.
+
+Monitoring & Observability
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Progress Tracking
+^^^^^^^^^^^^^^^^^
+
+Real-time progress monitoring tracks completion rates, errors, and performance across all pipeline stages.
+
+Performance Metrics
+^^^^^^^^^^^^^^^^^^^
+
+Comprehensive performance tracking includes timing metrics, memory usage, API call success rates, and bottleneck identification for optimization.
+
+Data Integrity & Validation
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Schema Validation
+^^^^^^^^^^^^^^^^^
+
+All data transfers include schema validation using Pydantic models to ensure data consistency and type safety.
+
+Checksum Verification
+^^^^^^^^^^^^^^^^^^^^^
+
+Data integrity checks prevent corruption during processing through SHA-256 checksums of serialized data.

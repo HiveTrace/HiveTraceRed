@@ -9,7 +9,6 @@ Complete technical reference for HiveTraceRed APIs and components.
    api/index
    architecture
    attack_lifecycle
-   component_interactions
 
 API Reference
 -------------
@@ -18,7 +17,7 @@ API Reference
    :maxdepth: 2
 
    api/attacks
-   api/evaluators  
+   api/evaluators
    api/pipeline
 
 Architecture & Design
@@ -29,7 +28,6 @@ Architecture & Design
 
    architecture
    attack_lifecycle
-   component_interactions
 
 Attack Documentation
 --------------------

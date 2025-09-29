@@ -41,4 +41,12 @@ Model-Based Attack Example
            response = self.model.invoke(meta_prompt)
            return response["content"]
 
-For detailed implementation guidance, see :doc:`../tutorials/custom_attack_development`.
+Best Practices
+--------------
+
+- Follow established naming conventions
+- Include comprehensive docstrings
+- Add unit tests for reliability
+- Document attack methodology and effectiveness
+
+For API details, see :doc:`../reference/api/attacks`.

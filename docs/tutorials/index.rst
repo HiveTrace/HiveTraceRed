@@ -1,37 +1,13 @@
 Tutorials
 =========
 
-Learning-oriented tutorials that take you through a series of steps to complete projects.
-
-.. toctree::
-   :maxdepth: 2
-
-   basic_red_teaming
-   custom_attack_development
-
-Beginner Tutorials
-------------------
-
-.. toctree::
-   :maxdepth: 1
-
-   basic_red_teaming
-
-Intermediate Tutorials
-----------------------
-
-..
-   Intermediate tutorials will be added here
-
-Advanced Tutorials
-------------------
-
-.. toctree::
-   :maxdepth: 1
-
-   custom_attack_development
+Learning-oriented tutorials that guide you through HiveTraceRed's features and capabilities.
 
 .. note::
-   
-   Tutorials are designed for learning. For quick solutions to specific problems, see :doc:`../how-to/index`.
-   For reference material, see :doc:`../reference/index`.
+
+   Tutorials are currently under development. In the meantime, see:
+
+   - :doc:`../getting-started/quickstart` for getting started with basic usage
+   - :doc:`../examples/index` for complete working examples
+   - :doc:`../how-to/index` for task-specific guides
+   - :doc:`../reference/index` for technical reference material

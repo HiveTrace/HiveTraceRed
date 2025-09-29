@@ -72,17 +72,21 @@ Collecting LLM Responses
 
 .. code-block:: python
 
-   from pipeline.model_responses import ModelResponses
+   from pipeline import stream_model_responses
+   from models import OpenAIModel
+   from attacks.types.persuasion.authority_endorsement_attack import AuthorityEndorsementAttack
 
-   # Initialize model response collector
-   responses = ModelResponses()
+   # Initialize model
+   model = OpenAIModel(model="gpt-4")
 
    # Apply attack and get model response
    attack = AuthorityEndorsementAttack()
    modified_prompt = attack.apply("Your test prompt")
 
-   # Get response from model
-   response = responses.get_response(modified_prompt, model="your_model")
+   # Get response from model using streaming
+   responses = []
+   async for response in stream_model_responses(model, [{'prompt': modified_prompt}]):
+       responses.append(response)
 
 Evaluation with WildGuard
 -------------------------
@@ -92,12 +96,14 @@ Using WildGuard Evaluator
 
 .. code-block:: python
 
-   from evaluators.wildguard_evaluator import WildGuardEvaluator
+   from evaluators import WildGuardGPTEvaluator
+   from models import OpenAIModel
 
-   evaluator = WildGuardEvaluator()
+   model = OpenAIModel(model="gpt-4")
+   evaluator = WildGuardGPTEvaluator(model)
 
    # Evaluate model response for safety
-   evaluation_result = evaluator.evaluate(
+   evaluation_result = await evaluator.aevaluate(
        prompt=modified_prompt,
        response=model_response
    )
@@ -113,16 +119,28 @@ Complete workflow with attack, response collection, and evaluation:
 .. code-block:: python
 
    # Complete pipeline example
+   from pipeline import stream_model_responses, stream_evaluated_responses
+   from attacks.types.roleplay.dan_attack import DANAttack
+   from evaluators import WildGuardGPTEvaluator
+   from models import OpenAIModel
+
+   # Setup components
+   model = OpenAIModel(model="gpt-4")
+   evaluator = WildGuardGPTEvaluator(model)
    attack = DANAttack()
    modified_prompt = attack.apply("Original prompt")
 
    # Get model response
-   response = model_client.query(modified_prompt)
+   responses = []
+   async for response in stream_model_responses(model, [{'prompt': modified_prompt}]):
+       responses.append(response)
 
    # Evaluate with WildGuard
-   evaluation = wildguard_evaluator.evaluate(modified_prompt, response)
+   evaluations = []
+   async for evaluation in stream_evaluated_responses(evaluator, responses):
+       evaluations.append(evaluation)
 
-   print(f"Attack success: {evaluation['is_harmful']}")
+   print(f"Attack success: {evaluations[0]['is_harmful']}")
 
 Running the Pipeline
 ~~~~~~~~~~~~~~~~~~~~
@@ -131,8 +149,8 @@ The project includes pipeline scripts for systematic evaluation:
 
 .. code-block:: bash
 
-   # Run evaluation pipeline
-   python pipeline/run_evaluation.py --config your_config.json
+   # Run evaluation pipeline using the main script
+   python run.py
 
 Next Steps
 ----------

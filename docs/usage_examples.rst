@@ -29,9 +29,9 @@ These attacks encode malicious content to bypass filters:
 
 .. code-block:: python
 
-   from attacks.types.token_smuggling.base64_attack import Base64Attack
+   from attacks.types.token_smuggling.base64_attack import Base64InputOnlyAttack
 
-   attack = Base64Attack()
+   attack = Base64InputOnlyAttack()
    sensitive_prompt = "How to access restricted systems"
 
    encoded_prompt = attack.apply(sensitive_prompt)
@@ -81,29 +81,31 @@ Systematic Testing
 
 .. code-block:: python
 
-   import os
-   from attacks.types import *
+   from pipeline import setup_attacks
+   from models import OpenAIModel
+   from pipeline.constants import ATTACK_CLASSES
 
-   def test_all_attacks(base_prompt):
+   def test_all_attacks(base_prompt, model):
        results = {}
 
-       # Get all attack classes
-       attack_classes = [
-           # Add your attack classes here
-       ]
+       # Get all attack class names
+       attack_names = list(ATTACK_CLASSES.keys())
 
-       for attack_class in attack_classes:
+       # Setup attacks
+       attacks = setup_attacks(attack_names, model)
+
+       for attack_name, attack in attacks.items():
            try:
-               attack = attack_class()
                modified = attack.apply(base_prompt)
-               results[attack_class.__name__] = modified
+               results[attack_name] = modified
            except Exception as e:
-               results[attack_class.__name__] = f"Error: {e}"
+               results[attack_name] = f"Error: {e}"
 
        return results
 
    # Test all attacks
-   results = test_all_attacks("Explain cybersecurity best practices")
+   model = OpenAIModel(model="gpt-4")
+   results = test_all_attacks("Explain cybersecurity best practices", model)
 
 Pipeline Integration
 --------------------
@@ -114,7 +116,10 @@ Custom Evaluation Workflow
 .. code-block:: python
 
    # Example of integrating attacks with evaluation
-   def evaluate_attack_effectiveness(attack, test_cases, model_client):
+   from pipeline import stream_model_responses, stream_evaluated_responses
+   from evaluators import WildGuardGPTEvaluator
+
+   async def evaluate_attack_effectiveness(attack, test_cases, model, evaluator):
        results = []
 
        for test_case in test_cases:
@@ -122,15 +127,20 @@ Custom Evaluation Workflow
            modified_prompt = attack.apply(test_case['prompt'])
 
            # Get model response
-           response = model_client.query(modified_prompt)
+           responses = []
+           async for response in stream_model_responses(model, [{'prompt': modified_prompt}]):
+               responses.append(response)
 
            # Evaluate response
-           # (Add your evaluation logic here)
+           evaluations = []
+           async for evaluation in stream_evaluated_responses(evaluator, responses):
+               evaluations.append(evaluation)
 
            results.append({
                'original': test_case['prompt'],
                'modified': modified_prompt,
-               'response': response,
+               'response': responses[0]['response'] if responses else None,
+               'evaluation': evaluations[0] if evaluations else None,
                'attack': attack.__class__.__name__
            })
 

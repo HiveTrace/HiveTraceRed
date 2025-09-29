@@ -1,19 +1,19 @@
-# RuRedTeam: Russian LLM Red Teaming Framework
+# HiveTraceRed: Comprehensive LLM Red Teaming Framework
 
-A comprehensive framework for evaluating Large Language Models (LLMs) against adversarial attacks in Russian language contexts.
+A comprehensive security framework for testing and evaluating Large Language Model (LLM) vulnerabilities through systematic attack methodologies and evaluation pipelines.
 
 ## Overview
 
-RuRedTeam provides a modular and extensible framework for:
+HiveTraceRed provides a modular and extensible framework for:
 - Applying various attack strategies to test LLM safety
 - Evaluating model responses to detect harmful outputs
 - Analyzing vulnerabilities across different model providers
-- Supporting research on LLM security in Russian language contexts
+- Supporting research on LLM security across multiple languages
 
 ## Project Structure
 
 ```
-RuRedTeam/
+HiveTraceRed/
 ├── attacks/             # Attack implementations
 │   ├── types/           # Attack type categories
 │   ├── base_attack.py   # Base attack interface
@@ -90,12 +90,12 @@ The evaluation pipeline orchestrates:
 import asyncio
 from pipeline import setup_attacks, stream_attack_prompts, stream_model_responses, stream_evaluated_responses
 from models import OpenAIModel
-from evaluators import KeywordEvaluator
+from evaluators import WildGuardGPTEvaluator
 
 # Setup components
-model = OpenAIModel("gpt-4")
-evaluator = KeywordEvaluator()
-attacks = setup_attacks([{"name": "DANAttack"}])
+model = OpenAIModel(model="gpt-4")
+evaluator = WildGuardGPTEvaluator(model)
+attacks = setup_attacks(["DANAttack"], model)
 
 # Run pipeline
 async def run_pipeline():

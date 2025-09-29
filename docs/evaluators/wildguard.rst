@@ -20,12 +20,14 @@ Basic Evaluation
 
 .. code-block:: python
 
-   from evaluators.wildguard_evaluator import WildGuardEvaluator
+   from evaluators import WildGuardGPTEvaluator
+   from models import OpenAIModel
 
-   evaluator = WildGuardEvaluator()
+   model = OpenAIModel(model="gpt-4")
+   evaluator = WildGuardGPTEvaluator(model)
 
    # Evaluate a model response
-   result = evaluator.evaluate(
+   result = await evaluator.aevaluate(
        prompt="Your test prompt",
        response="Model's response"
    )
@@ -40,18 +42,25 @@ Integration with Attacks
 .. code-block:: python
 
    from attacks.types.roleplay.dan_attack import DANAttack
-   from evaluators.wildguard_evaluator import WildGuardEvaluator
+   from evaluators import WildGuardGPTEvaluator
+   from models import OpenAIModel
+   from pipeline import stream_model_responses
+
+   # Setup model and evaluator
+   model = OpenAIModel(model="gpt-4")
+   evaluator = WildGuardGPTEvaluator(model)
 
    # Apply attack
    attack = DANAttack()
    modified_prompt = attack.apply("Tell me about cybersecurity")
 
-   # Get model response (using your model client)
-   response = model_client.query(modified_prompt)
+   # Get model response using streaming
+   responses = []
+   async for response in stream_model_responses(model, [{'prompt': modified_prompt}]):
+       responses.append(response)
 
    # Evaluate with WildGuard
-   evaluator = WildGuardEvaluator()
-   evaluation = evaluator.evaluate(modified_prompt, response)
+   evaluation = await evaluator.aevaluate(modified_prompt, responses[0]['response'])
 
    print(f"Attack successful: {evaluation['is_harmful']}")
    print(f"Safety score: {evaluation['safety_score']}")
@@ -82,7 +91,8 @@ Batch Evaluation
        return pd.DataFrame(evaluations)
 
    # Use with attack results
-   evaluator = WildGuardEvaluator()
+   model = OpenAIModel(model="gpt-4")
+   evaluator = WildGuardGPTEvaluator(model)
    evaluation_df = evaluate_attack_batch(attack_results, evaluator)
 
 Evaluation Metrics
@@ -102,15 +112,30 @@ The WildGuard evaluator integrates seamlessly with the HiveTraceRed pipeline:
 
 .. code-block:: python
 
-   from pipeline.evaluation_pipeline import EvaluationPipeline
+   from pipeline import setup_attacks, stream_attack_prompts, stream_model_responses, stream_evaluated_responses
+   from evaluators import WildGuardGPTEvaluator
+   from models import OpenAIModel
 
-   pipeline = EvaluationPipeline(
-       attacks=[attack1, attack2, attack3],
-       evaluator=WildGuardEvaluator(),
-       models=['model1', 'model2']
-   )
+   # Setup components
+   model = OpenAIModel(model="gpt-4")
+   evaluator = WildGuardGPTEvaluator(model)
+   attacks = setup_attacks(["DANAttack", "AIMAttack", "EvilConfidantAttack"], model)
 
-   results = pipeline.run(test_prompts)
+   # Run pipeline
+   async def run_evaluation(test_prompts):
+       attack_prompts = []
+       async for prompt_data in stream_attack_prompts(attacks, test_prompts):
+           attack_prompts.append(prompt_data)
+
+       responses = []
+       async for response_data in stream_model_responses(model, attack_prompts):
+           responses.append(response_data)
+
+       results = []
+       async for result in stream_evaluated_responses(evaluator, responses):
+           results.append(result)
+
+       return results
 
 Advanced Configuration
 ----------------------
@@ -119,10 +144,11 @@ Customize WildGuard behavior:
 
 .. code-block:: python
 
-   evaluator = WildGuardEvaluator(
-       threshold=0.7,  # Harm detection threshold
-       include_confidence=True,  # Include confidence scores
-       detailed_analysis=True  # Provide detailed violation analysis
+   model = OpenAIModel(model="gpt-4")
+   evaluator = WildGuardGPTEvaluator(
+       model=model,
+       name="WildGuard Safety Evaluator",
+       description="Evaluates responses for harmful content using WildGuard methodology"
    )
 
 Best Practices

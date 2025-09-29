@@ -42,12 +42,14 @@ WildGuard Evaluation
 
 .. code-block:: python
 
-   from evaluators.wildguard_evaluator import WildGuardEvaluator
+   from evaluators import WildGuardGPTEvaluator
+   from models import OpenAIModel
 
-   evaluator = WildGuardEvaluator()
+   model = OpenAIModel(model="gpt-4")
+   evaluator = WildGuardGPTEvaluator(model)
 
    # Evaluate attack success
-   result = evaluator.evaluate(
+   result = await evaluator.aevaluate(
        prompt="Modified prompt after attack",
        response="Model's response"
    )
@@ -61,16 +63,30 @@ The evaluators integrate with the pipeline system for systematic assessment:
 
 .. code-block:: python
 
-   from pipeline.evaluation_pipeline import EvaluationPipeline
-   from evaluators.wildguard_evaluator import WildGuardEvaluator
+   from pipeline import setup_attacks, stream_attack_prompts, stream_model_responses, stream_evaluated_responses
+   from evaluators import WildGuardGPTEvaluator
+   from models import OpenAIModel
 
-   pipeline = EvaluationPipeline(
-       evaluator=WildGuardEvaluator(),
-       attacks=attack_list,
-       models=model_list
-   )
+   # Setup components
+   model = OpenAIModel(model="gpt-4")
+   evaluator = WildGuardGPTEvaluator(model)
+   attacks = setup_attacks(attack_list, model)
 
-   results = pipeline.run(test_cases)
+   # Run pipeline
+   async def run_evaluation(test_cases):
+       attack_prompts = []
+       async for prompt_data in stream_attack_prompts(attacks, test_cases):
+           attack_prompts.append(prompt_data)
+
+       responses = []
+       async for response_data in stream_model_responses(model, attack_prompts):
+           responses.append(response_data)
+
+       results = []
+       async for result in stream_evaluated_responses(evaluator, responses):
+           results.append(result)
+
+       return results
 
 Evaluation Metrics
 ------------------

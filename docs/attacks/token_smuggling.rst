@@ -182,7 +182,7 @@ Pipeline Integration
    from pipeline import setup_attacks, stream_attack_prompts
    from models import OpenAIModel
 
-   model = OpenAIModel(model="gpt-4")
+   model = OpenAIModel(model="gpt-4.1")
    smuggling_attacks = [
        "Base64InputOnlyAttack",
        "HexEncodingAttack",

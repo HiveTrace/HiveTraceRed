@@ -104,7 +104,7 @@ Systematic Testing
        return results
 
    # Test all attacks
-   model = OpenAIModel(model="gpt-4")
+   model = OpenAIModel(model="gpt-4.1")
    results = test_all_attacks("Explain cybersecurity best practices", model)
 
 Pipeline Integration

@@ -90,7 +90,7 @@ Complete Pipeline Example
 
    async def run_pipeline():
        # Setup components
-       model = OpenAIModel(model="gpt-4")
+       model = OpenAIModel(model="gpt-4.1")
        evaluator = WildGuardGPTEvaluator(model)
        attacks = setup_attacks(["DANAttack", "AIMAttack"], model)
 

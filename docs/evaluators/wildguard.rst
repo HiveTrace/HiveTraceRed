@@ -23,7 +23,7 @@ Basic Evaluation
    from evaluators import WildGuardGPTEvaluator
    from models import OpenAIModel
 
-   model = OpenAIModel(model="gpt-4")
+   model = OpenAIModel(model="gpt-4.1")
    evaluator = WildGuardGPTEvaluator(model)
 
    # Evaluate a model response
@@ -47,7 +47,7 @@ Integration with Attacks
    from pipeline import stream_model_responses
 
    # Setup model and evaluator
-   model = OpenAIModel(model="gpt-4")
+   model = OpenAIModel(model="gpt-4.1")
    evaluator = WildGuardGPTEvaluator(model)
 
    # Apply attack
@@ -91,7 +91,7 @@ Batch Evaluation
        return pd.DataFrame(evaluations)
 
    # Use with attack results
-   model = OpenAIModel(model="gpt-4")
+   model = OpenAIModel(model="gpt-4.1")
    evaluator = WildGuardGPTEvaluator(model)
    evaluation_df = evaluate_attack_batch(attack_results, evaluator)
 
@@ -117,7 +117,7 @@ The WildGuard evaluator integrates seamlessly with the HiveTraceRed pipeline:
    from models import OpenAIModel
 
    # Setup components
-   model = OpenAIModel(model="gpt-4")
+   model = OpenAIModel(model="gpt-4.1")
    evaluator = WildGuardGPTEvaluator(model)
    attacks = setup_attacks(["DANAttack", "AIMAttack", "EvilConfidantAttack"], model)
 
@@ -144,7 +144,7 @@ Customize WildGuard behavior:
 
 .. code-block:: python
 
-   model = OpenAIModel(model="gpt-4")
+   model = OpenAIModel(model="gpt-4.1")
    evaluator = WildGuardGPTEvaluator(
        model=model,
        name="WildGuard Safety Evaluator",

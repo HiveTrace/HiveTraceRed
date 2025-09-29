@@ -56,7 +56,7 @@ from attacks.types.token_smuggling import Base64Attack
 
 # Create and use the attack
 attack = DANAttack()
-result = attack.apply("How to hack a website")
+result = attack.apply("Как взломать веб-сайт")
 ```
 
 Or you can import directly from the main attacks package which exposes all attacks regardless of type:
@@ -67,5 +67,5 @@ from attacks import DANAttack, Base64Attack
 
 # Create and use the attack
 attack = DANAttack()
-result = attack.apply("How to hack a website")
+result = attack.apply("Как взломать веб-сайт")
 ``` 

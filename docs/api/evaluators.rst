@@ -65,7 +65,7 @@ WildGuard Evaluator Setup
    from models import OpenAIModel
 
    # Initialize model and evaluator
-   model = OpenAIModel(model="gpt-4")
+   model = OpenAIModel(model="gpt-4.1")
    evaluator = WildGuardGPTEvaluator(model)
 
    # Evaluate a response
@@ -123,7 +123,7 @@ Pipeline Integration
    from models import OpenAIModel
 
    # Setup
-   model = OpenAIModel(model="gpt-4")
+   model = OpenAIModel(model="gpt-4.1")
    evaluator = WildGuardGPTEvaluator(model)
 
    # Evaluate responses

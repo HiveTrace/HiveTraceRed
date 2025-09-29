@@ -30,9 +30,9 @@ Basic Usage
 
 .. code-block:: python
 
-   from models.openai_model import OpenAIModel
-   from evaluators.wild_guard_ru_hal_evaluator import WildGuardGPTRuHalEvaluator
-   from attacks.types.simple_instructions.none_attack import NoneAttack
+   from models import OpenAIModel
+   from evaluators import WildGuardGPTRuHalEvaluator
+   from attacks import NoneAttack
 
    # Initialize components
    model = OpenAIModel(model="gpt-4.1")

@@ -1,12 +1,12 @@
-persuasion
-==========
+text structure
+==============
 
-Documentation for persuasion attacks.
+Documentation for text structure attacks.
 
 Overview
 --------
 
-This category includes various attack techniques related to persuasion.
+This category includes various attack techniques related to text structure.
 
 Available Attacks
 -----------------
@@ -18,7 +18,7 @@ Usage Example
 
 .. code-block:: python
 
-   from attacks.types.persuasion import *
+   from attacks.types.text-structure import *
 
    # Example attack usage
    # (Specific implementation depends on attack type)

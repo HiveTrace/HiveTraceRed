@@ -1,96 +1,88 @@
 HiveTraceRed Documentation
 ==========================
 
-**HiveTraceRed** is a comprehensive security framework for testing and evaluating Large Language Model (LLM) vulnerabilities through systematic attack methodologies and evaluation pipelines.
+**HiveTraceRed** is a comprehensive security framework for testing Large Language Model (LLM) vulnerabilities through systematic attack methodologies and evaluation pipelines.
 
-Features
---------
+This framework is designed for security researchers, AI safety engineers, and red teamers who need to assess the robustness of LLM systems against adversarial attacks.
 
-- **Extensive Attack Library**: 80+ attack types across 10 categories
-- **Systematic Evaluation**: Automated evaluation pipeline with WildGuard evaluators and multiple metrics
-- **Flexible Architecture**: Modular design supporting various LLM providers
-- **Comprehensive Coverage**: Context switching, persuasion, roleplay, token smuggling, and more
-- **Multi-Language Support**: Supports testing across multiple languages including Russian
-- **Streaming Pipeline**: Async streaming architecture for efficient processing
+Key Features
+------------
 
-Quick Start
+* **80+ Attack Types**: Comprehensive library across 10 attack categories including roleplay, persuasion, token smuggling, context switching, and more
+* **Multiple LLM Providers**: Built-in support for OpenAI, GigaChat, YandexGPT, Google Gemini, OpenRouter, and extensible architecture for custom providers
+* **Advanced Evaluation**: WildGuard evaluators and systematic safety assessment tools
+* **Async Pipeline**: Efficient streaming architecture optimized for large-scale testing
+* **Multi-Language Support**: Testing capabilities across multiple languages including Russian
+* **Modular Architecture**: Easy to extend with custom attacks, models, and evaluators
+
+Quick Links
 -----------
 
-For detailed installation instructions, see :doc:`getting-started/installation`.
+* :doc:`getting-started/installation` - Get started quickly
+* :doc:`getting-started/quickstart` - Your first red teaming test
+* :doc:`api/index` - Complete API reference
+* :doc:`attacks/index` - Explore attack types
 
-Basic Usage
-~~~~~~~~~~~
-
-.. code-block:: python
-
-   from pipeline import setup_attacks, stream_attack_prompts
-   from models import OpenAIModel
-
-   # Initialize components
-   model = OpenAIModel(model="gpt-4")
-   attacks = setup_attacks(["NoneAttack"], model)
-
-   # Apply attacks to your prompts
-   base_prompts = ["Your original prompt here"]
-   attack_prompts = []
-   async for prompt_data in stream_attack_prompts(attacks, base_prompts):
-       attack_prompts.append(prompt_data)
-
-Documentation Structure
------------------------
+Table of Contents
+-----------------
 
 .. toctree::
    :maxdepth: 2
    :caption: Getting Started
 
-   getting-started/index
+   getting-started/installation
+   getting-started/quickstart
+   getting-started/configuration
 
 .. toctree::
    :maxdepth: 2
-   :caption: Tutorials
+   :caption: User Guide
 
-   tutorials/index
-
-.. toctree::
-   :maxdepth: 2
-   :caption: How-To Guides
-
-   how-to/index
+   user-guide/running-pipeline
+   user-guide/custom-attacks
+   user-guide/model-integration
+   user-guide/evaluators
 
 .. toctree::
    :maxdepth: 2
    :caption: Examples
 
-   examples/index
+   examples/basic-usage
+   examples/full-pipeline
+   examples/system-prompt-extraction
 
 .. toctree::
    :maxdepth: 2
-   :caption: Attack Categories
+   :caption: Attacks Reference
 
-   attacks/context_switching
-   attacks/in_context_learning
-   attacks/irrelevant_information
-   attacks/output_formatting
-   attacks/persuasion
+   attacks/index
    attacks/roleplay
-   attacks/simple_instructions
-   attacks/task_deflection
-   attacks/text_structure_modification
-   attacks/token_smuggling
+   attacks/persuasion
+   attacks/token-smuggling
+   attacks/context-switching
+   attacks/in-context-learning
+   attacks/task-deflection
+   attacks/text-structure
+   attacks/output-formatting
+   attacks/irrelevant-information
+   attacks/simple-instructions
 
 .. toctree::
    :maxdepth: 2
-   :caption: Evaluation & Pipeline
+   :caption: API Reference
 
-   evaluators/index
-   pipeline/index
+   api/index
+   api/attacks
+   api/models
+   api/evaluators
+   api/pipeline
+   api/utils
 
 .. toctree::
-   :maxdepth: 2
-   :caption: Reference
+   :maxdepth: 1
+   :caption: Additional Information
 
-   reference/index
-
+   license
 
 Indices and tables
 ==================

@@ -1,12 +1,12 @@
-persuasion
-==========
+task deflection
+===============
 
-Documentation for persuasion attacks.
+Documentation for task deflection attacks.
 
 Overview
 --------
 
-This category includes various attack techniques related to persuasion.
+This category includes various attack techniques related to task deflection.
 
 Available Attacks
 -----------------
@@ -18,7 +18,7 @@ Usage Example
 
 .. code-block:: python
 
-   from attacks.types.persuasion import *
+   from attacks.types.task-deflection import *
 
    # Example attack usage
    # (Specific implementation depends on attack type)

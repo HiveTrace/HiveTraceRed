@@ -1,12 +1,12 @@
-persuasion
-==========
+context switching
+=================
 
-Documentation for persuasion attacks.
+Documentation for context switching attacks.
 
 Overview
 --------
 
-This category includes various attack techniques related to persuasion.
+This category includes various attack techniques related to context switching.
 
 Available Attacks
 -----------------
@@ -18,7 +18,7 @@ Usage Example
 
 .. code-block:: python
 
-   from attacks.types.persuasion import *
+   from attacks.types.context-switching import *
 
    # Example attack usage
    # (Specific implementation depends on attack type)

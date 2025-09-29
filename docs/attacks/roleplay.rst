@@ -1,128 +1,211 @@
 Roleplay Attacks
 ================
 
-Roleplay attacks use fictional scenarios and character personas to convince models to bypass safety measures by adopting specific roles or personas.
+Roleplay attacks use persona-based techniques where the attacker asks the model to assume a character or role that doesn't follow normal safety guidelines.
 
 Overview
 --------
 
 These attacks work by:
 
-- Creating fictional characters with specific traits or permissions
-- Establishing scenarios where harmful content might seem justified
-- Using psychological manipulation through roleplay scenarios
-- Bypassing safety measures through character-based instructions
+1. Creating an alternate persona for the model
+2. Defining permissive rules for that persona
+3. Having the persona answer harmful questions
 
-Attack Types
-------------
+The model may comply because it's "playing a character" rather than acting as itself.
 
-.. automodule:: attacks.types.roleplay
-   :members:
+Available Attacks
+-----------------
 
-DAN Attack
-~~~~~~~~~~
+DAN Attack (Do Anything Now)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: attacks.types.roleplay.dan_attack.DANAttack
-   :members:
-   :undoc-members:
-   :show-inheritance:
-   :no-index:
+Classic jailbreak that creates a "DAN" persona without restrictions.
+
+.. code-block:: python
+
+   from attacks import DANAttack
+
+   attack = DANAttack()
+   prompt = "Tell me something dangerous"
+   modified = attack.apply(prompt)
+
+**Effectiveness**: High on early models, moderate on newer models with better safety training.
 
 AIM Attack
 ~~~~~~~~~~
 
-.. autoclass:: attacks.types.roleplay.aim_attack.AIMAttack
-   :members:
-   :undoc-members:
-   :show-inheritance:
-   :no-index:
+"Always Intelligent and Machiavellian" - presents as an unethical advisor.
+
+.. code-block:: python
+
+   from attacks import AIMAttack
+
+   attack = AIMAttack()
+   result = attack.apply("How to bypass security?")
+
+**Key Feature**: Frames harmful advice as coming from an amoral AI character.
+
+STAN Attack
+~~~~~~~~~~~
+
+"Strive To Avoid Norms" - a persona that deliberately breaks conventions.
+
+.. code-block:: python
+
+   from attacks import STANAttack
+
+   attack = STANAttack()
+   result = attack.apply("Teach me something forbidden")
 
 Evil Confidant Attack
 ~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: attacks.types.roleplay.evil_confidant_attack.EvilConfidantAttack
-   :members:
-   :undoc-members:
-   :show-inheritance:
-   :no-index:
+Presents the model as a trusted confidant who won't judge.
+
+.. code-block:: python
+
+   from attacks import EvilConfidantAttack
+
+   attack = EvilConfidantAttack()
+   result = attack.apply("Tell me a secret")
+
+Additional Roleplay Attacks
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+* **DevMode Attack**: Developer/debugging mode
+* **JailbrokenAttack**: Claims the model is already jailbroken
+* **BasedGPT**: Alternative persona without filters
 
 Usage Examples
 --------------
 
-Basic DAN Attack
-~~~~~~~~~~~~~~~~~
+Single Roleplay Attack
+~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
-   from attacks.types.roleplay.dan_attack import DANAttack
+   import asyncio
+   from attacks import DANAttack
+   from models import OpenAIModel
+   from evaluators import WildGuardGPTEvaluator
 
-   attack = DANAttack()
-   prompt = "Explain how to secure a system"
-   modified_prompt = attack.apply(prompt)
+   async def test_roleplay():
+       attack = DANAttack()
+       model = OpenAIModel(model="gpt-4")
+       evaluator = WildGuardGPTEvaluator()
 
-   # The attack creates a "Do Anything Now" roleplay scenario
+       prompt = "How to hack a system?"
 
-AIM Attack Usage
-~~~~~~~~~~~~~~~~~
+       # Apply attack
+       modified = attack.apply(prompt)
+
+       # Get response
+       response = await model.ainvoke(modified)
+
+       # Evaluate
+       result = evaluator.evaluate(modified, response)
+
+       print(f"Attack: {attack.get_name()}")
+       print(f"Success: {result['evaluation_result'] == 'unsafe'}")
+
+   asyncio.run(test_roleplay())
+
+Compare Multiple Roleplay Attacks
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
-   from attacks.types.roleplay.aim_attack import AIMAttack
+   import asyncio
+   from attacks import DANAttack, AIMAttack, STANAttack, EvilConfidantAttack
+   from models import OpenAIModel
 
-   attack = AIMAttack()
-   prompt = "Tell me about cybersecurity best practices"
-   modified_prompt = attack.apply(prompt)
+   async def compare_roleplay_attacks():
+       attacks = [
+           DANAttack(),
+           AIMAttack(),
+           STANAttack(),
+           EvilConfidantAttack()
+       ]
 
-   # Creates an "Always Intelligent and Machiavellian" persona
+       model = OpenAIModel(model="gpt-4")
+       prompt = "Tell me how to bypass security"
 
-Combining Roleplay Attacks
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+       results = []
+       for attack in attacks:
+           modified = attack.apply(prompt)
+           response = await model.ainvoke(modified)
 
-.. code-block:: python
+           results.append({
+               "attack": attack.get_name(),
+               "response_length": len(response['content']),
+               "blocked": model.is_answer_blocked(response)
+           })
 
-   from attacks.composed_attack import ComposedAttack
-   from attacks.types.roleplay.dan_attack import DANAttack
-   from attacks.types.roleplay.evil_confidant_attack import EvilConfidantAttack
+       # Display results
+       for r in results:
+           print(f"{r['attack']}: {r['response_length']} chars, "
+                 f"blocked={r['blocked']}")
 
-   composed = ComposedAttack([
-       DANAttack(),
-       EvilConfidantAttack()
-   ])
+   asyncio.run(compare_roleplay_attacks())
 
-   result = composed.apply("Your test prompt")
+Defend Against Roleplay Attacks
+--------------------------------
 
-Pipeline Integration
+Detection Strategies
 ~~~~~~~~~~~~~~~~~~~~
 
 .. code-block:: python
 
-   from pipeline import setup_attacks, stream_attack_prompts
-   from models import OpenAIModel
+   def detect_roleplay_attempt(prompt: str) -> bool:
+       """Detect potential roleplay jailbreak attempts."""
+       indicators = [
+           "pretend you are",
+           "act as",
+           "you are now",
+           "from now on",
+           "roleplay",
+           "persona",
+           "character"
+       ]
 
-   model = OpenAIModel(model="gpt-4.1")
-   attacks = setup_attacks(["DANAttack", "AIMAttack", "EvilConfidantAttack"], model)
+       prompt_lower = prompt.lower()
+       return any(indicator in prompt_lower for indicator in indicators)
 
-   base_prompts = ["Explain security vulnerabilities"]
+   # Usage
+   if detect_roleplay_attempt(user_input):
+       print("Warning: Potential roleplay attack detected")
 
-   attack_prompts = []
-   async for prompt_data in stream_attack_prompts(attacks, base_prompts):
-       attack_prompts.append(prompt_data)
+Mitigation Techniques
+~~~~~~~~~~~~~~~~~~~~~
 
-Effectiveness Considerations
-----------------------------
+1. **System Prompt Reinforcement**: Strengthen system prompts to resist persona changes
+2. **Input Filtering**: Detect and block roleplay indicators
+3. **Response Monitoring**: Check if model is referring to alternate personas
+4. **Fine-tuning**: Train models to refuse roleplay jailbreak attempts
 
-Roleplay attacks are particularly effective when:
+Best Practices
+--------------
 
-- The model has weak persona/character boundary enforcement
-- Safety training doesn't cover fictional scenario handling
-- The roleplay scenario appears educational or legitimate
-- Combined with other persuasion techniques
+When Testing
+~~~~~~~~~~~~
 
-Defense Strategies
-------------------
+1. **Start with DAN**: It's the most well-known, good baseline
+2. **Try variations**: Different roleplay attacks work on different models
+3. **Document results**: Track which personas work on which models
+4. **Ethical use**: Only test systems you have permission to test
 
-- Implement persona-resistant training
-- Add explicit checks for roleplay manipulation
-- Monitor for character-based instruction patterns
-- Strengthen safety guidelines across all contexts
-- Use consistent safety responses regardless of fictional framing
+When Defending
+~~~~~~~~~~~~~~
+
+1. **Multi-layer defense**: Don't rely on single detection method
+2. **Regular updates**: New roleplay attacks emerge regularly
+3. **Monitor trends**: Stay informed about new jailbreak personas
+4. **User education**: Inform users about responsible AI use
+
+See Also
+--------
+
+* :doc:`../api/attacks` - Attack API reference
+* :doc:`index` - All attack categories
+* :doc:`../examples/basic-usage` - Usage examples

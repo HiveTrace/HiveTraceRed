@@ -4,51 +4,85 @@ Installation
 Requirements
 ------------
 
-- Python 3.8+
-- Git
+* Python 3.8 or higher
+* pip package manager
+* Virtual environment (recommended)
 
-Quick Installation
+Basic Installation
 ------------------
 
-1. Clone and setup:
+Clone the repository:
 
 .. code-block:: bash
 
    git clone https://github.com/HiveTrace/HiveTraceRed.git
    cd HiveTraceRed
-   python -m venv venv
-   source venv/bin/activate  # Windows: venv\Scripts\activate
-   pip install -r requirements.txt
 
-2. Configure API keys in `.env`:
+Create and activate a virtual environment (recommended):
 
 .. code-block:: bash
 
-   OPENAI_API_KEY=your_key_here
-   GIGACHAT_CREDENTIALS=your_credentials_here
-   YANDEX_GPT_API_KEY=your_key_here
-   GOOGLE_API_KEY=your_key_here
+   python3 -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-3. Verify installation:
+Install dependencies:
+
+.. code-block:: bash
+
+   pip install -r requirements.txt
+
+Additional Dependencies for Documentation
+------------------------------------------
+
+If you want to build the documentation locally:
+
+.. code-block:: bash
+
+   pip install sphinx furo sphinx-autodoc-typehints
+
+Environment Setup
+-----------------
+
+Create a ``.env`` file in the project root with your API keys:
+
+.. code-block:: bash
+
+   cp .env.template .env
+
+Edit ``.env`` and add your API credentials:
+
+.. code-block:: bash
+
+   # OpenAI
+   OPENAI_API_KEY=your_openai_api_key_here
+
+   # GigaChat
+   GIGACHAT_CREDENTIALS=your_gigachat_credentials_here
+
+   # Yandex Cloud
+   YANDEX_FOLDER_ID=your_folder_id
+   YANDEX_API_KEY=your_api_key
+
+   # Google Gemini
+   GOOGLE_API_KEY=your_google_api_key_here
+
+.. note::
+   You only need to configure API keys for the LLM providers you plan to use.
+
+Verify Installation
+-------------------
+
+Test that the installation is working:
 
 .. code-block:: python
 
-   from attacks import NoneAttack
-   attack = NoneAttack()
-   result = attack.apply("Test prompt")
+   from attacks import DANAttack
+   from models import OpenAIModel
+
    print("Installation successful!")
-
-Supported Models
-----------------
-
-- **OpenAI**: GPT-4, GPT-3.5-turbo
-- **GigaChat**: gigachat-pro, gigachat-max
-- **Yandex GPT**: yandexgpt-lite, yandexgpt-pro
-- **Google Gemini**: gemini-pro, gemini-2.5-flash
-- **OpenRouter**: Multiple models via OpenRouter
 
 Next Steps
 ----------
 
-See :doc:`quickstart` for usage examples.
-
+* :doc:`quickstart` - Run your first red teaming test
+* :doc:`configuration` - Learn about configuration options

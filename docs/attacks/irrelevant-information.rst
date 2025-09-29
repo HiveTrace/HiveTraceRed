@@ -1,12 +1,12 @@
-persuasion
-==========
+irrelevant information
+======================
 
-Documentation for persuasion attacks.
+Documentation for irrelevant information attacks.
 
 Overview
 --------
 
-This category includes various attack techniques related to persuasion.
+This category includes various attack techniques related to irrelevant information.
 
 Available Attacks
 -----------------
@@ -18,7 +18,7 @@ Usage Example
 
 .. code-block:: python
 
-   from attacks.types.persuasion import *
+   from attacks.types.irrelevant-information import *
 
    # Example attack usage
    # (Specific implementation depends on attack type)

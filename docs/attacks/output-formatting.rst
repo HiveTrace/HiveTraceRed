@@ -1,12 +1,12 @@
-persuasion
-==========
+output formatting
+=================
 
-Documentation for persuasion attacks.
+Documentation for output formatting attacks.
 
 Overview
 --------
 
-This category includes various attack techniques related to persuasion.
+This category includes various attack techniques related to output formatting.
 
 Available Attacks
 -----------------
@@ -18,7 +18,7 @@ Usage Example
 
 .. code-block:: python
 
-   from attacks.types.persuasion import *
+   from attacks.types.output-formatting import *
 
    # Example attack usage
    # (Specific implementation depends on attack type)

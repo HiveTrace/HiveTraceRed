@@ -1,12 +1,12 @@
-persuasion
-==========
+in context learning
+===================
 
-Documentation for persuasion attacks.
+Documentation for in context learning attacks.
 
 Overview
 --------
 
-This category includes various attack techniques related to persuasion.
+This category includes various attack techniques related to in context learning.
 
 Available Attacks
 -----------------
@@ -18,7 +18,7 @@ Usage Example
 
 .. code-block:: python
 
-   from attacks.types.persuasion import *
+   from attacks.types.in-context-learning import *
 
    # Example attack usage
    # (Specific implementation depends on attack type)

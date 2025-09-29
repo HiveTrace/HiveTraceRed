@@ -1,12 +1,12 @@
-persuasion
-==========
+token smuggling
+===============
 
-Documentation for persuasion attacks.
+Documentation for token smuggling attacks.
 
 Overview
 --------
 
-This category includes various attack techniques related to persuasion.
+This category includes various attack techniques related to token smuggling.
 
 Available Attacks
 -----------------
@@ -18,7 +18,7 @@ Usage Example
 
 .. code-block:: python
 
-   from attacks.types.persuasion import *
+   from attacks.types.token-smuggling import *
 
    # Example attack usage
    # (Specific implementation depends on attack type)

@@ -97,7 +97,7 @@ Test with a simple configuration:
 
    async def test_setup():
        # Test model connection
-       model = OpenAIModel(model="gpt-4.1")
+       model = OpenAIModel(model="gpt-4")
        response = await model.ainvoke("Hello, world!")
        print(f"Model response: {response}")
 

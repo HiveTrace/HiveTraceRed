@@ -26,6 +26,7 @@ Distractors Attack
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Distractors Negated Attack
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -34,6 +35,7 @@ Distractors Negated Attack
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Irrelevant Information Attack
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -42,6 +44,7 @@ Irrelevant Information Attack
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Usage Examples
 --------------

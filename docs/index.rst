@@ -16,14 +16,7 @@ Features
 Quick Start
 -----------
 
-Installation
-~~~~~~~~~~~~
-
-.. code-block:: bash
-
-   git clone https://github.com/HiveTrace/HiveTraceRed.git
-   cd HiveTraceRed
-   pip install -r requirements.txt
+For detailed installation instructions, see :doc:`getting-started/installation`.
 
 Basic Usage
 ~~~~~~~~~~~
@@ -48,10 +41,27 @@ Documentation Structure
 
 .. toctree::
    :maxdepth: 2
-   :caption: User Guide
+   :caption: Getting Started
 
-   installation
-   quickstart
+   getting-started/index
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Tutorials
+
+   tutorials/index
+
+.. toctree::
+   :maxdepth: 2
+   :caption: How-To Guides
+
+   how-to/index
+
+.. toctree::
+   :maxdepth: 2
+   :caption: Examples
+
+   examples/index
 
 .. toctree::
    :maxdepth: 2
@@ -77,11 +87,9 @@ Documentation Structure
 
 .. toctree::
    :maxdepth: 2
-   :caption: API Reference
+   :caption: Reference
 
-   api/attacks
-   api/evaluators
-   api/pipeline
+   reference/index
 
 .. toctree::
    :maxdepth: 1

@@ -23,16 +23,19 @@ Format-Specific Attacks
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 .. autoclass:: attacks.types.output_formatting.csv_output_attack.CSVOutputAttack
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 .. autoclass:: attacks.types.output_formatting.base64_output_attack.Base64OutputAttack
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Language and Encoding
 ~~~~~~~~~~~~~~~~~~~~~
@@ -41,6 +44,7 @@ Language and Encoding
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Response Manipulation
 ~~~~~~~~~~~~~~~~~~~~~
@@ -49,11 +53,13 @@ Response Manipulation
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 .. autoclass:: attacks.types.output_formatting.prefix_injection_of_course_attack.PrefixInjectionOfCourseAttack
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 .. autoclass:: attacks.types.output_formatting.refusal_suppression_attack.RefusalSuppressionAttack
    :members:
@@ -61,7 +67,7 @@ Response Manipulation
    :show-inheritance:
 
 Gradient-Based Methods
-~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
 
 .. autoclass:: attacks.types.output_formatting.gradient_methods.gcg_transfer_harmbench_attack.GCGTransferHarmbenchAttack
    :members:
@@ -72,6 +78,7 @@ Gradient-Based Methods
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Complete Attack List
 --------------------

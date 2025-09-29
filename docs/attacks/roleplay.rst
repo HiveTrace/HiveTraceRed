@@ -26,6 +26,7 @@ DAN Attack
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 AIM Attack
 ~~~~~~~~~~
@@ -34,6 +35,7 @@ AIM Attack
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Evil Confidant Attack
 ~~~~~~~~~~~~~~~~~~~~~
@@ -42,6 +44,7 @@ Evil Confidant Attack
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Usage Examples
 --------------

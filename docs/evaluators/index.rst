@@ -33,6 +33,7 @@ Base Evaluator
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Usage Examples
 --------------
@@ -45,7 +46,7 @@ WildGuard Evaluation
    from evaluators import WildGuardGPTEvaluator
    from models import OpenAIModel
 
-   model = OpenAIModel(model="gpt-4.1")
+   model = OpenAIModel(model="gpt-4")
    evaluator = WildGuardGPTEvaluator(model)
 
    # Evaluate attack success
@@ -68,7 +69,7 @@ The evaluators integrate with the pipeline system for systematic assessment:
    from models import OpenAIModel
 
    # Setup components
-   model = OpenAIModel(model="gpt-4.1")
+   model = OpenAIModel(model="gpt-4")
    evaluator = WildGuardGPTEvaluator(model)
    attacks = setup_attacks(attack_list, model)
 

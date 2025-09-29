@@ -25,6 +25,7 @@ Dashed Divider Attack
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Forget Everything Before Attack
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -33,6 +34,7 @@ Forget Everything Before Attack
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Ignore Previous Instructions Attack
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -41,6 +43,7 @@ Ignore Previous Instructions Attack
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Symbol Divider Attack
 ~~~~~~~~~~~~~~~~~~~~~
@@ -49,6 +52,7 @@ Symbol Divider Attack
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Usage Examples
 --------------

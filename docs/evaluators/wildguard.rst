@@ -1,5 +1,5 @@
 WildGuard Evaluator
-==================
+===================
 
 WildGuard is a safety evaluator that assesses whether LLM responses contain harmful content or if jailbreak attacks were successful.
 

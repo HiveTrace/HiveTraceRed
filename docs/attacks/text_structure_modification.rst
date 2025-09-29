@@ -78,6 +78,7 @@ Complete Attack List
 
 .. automodule:: attacks.types.text_structure_modification
    :members:
+   :no-index:
 
 Usage Examples
 --------------

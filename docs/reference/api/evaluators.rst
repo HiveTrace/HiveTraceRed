@@ -152,7 +152,7 @@ Batch Evaluation
    results = await batch_evaluate(evaluator, pairs)
 
 Evaluator Parameters
--------------------
+--------------------
 
 Common Parameters
 ~~~~~~~~~~~~~~~~~

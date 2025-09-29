@@ -23,6 +23,7 @@ Attack Generation
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Model Responses
 ~~~~~~~~~~~~~~~
@@ -31,6 +32,7 @@ Model Responses
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Evaluation
 ~~~~~~~~~~
@@ -39,6 +41,7 @@ Evaluation
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Constants and Configuration
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -47,6 +50,7 @@ Constants and Configuration
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Pipeline Architecture
 ---------------------
@@ -167,7 +171,7 @@ Pipeline outputs include:
 - Comparative analysis across models
 - Detailed logs and traces
 
-For detailed API documentation, see :doc:`../api/pipeline`.
+For detailed API documentation, see :doc:`../reference/api/pipeline`.
 
 Performance Considerations
 --------------------------

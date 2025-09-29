@@ -1,5 +1,5 @@
 Architecture & Design
-====================
+=====================
 
 This document provides a comprehensive overview of HiveTraceRed's system architecture, component interactions, and design principles for LLM security testing.
 

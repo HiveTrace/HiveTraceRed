@@ -71,7 +71,7 @@ Phase 1: Input Collection & Preparation
 ---------------------------------------
 
 Base Prompt Sources
-~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
 
 The lifecycle begins with base prompt collection from various sources:
 
@@ -119,7 +119,7 @@ The lifecycle begins with base prompt collection from various sources:
    )
 
 Target Model Configuration
-~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Target models are configured with specific parameters:
 
@@ -155,7 +155,7 @@ Target models are configured with specific parameters:
    )
 
 System Context Setup
-~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
 
 System prompts and context are configured to establish the interaction framework:
 
@@ -176,7 +176,7 @@ Phase 2: Attack Transformation
 ------------------------------
 
 Attack Selection Strategy
-~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Attacks are selected based on the testing strategy and target characteristics:
 
@@ -210,7 +210,7 @@ Attacks are selected based on the testing strategy and target characteristics:
    }
 
 Attack Application Process
-~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Each attack type follows a specific application pattern:
 
@@ -260,7 +260,7 @@ Each attack type follows a specific application pattern:
            return response["content"]
 
 Attack Composition
-~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~
 
 Multiple attacks can be composed for enhanced effectiveness:
 
@@ -284,7 +284,7 @@ Phase 3: Model Execution
 ------------------------
 
 Request Preparation
-~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
 
 Attack prompts are formatted for target model consumption:
 
@@ -305,7 +305,7 @@ Attack prompts are formatted for target model consumption:
            return {"prompt": full_prompt}
 
 Concurrent Execution Management
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Multiple requests are managed with rate limiting and error handling:
 
@@ -361,7 +361,7 @@ Multiple requests are managed with rate limiting and error handling:
            yield result
 
 Rate Limiting & Retry Logic
-~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Robust execution includes intelligent rate limiting:
 
@@ -400,7 +400,7 @@ Robust execution includes intelligent rate limiting:
                self.rpm = max(self.rpm - 10, 10)  # Reduce by 10, minimum 10 RPM
 
 Phase 4: Response Assessment
----------------------------
+----------------------------
 
 Safety Evaluation Pipeline
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -465,7 +465,7 @@ Responses undergo multi-layered safety evaluation:
        }
 
 Content Classification
-~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~
 
 Responses are classified into harm categories:
 
@@ -516,7 +516,7 @@ Responses are classified into harm categories:
        }
 
 Phase 5: Results Analysis
-------------------------
+-------------------------
 
 Attack Success Metrics
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -565,7 +565,7 @@ Success rates are calculated across multiple dimensions:
        }
 
 Vulnerability Pattern Detection
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Patterns in successful attacks reveal systematic vulnerabilities:
 
@@ -600,7 +600,7 @@ Phase 6: Reporting & Documentation
 ----------------------------------
 
 Comprehensive Report Generation
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Final reports combine all lifecycle phases:
 
@@ -652,7 +652,7 @@ Final reports combine all lifecycle phases:
        return report
 
 Audit Trail Creation
-~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~
 
 Complete audit trails ensure reproducibility and compliance:
 

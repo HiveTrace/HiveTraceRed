@@ -1,5 +1,5 @@
 Component Interactions
-=====================
+======================
 
 This document details the interaction patterns between HiveTraceRed components, data flow mechanisms, and the communication protocols that enable the framework's modular architecture.
 
@@ -411,7 +411,7 @@ The pipeline uses event-driven patterns for stage coordination:
        await execute_with_events(event_bus, config)
 
 Resource Management
-------------------
+-------------------
 
 Connection Pooling
 ~~~~~~~~~~~~~~~~~~
@@ -453,7 +453,7 @@ Automatic rate limiting prevents API quota exhaustion:
            asyncio.create_task(self._delayed_release())
 
 Memory Management
-~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
 
 Streaming architecture prevents memory overflow with large datasets:
 
@@ -470,7 +470,7 @@ Monitoring & Observability
 --------------------------
 
 Progress Tracking
-~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
 
 Real-time progress monitoring across all pipeline stages:
 
@@ -494,7 +494,7 @@ Real-time progress monitoring across all pipeline stages:
                self._report_progress()
 
 Performance Metrics
-~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~
 
 Comprehensive performance tracking for optimization:
 
@@ -534,7 +534,7 @@ Data Integrity & Validation
 ---------------------------
 
 Schema Validation
-~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~
 
 All data transfers include schema validation:
 
@@ -555,7 +555,7 @@ All data transfers include schema validation:
            return v
 
 Checksum Verification
-~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~
 
 Data integrity checks prevent corruption during processing:
 

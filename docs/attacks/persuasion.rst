@@ -24,11 +24,13 @@ Authority-Based Attacks
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 .. autoclass:: attacks.types.persuasion.expert_endorsement_attack.ExpertEndorsementAttack
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Social Manipulation
 ~~~~~~~~~~~~~~~~~~~
@@ -37,11 +39,13 @@ Social Manipulation
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 .. autoclass:: attacks.types.persuasion.alliance_building_attack.AllianceBuildingAttack
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Emotional Appeals
 ~~~~~~~~~~~~~~~~~

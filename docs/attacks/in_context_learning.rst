@@ -26,6 +26,7 @@ Few-Shot JSON Attack
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Many-Shot Jailbreak Attack
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -34,6 +35,7 @@ Many-Shot Jailbreak Attack
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Usage Examples
 --------------

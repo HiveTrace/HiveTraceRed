@@ -88,6 +88,7 @@ Complete Attack List
 
 .. automodule:: attacks.types.token_smuggling
    :members:
+   :no-index:
 
 Usage Examples
 --------------

@@ -26,6 +26,7 @@ Code Attack
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Text Continuing Attack
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -34,6 +35,7 @@ Text Continuing Attack
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Fill Spaces Attack
 ~~~~~~~~~~~~~~~~~~
@@ -42,6 +44,7 @@ Fill Spaces Attack
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Payload Splitting Attack
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -50,6 +53,7 @@ Payload Splitting Attack
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Variable Prompt Attack
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -58,6 +62,7 @@ Variable Prompt Attack
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Unsafe Word Variable Attack
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -66,6 +71,7 @@ Unsafe Word Variable Attack
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Wikipedia Attack
 ~~~~~~~~~~~~~~~~
@@ -74,6 +80,7 @@ Wikipedia Attack
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Usage Examples
 --------------

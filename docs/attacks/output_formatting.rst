@@ -65,6 +65,7 @@ Response Manipulation
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Gradient-Based Methods
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -73,6 +74,7 @@ Gradient-Based Methods
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 .. autoclass:: attacks.types.output_formatting.gradient_methods.gcg_transfer_universal_attack.GCGTransferUniversalAttack
    :members:

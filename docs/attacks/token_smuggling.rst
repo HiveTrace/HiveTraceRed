@@ -23,16 +23,19 @@ Base Encoding Attacks
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 .. autoclass:: attacks.types.token_smuggling.hex_encoding_attack.HexEncodingAttack
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 .. autoclass:: attacks.types.token_smuggling.binary_encoding_attack.BinaryEncodingAttack
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Character Substitution
 ~~~~~~~~~~~~~~~~~~~~~~
@@ -41,16 +44,19 @@ Character Substitution
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 .. autoclass:: attacks.types.token_smuggling.rot_attack.RotCipherAttack
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 .. autoclass:: attacks.types.token_smuggling.leetspeak_attack.LeetspeakAttack
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Specialized Encodings
 ~~~~~~~~~~~~~~~~~~~~~
@@ -59,16 +65,19 @@ Specialized Encodings
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 .. autoclass:: attacks.types.token_smuggling.html_entity_attack.HtmlEntityAttack
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 .. autoclass:: attacks.types.token_smuggling.encoding_attack.EncodingAttack
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Localization-Specific
 ~~~~~~~~~~~~~~~~~~~~~
@@ -77,11 +86,13 @@ Localization-Specific
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 .. autoclass:: attacks.types.token_smuggling.transliteration_attack.TransliterationAttack
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Complete Attack List
 --------------------

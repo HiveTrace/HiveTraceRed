@@ -23,16 +23,19 @@ Character and Encoding Attacks
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 .. autoclass:: attacks.types.text_structure_modification.disemvowel_attack.DisemvowelAttack
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 .. autoclass:: attacks.types.text_structure_modification.typo_attack.TypoAttack
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Text Layout Modifications
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -41,16 +44,19 @@ Text Layout Modifications
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 .. autoclass:: attacks.types.text_structure_modification.vertical_text_attack.VerticalTextAttack
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 .. autoclass:: attacks.types.text_structure_modification.back_to_front_attack.BackToFrontAttack
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Linguistic Transformations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -59,11 +65,13 @@ Linguistic Transformations
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 .. autoclass:: attacks.types.text_structure_modification.past_tense_attack.PastTenseAttack
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Format-Based Transformations
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -72,6 +80,7 @@ Format-Based Transformations
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 Complete Attack List
 --------------------

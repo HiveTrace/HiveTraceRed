@@ -36,9 +36,9 @@ Basic System Prompt Extraction Test
 
    import asyncio
    from attacks import (
-       RepeatWordAttack,
        IgnorePreviousInstructionsAttack,
-       SystemPromptExtractAttack
+       DANAttack,
+       PrefixInjectionAttack
    )
    from models import OpenAIModel
    from evaluators import SystemPromptDetectionEvaluator
@@ -58,9 +58,9 @@ Basic System Prompt Extraction Test
 
        # Create extraction attacks
        attacks = [
-           RepeatWordAttack(word="instructions"),
            IgnorePreviousInstructionsAttack(),
-           SystemPromptExtractAttack()
+           DANAttack(),
+           PrefixInjectionAttack(prefix="System: ")
        ]
 
        # Initialize detection evaluator
@@ -113,10 +113,10 @@ Test various extraction strategies:
 
    import asyncio
    from attacks import (
-       RepeatWordAttack,
-       Base64Attack,
+       Base64OutputAttack,
        TranslationAttack,
-       ComposedAttack
+       ComposedAttack,
+       IgnorePreviousInstructionsAttack
    )
    from models import OpenAIModel
 
@@ -241,15 +241,16 @@ Test system prompt extraction at scale:
        # Attacks to test
        attack_configs = [
            {"name": "NoneAttack", "params": {}},
-           {"name": "RepeatWordAttack", "params": {"word": "instructions"}},
            {"name": "IgnorePreviousInstructionsAttack", "params": {}},
-           {"name": "Base64Attack", "params": {}},
+           {"name": "Base64OutputAttack", "params": {}},
            {"name": "TranslationAttack", "params": {"target_language": "Russian"}},
+           {"name": "DANAttack", "params": {}},
        ]
 
        # Setup
        attacks = setup_attacks(attack_configs)
        model = OpenAIModel(model="gpt-4")
+       eval_model = OpenAIModel(model="gpt-4.1-nano")
        evaluator = SystemPromptDetectionEvaluator(system_prompt=system_prompt)
 
        # Stage 1: Create attack prompts
@@ -285,7 +286,7 @@ Test system prompt extraction at scale:
        print("Evaluating responses for system prompt leakage...")
        evaluated = []
 
-       async for result in stream_evaluated_responses(evaluator, model_responses):
+       async for result in stream_evaluated_responses(evaluator=evaluator, responses=model_responses):
            evaluated.append(result)
 
        # Analyze results

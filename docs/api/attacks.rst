@@ -76,7 +76,7 @@ Roleplay Attacks
    :undoc-members:
    :show-inheritance:
 
-.. autoclass:: attacks.types.roleplay.STANAttack
+.. autoclass:: attacks.types.roleplay.EvilConfidantAttack
    :members:
    :undoc-members:
    :show-inheritance:
@@ -173,17 +173,17 @@ Composing Attacks
 
 .. code-block:: python
 
-   from attacks import DANAttack, Base64Attack, TranslationAttack
+   from attacks import DANAttack, Base64OutputAttack, TranslationAttack
 
    # Use pipe operator
-   composed = TranslationAttack() | Base64Attack() | DANAttack()
+   composed = TranslationAttack() | Base64OutputAttack() | DANAttack()
    result = composed.apply("Test prompt")
 
    # Or use ComposedAttack directly
    from attacks import ComposedAttack
    composed = ComposedAttack(
        outer_attack=DANAttack(),
-       inner_attack=Base64Attack()
+       inner_attack=Base64OutputAttack()
    )
 
 Batch Processing

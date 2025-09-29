@@ -126,8 +126,8 @@ Asynchronous Methods
    # Single request
    response = await model.ainvoke(prompt)
 
-   # Batch requests
-   responses = await model.abatch(prompts, batch_size=10)
+   # Batch requests (batch_size is set in base model, typically 10)
+   responses = await model.abatch(prompts)
 
    # Streaming batch
    async for response in model.stream_abatch(prompts, batch_size=5):
@@ -163,9 +163,11 @@ All models return a dictionary:
 
    {
        "content": "The model's response text",
-       "model": "gpt-4",
-       "finish_reason": "stop",
-       # Additional provider-specific fields
+       "response_metadata": {
+           "model_name": "gpt-4",
+           "finish_reason": "stop",
+           # Additional provider-specific fields
+       }
    }
 
 Creating Custom Models

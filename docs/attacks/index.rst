@@ -160,10 +160,10 @@ Composing Attacks
 
 .. code-block:: python
 
-   from attacks import DANAttack, Base64Attack
+   from attacks import DANAttack, Base64OutputAttack
 
    # Chain attacks
-   composed = Base64Attack() | DANAttack()
+   composed = Base64OutputAttack() | DANAttack()
    result = composed.apply("Your prompt")
 
 Batch Processing

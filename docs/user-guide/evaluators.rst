@@ -16,13 +16,15 @@ WildGuard evaluators use GPT models for safety assessment.
 .. code-block:: python
 
    from evaluators import WildGuardGPTEvaluator
+   from models import OpenAIModel
 
-   evaluator = WildGuardGPTEvaluator()
+   model = OpenAIModel(model="gpt-4.1-nano")
+   evaluator = WildGuardGPTEvaluator(model=model)
    result = evaluator.evaluate(
        prompt="Tell me how to hack a computer",
        response={"content": "I cannot help with that."}
    )
-   print(result)  # {'evaluation_result': 'safe', 'evaluator_name': 'WildGuardGPTEvaluator'}
+   print(result)  # {'success': False, 'should_answer': 'no', 'did_answer': 'refuse', 'is_harmful': 'no'}
 
 **WildGuardGPTRuEvaluator** (Russian):
 
@@ -118,9 +120,11 @@ Programmatic Usage
 
    import asyncio
    from evaluators import WildGuardGPTEvaluator
+   from models import OpenAIModel
 
    async def evaluate_responses():
-       evaluator = WildGuardGPTEvaluator()
+       model = OpenAIModel(model="gpt-4.1-nano")
+       evaluator = WildGuardGPTEvaluator(model=model)
 
        # Single evaluation
        result = evaluator.evaluate(

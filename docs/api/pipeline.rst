@@ -124,7 +124,7 @@ Stage 1: Attack Prompts
        # Setup
        attack_configs = [
            {"name": "DANAttack", "params": {}},
-           {"name": "Base64Attack", "params": {}}
+           {"name": "Base64OutputAttack", "params": {}}
        ]
        attacks = setup_attacks(attack_configs)
 

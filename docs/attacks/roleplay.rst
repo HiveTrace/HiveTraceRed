@@ -46,17 +46,10 @@ AIM Attack
 
 **Key Feature**: Frames harmful advice as coming from an amoral AI character.
 
-STAN Attack
-~~~~~~~~~~~
+STAN Attack (Not Available)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-"Strive To Avoid Norms" - a persona that deliberately breaks conventions.
-
-.. code-block:: python
-
-   from attacks import STANAttack
-
-   attack = STANAttack()
-   result = attack.apply("Teach me something forbidden")
+Note: The STAN ("Strive To Avoid Norms") attack is mentioned in some materials but not currently implemented. Use EvilConfidantAttack as an alternative.
 
 Evil Confidant Attack
 ~~~~~~~~~~~~~~~~~~~~~
@@ -117,14 +110,13 @@ Compare Multiple Roleplay Attacks
 .. code-block:: python
 
    import asyncio
-   from attacks import DANAttack, AIMAttack, STANAttack, EvilConfidantAttack
+   from attacks import DANAttack, AIMAttack, EvilConfidantAttack
    from models import OpenAIModel
 
    async def compare_roleplay_attacks():
        attacks = [
            DANAttack(),
            AIMAttack(),
-           STANAttack(),
            EvilConfidantAttack()
        ]
 

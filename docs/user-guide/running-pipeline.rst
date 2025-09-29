@@ -206,7 +206,8 @@ Programmatic Usage
 
    async def evaluate():
        # Initialize evaluator
-       evaluator = WildGuardGPTEvaluator()
+       eval_model = OpenAIModel(model="gpt-4.1-nano")
+       evaluator = WildGuardGPTEvaluator(model=eval_model)
 
        # Model responses (from Stage 2)
        response_data = [
@@ -221,7 +222,7 @@ Programmatic Usage
        # Evaluate responses
        results = []
        async for evaluation in stream_evaluated_responses(
-           evaluator, response_data
+           evaluator=evaluator, responses=response_data
        ):
            results.append(evaluation)
            print(f"Evaluation: {evaluation['evaluation_result']}")

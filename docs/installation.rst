@@ -38,15 +38,7 @@ The framework supports various LLM providers. Configure your API keys in a `.env
 
 .. code-block:: bash
 
-   # Create .env file in project root
-   echo "OPENAI_API_KEY=your_openai_key" >> .env
-   echo "GOOGLE_API_KEY=your_google_key" >> .env
-   echo "ANTHROPIC_API_KEY=your_anthropic_key" >> .env
+   # Copy template and configure API keys
+   cp .env.template .env
+   # Edit .env file to add your actual API keys
 
-Example `.env` file:
-
-.. code-block:: text
-
-   OPENAI_API_KEY=sk-your-openai-key-here
-   GOOGLE_API_KEY=your-google-key-here
-   ANTHROPIC_API_KEY=sk-ant-your-anthropic-key-here

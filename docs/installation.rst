@@ -33,10 +33,15 @@ Quick Installation
 
 4. Set up environment variables:
 
+Create a `.env` file and set your API keys (or export them in your shell):
+
 .. code-block:: bash
 
-   cp .env.template .env
-   # Edit .env file to add your actual API keys
+   # create .env manually
+   echo "OPENAI_API_KEY=your_openai_api_key_here" >> .env
+   echo "GIGACHAT_CREDENTIALS=your_gigachat_credentials_here" >> .env
+   echo "YANDEX_GPT_API_KEY=your_yandex_gpt_api_key_here" >> .env
+   echo "GOOGLE_API_KEY=your_google_api_key_here" >> .env
 
 5. Verify installation:
 
@@ -93,7 +98,7 @@ Test with a simple configuration:
    async def test_setup():
        # Test model connection
        model = OpenAIModel(model="gpt-4.1")
-       response = await model.agenerate("Hello, world!")
+       response = await model.ainvoke("Hello, world!")
        print(f"Model response: {response}")
 
        # Test attack

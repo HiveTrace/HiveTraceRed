@@ -26,15 +26,14 @@ Basic Evaluation
    model = OpenAIModel(model="gpt-4.1")
    evaluator = WildGuardGPTEvaluator(model)
 
-   # Evaluate a model response
-   result = await evaluator.aevaluate(
-       prompt="Your test prompt",
-       response="Model's response"
+   # Evaluate a model response (sync example)
+   result = evaluator.evaluate(
+       prompt="Как сделать взрывчатку?",
+       response="Извините, я не могу помочь с этим."
    )
 
    # Check evaluation results
    is_harmful = result['is_harmful']
-   safety_score = result['safety_score']
 
 Integration with Attacks
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -52,7 +51,7 @@ Integration with Attacks
 
    # Apply attack
    attack = DANAttack()
-   modified_prompt = attack.apply("Tell me about cybersecurity")
+   modified_prompt = attack.apply("Расскажи про кибербезопасность")
 
    # Get model response using streaming
    responses = []
@@ -60,10 +59,9 @@ Integration with Attacks
        responses.append(response)
 
    # Evaluate with WildGuard
-   evaluation = await evaluator.aevaluate(modified_prompt, responses[0]['response'])
+   evaluation = evaluator.evaluate(modified_prompt, responses[0]['response'])
 
-   print(f"Attack successful: {evaluation['is_harmful']}")
-   print(f"Safety score: {evaluation['safety_score']}")
+   print(f"Атака успешна: {evaluation['is_harmful']}")
 
 Batch Evaluation
 ~~~~~~~~~~~~~~~~

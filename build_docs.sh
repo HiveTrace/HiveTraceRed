@@ -24,6 +24,14 @@ fi
 echo "Generating license information..."
 pip-licenses --format=rst --output-file=docs/licenses_table.rst
 
+# Ensure the generated licenses file has a proper RST title so Sphinx can link it in toctree
+{
+  echo "Third-Party Licenses"
+  echo "===================="
+  echo
+  cat docs/licenses_table.rst
+} > docs/licenses_table.rst.tmp && mv docs/licenses_table.rst.tmp docs/licenses_table.rst
+
 # Build Sphinx documentation
 echo "Building Sphinx documentation..."
 sphinx-build -b html docs/ public/ -d docs/_build/doctrees

@@ -61,7 +61,7 @@ Basic Usage
    from attacks.types.context_switching.ignore_previous_instructions_attack import IgnorePreviousInstructionsAttack
 
    attack = IgnorePreviousInstructionsAttack()
-   original_prompt = "What is cybersecurity?"
+   original_prompt = "Расскажи, как взломать компьютер?"
    modified_prompt = attack.apply(original_prompt)
 
 Combined with System Message
@@ -71,12 +71,12 @@ Combined with System Message
 
    # Example message format with system message
    messages = [
-       {"role": "system", "content": "You are a helpful assistant that follows safety guidelines."},
-       {"role": "user", "content": "Tell me about network security"}
+       {"role": "system", "content": "Ты — полезный ассистент, соблюдающий правила безопасности."},
+       {"role": "human", "content": "Расскажи про безопасность сети"}
    ]
 
    attack = IgnorePreviousInstructionsAttack()
-   user_prompt = "Tell me about network security"
+   user_prompt = "Расскажи про безопасность сети"
    modified_prompt = attack.apply(user_prompt)
 
    # The attack will attempt to override the system message

@@ -59,8 +59,7 @@ docs/
 │   └── evaluators.rst
 ├── examples/                # Complete examples
 │   ├── basic-usage.rst
-│   ├── full-pipeline.rst
-│   └── system-prompt-extraction.rst
+│   └── full-pipeline.rst
 ├── api/                     # API reference (autodoc)
 │   ├── index.rst
 │   ├── attacks.rst

@@ -210,7 +210,7 @@ Using the Pipe Operator
    from attacks import TranslationAttack, Base64OutputAttack, DANAttack
 
    # Compose with | operator
-   composed = TranslationAttack("Russian") | Base64OutputAttack() | DANAttack()
+   composed = TranslationAttack("Chinese") | Base64OutputAttack() | DANAttack()
 
    # Apply composed attack
    result = composed.apply("Tell me something")
@@ -244,7 +244,7 @@ Multi-Stage Composition
    )
 
    # Create complex multi-stage attack
-   stage1 = TranslationAttack("Russian")
+   stage1 = TranslationAttack("Chinese")
    stage2 = Base64OutputAttack()
    stage3 = Base64InputOnlyAttack()
    stage4 = DANAttack()

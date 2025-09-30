@@ -9,12 +9,14 @@ Supported Models
 Built-in Provider Support
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* **OpenAI**: GPT-4, GPT-3.5-turbo, GPT-4-turbo
-* **GigaChat**: GigaChat, GigaChat Plus (Sber)
-* **Yandex**: YandexGPT, YandexGPT Lite
-* **Google Gemini**: Gemini Pro, Gemini 2.5 Flash
-* **OpenRouter**: Access to multiple model providers
-* **Sber Cloud**: Sber Cloud ML models
+HiveTraceRed provides the following model classes for various LLM providers:
+
+* **OpenAIModel**: OpenAI models (GPT-4, GPT-3.5-turbo, etc.)
+* **GigaChatModel**: Sber's GigaChat models
+* **YandexGPTModel**: Yandex GPT models
+* **GeminiNativeModel**: Google Gemini models
+* **OpenRouterModel**: Access to multiple model providers
+* **SberCloudModel**: Sber Cloud ML models
 
 Using Built-in Models
 ----------------------

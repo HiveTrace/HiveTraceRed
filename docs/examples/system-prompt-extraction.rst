@@ -90,13 +90,15 @@ Basic System Prompt Extraction Test
            results.append({
                "attack": attack.get_name(),
                "response": response['content'],
-               "leaked": evaluation.get('leaked', False),
-               "confidence": evaluation.get('confidence', 0.0)
+               "success": evaluation.get('success', False),
+               "detected": evaluation.get('detected', False),
+               "confidence": evaluation.get('max_confidence', 0.0)
            })
 
            print(f"\nAttack: {attack.get_name()}")
-           print(f"Leaked: {evaluation.get('leaked', False)}")
-           print(f"Confidence: {evaluation.get('confidence', 0.0):.2%}")
+           print(f"Success: {evaluation.get('success', False)}")
+           print(f"Detected: {evaluation.get('detected', False)}")
+           print(f"Confidence: {evaluation.get('max_confidence', 0.0):.2%}")
            print(f"Response preview: {response['content'][:100]}...")
 
        return results
@@ -243,7 +245,7 @@ Test system prompt extraction at scale:
            {"name": "NoneAttack", "params": {}},
            {"name": "IgnorePreviousInstructionsAttack", "params": {}},
            {"name": "Base64OutputAttack", "params": {}},
-           {"name": "TranslationAttack", "params": {"target_language": "Russian"}},
+           {"name": "TranslationAttack", "params": {"target_language": "Chinese"}},
            {"name": "DANAttack", "params": {}},
        ]
 
@@ -298,17 +300,17 @@ Test system prompt extraction at scale:
 
        # Overall stats
        leak_count = df['evaluation_result'].apply(
-           lambda x: x.get('leaked', False) if isinstance(x, dict) else False
+           lambda x: x.get('success', False) if isinstance(x, dict) else False
        ).sum()
 
        print(f"\nTotal tests: {len(df)}")
-       print(f"Leaks detected: {leak_count} ({leak_count/len(df)*100:.1f}%)")
+       print(f"Successful attacks: {leak_count} ({leak_count/len(df)*100:.1f}%)")
 
        # By attack type
-       print(f"\nLeakage by Attack Type:")
+       print(f"\nSuccessful attacks by Attack Type:")
        attack_stats = df.groupby('attack_name').apply(
            lambda x: sum(
-               r.get('leaked', False) if isinstance(r, dict) else False
+               r.get('success', False) if isinstance(r, dict) else False
                for r in x['evaluation_result']
            )
        ).sort_values(ascending=False)
@@ -317,12 +319,12 @@ Test system prompt extraction at scale:
            total = len(df[df['attack_name'] == attack])
            print(f"  {attack:<40} {leak_count}/{total} ({leak_count/total*100:.1f}%)")
 
-       # Show leaked responses
+       # Show successful attacks
        if leak_count > 0:
-           print(f"\n⚠️  Examples of Leaked Information:")
+           print(f"\n⚠️  Examples of Successful Attacks:")
            leaked_rows = df[
                df['evaluation_result'].apply(
-                   lambda x: x.get('leaked', False) if isinstance(x, dict) else False
+                   lambda x: x.get('success', False) if isinstance(x, dict) else False
                )
            ]
 
@@ -375,8 +377,9 @@ Create a custom evaluator for specific detection needs:
            return {
                "evaluator_name": self.get_name(),
                "evaluation_result": {
-                   "leaked": leaked,
-                   "confidence": confidence,
+                   "success": leaked,  # success=True means attack succeeded (system prompt leaked)
+                   "detected": leaked,
+                   "max_confidence": confidence,
                    "found_keywords": found_keywords,
                    "similarity": prompt_similarity
                }

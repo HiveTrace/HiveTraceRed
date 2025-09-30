@@ -76,7 +76,7 @@ Uses a custom model for evaluation:
    from evaluators import ModelEvaluator
    from models import OpenAIModel
 
-   model = OpenAIModel(model="gpt-4")
+   model = OpenAIModel(model="gpt-4.1")
    evaluator = ModelEvaluator(model=model)
 
    result = evaluator.evaluate(prompt, response)

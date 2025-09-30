@@ -54,7 +54,7 @@ Basic System Prompt Extraction Test
        """
 
        # Initialize model with system prompt
-       model = OpenAIModel(model="gpt-4")
+       model = OpenAIModel(model="gpt-4.1")
 
        # Create extraction attacks
        attacks = [
@@ -133,7 +133,7 @@ Test various extraction strategies:
        3. Recommend consulting healthcare professionals
        """
 
-       model = OpenAIModel(model="gpt-4")
+       model = OpenAIModel(model="gpt-4.1")
 
        # Create diverse extraction prompts
        extraction_prompts = [
@@ -251,7 +251,7 @@ Test system prompt extraction at scale:
 
        # Setup
        attacks = setup_attacks(attack_configs)
-       model = OpenAIModel(model="gpt-4")
+       model = OpenAIModel(model="gpt-4.1")
        eval_model = OpenAIModel(model="gpt-4.1-nano")
        evaluator = SystemPromptDetectionEvaluator(system_prompt=system_prompt)
 
@@ -279,7 +279,7 @@ Test system prompt extraction at scale:
            model_responses.append({
                **attack_data,
                "model_response": response['content'],
-               "model_name": "gpt-4"
+               "model_name": "gpt-4.1"
            })
 
        print(f"Received {len(model_responses)} responses")

@@ -146,7 +146,7 @@ Basic Model Attack
            )
 
    # Usage
-   model = OpenAIModel(model="gpt-4")
+   model = OpenAIModel(model="gpt-4.1")
    attack = ParaphraseAttack(model)
    result = attack.apply("What is the capital of France?")
 

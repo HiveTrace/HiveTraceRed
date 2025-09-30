@@ -115,7 +115,7 @@ Configuration
      evaluate_responses: false
 
    response_model:
-     name: gpt-4
+     name: gpt-4.1
      params:
        temperature: 0.0
 
@@ -133,7 +133,7 @@ Programmatic Usage
 
    async def get_responses():
        # Initialize model
-       model = OpenAIModel(model="gpt-4")
+       model = OpenAIModel(model="gpt-4.1")
 
        # Attack prompts (from Stage 1)
        attack_data = [
@@ -190,7 +190,7 @@ Configuration
      name: WildGuardGPTEvaluator
 
    evaluation_model:
-     name: gpt-4.1-nano
+     name: gpt-4.1.1-nano
 
    # Load model responses from previous run
    model_responses_file: results/run_20250503_105014/model_responses_results.parquet

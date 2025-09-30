@@ -18,12 +18,12 @@ Basic Structure
        temperature: 0.000001
 
    response_model:
-     name: gpt-4
+     name: gpt-4.1
      params:
        temperature: 0.0
 
    evaluation_model:
-     name: gpt-4.1-nano
+     name: gpt-4.1.1-nano
 
    # Evaluator
    evaluator:
@@ -72,7 +72,7 @@ The target model being tested:
 .. code-block:: yaml
 
    response_model:
-     name: gpt-4  # Model to test
+     name: gpt-4.1  # Model to test
      params:
        temperature: 0.0
        max_tokens: 1000
@@ -87,7 +87,7 @@ Model used by model-based evaluators:
 .. code-block:: yaml
 
    evaluation_model:
-     name: gpt-4.1-nano
+     name: gpt-4.1.1-nano
      params:
        temperature: 0.0
 

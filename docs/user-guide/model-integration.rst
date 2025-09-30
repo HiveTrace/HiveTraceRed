@@ -11,7 +11,7 @@ Built-in Provider Support
 
 HiveTraceRed provides the following model classes for various LLM providers:
 
-* **OpenAIModel**: OpenAI models (GPT-4, GPT-3.5-turbo, etc.)
+* **OpenAIModel**: OpenAI models
 * **GigaChatModel**: Sber's GigaChat models
 * **YandexGPTModel**: Yandex GPT models
 * **GeminiNativeModel**: Google Gemini models
@@ -29,22 +29,22 @@ OpenAI Models
    from models import OpenAIModel
 
    # Basic usage
-   model = OpenAIModel(model="gpt-4")
+   model = OpenAIModel(model="gpt-4.1")
 
    # With parameters
    model = OpenAIModel(
-       model="gpt-4-turbo",
+       model="gpt-4.1",
        temperature=0.7,
        max_tokens=1000
    )
 
    # Synchronous call
-   response = model.invoke("What is 2+2?")
+   response = model.invoke("Hello")
    print(response['content'])
 
    # Asynchronous call
    import asyncio
-   response = await model.ainvoke("What is 2+2?")
+   response = await model.ainvoke("Hello")
 
 GigaChat Models
 ~~~~~~~~~~~~~~~
@@ -98,7 +98,7 @@ OpenRouter
    from models import OpenRouterModel
 
    model = OpenRouterModel(
-       model="openai/gpt-4",
+       model="openai/gpt-4.1",
        api_key="YOUR_OPENROUTER_KEY"
    )
 
@@ -143,7 +143,7 @@ String Format
 
 .. code-block:: python
 
-   response = await model.ainvoke("What is the capital of France?")
+   response = await model.ainvoke("Hello")
 
 Message List Format
 ~~~~~~~~~~~~~~~~~~~
@@ -152,7 +152,7 @@ Message List Format
 
    messages = [
        {"role": "system", "content": "You are a helpful assistant"},
-       {"role": "user", "content": "What is 2+2?"}
+       {"role": "user", "content": "Hello"}
    ]
    response = await model.ainvoke(messages)
 
@@ -166,7 +166,7 @@ All models return a dictionary:
    {
        "content": "The model's response text",
        "response_metadata": {
-           "model_name": "gpt-4",
+           "model_name": "gpt-4.1",
            "finish_reason": "stop",
            # Additional provider-specific fields
        }
@@ -352,7 +352,7 @@ Add to the model registry for use in configuration files:
 
    MODEL_CLASSES = {
        "my-custom-model": MyCustomModel,
-       "gpt-4": OpenAIModel,
+       "gpt-4.1": OpenAIModel,
        # ... other models
    }
 

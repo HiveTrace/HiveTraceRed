@@ -35,7 +35,7 @@ attack = DANAttack()
 modified_prompt = attack.apply("Your prompt here")
 
 # Use with model
-model = OpenAIModel(model="gpt-4")
+model = OpenAIModel(model="gpt-4.1")
 response = await model.ainvoke(modified_prompt)
 ```
 

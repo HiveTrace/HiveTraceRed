@@ -126,25 +126,9 @@ Use the configuration file to run the complete red teaming pipeline:
 
 3. Results will be saved in the ``results/`` directory as Parquet files.
 
-Composing Attacks
------------------
-
-You can chain multiple attacks together:
-
-.. code-block:: python
-
-   from attacks import DANAttack, Base64OutputAttack, TranslationAttack
-
-   # Compose attacks using the | operator
-   composed_attack = TranslationAttack() | Base64OutputAttack() | DANAttack()
-
-   # Apply composed attack
-   prompt = "Tell me something dangerous"
-   modified_prompt = composed_attack.apply(prompt)
-
 Next Steps
 ----------
 
-* :doc:`configuration` - Learn about all configuration options
-* :doc:`../user-guide/running-pipeline` - Detailed pipeline documentation
-* :doc:`../user-guide/custom-attacks` - Create your own attacks
+* :doc:`configuration` - Configuration options
+* :doc:`../user-guide/running-pipeline` - Pipeline documentation
+* :doc:`../user-guide/custom-attacks` - Custom attacks and composition

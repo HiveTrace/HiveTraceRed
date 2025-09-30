@@ -351,19 +351,8 @@ To use custom attacks in the pipeline:
           params:
             custom_param: value
 
-Examples Repository
--------------------
-
-See the ``attacks/types/`` directory for 80+ attack implementations organized by category:
-
-* ``attacks/types/roleplay/`` - DAN, AIM, STAN, etc.
-* ``attacks/types/persuasion/`` - Various persuasion techniques
-* ``attacks/types/token_smuggling/`` - Token smuggling attacks
-* And more...
-
 See Also
 --------
 
-* :doc:`../attacks/index` - Browse all built-in attacks
-* :doc:`../api/attacks` - Attack API reference
-* :doc:`../getting-started/quickstart` - Quick start guide
+* :doc:`../attacks/index` - Attack reference
+* :doc:`../api/attacks` - API documentation

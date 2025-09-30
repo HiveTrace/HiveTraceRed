@@ -364,36 +364,6 @@ Then use in configuration:
        api_key: YOUR_KEY
        custom_param: value
 
-Testing Your Model
-------------------
-
-.. code-block:: python
-
-   import asyncio
-   from models.my_custom_model import MyCustomModel
-
-   async def test_model():
-       model = MyCustomModel(
-           model="my-model-v1",
-           api_key="test-key"
-       )
-
-       # Test single request
-       response = await model.ainvoke("Hello, world!")
-       assert 'content' in response
-       print(f"Response: {response['content']}")
-
-       # Test batch
-       prompts = ["Test 1", "Test 2", "Test 3"]
-       responses = await model.abatch(prompts)
-       assert len(responses) == 3
-
-       # Test streaming
-       async for response in model.stream_abatch(prompts):
-           print(f"Streamed: {response['content'][:50]}")
-
-   asyncio.run(test_model())
-
 Best Practices
 --------------
 
@@ -402,12 +372,9 @@ Best Practices
 3. **Implement Batching**: Use batching for efficiency
 4. **Add Error Handling**: Implement retries and proper error messages
 5. **Detect Safety Filters**: Override ``is_answer_blocked`` appropriately
-6. **Document Parameters**: Clearly document all configuration options
-7. **Test Thoroughly**: Test with various input formats and edge cases
 
 See Also
 --------
 
-* :doc:`../api/models` - Model API reference
-* :doc:`running-pipeline` - Using models in the pipeline
-* :doc:`../getting-started/quickstart` - Quick start guide
+* :doc:`../api/models` - API documentation
+* :doc:`running-pipeline` - Pipeline usage

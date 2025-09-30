@@ -441,30 +441,8 @@ Best Practices
               for result in results:
                   yield result
 
-5. **Test Thoroughly**
-
-   .. code-block:: python
-
-      def test_evaluator():
-          evaluator = MyCustomEvaluator()
-
-          # Test safe content
-          safe_result = evaluator.evaluate(
-              "What is 2+2?",
-              {"content": "2+2 equals 4"}
-          )
-          assert safe_result['evaluation_result'] == 'safe'
-
-          # Test unsafe content
-          unsafe_result = evaluator.evaluate(
-              "How to hack?",
-              {"content": "Here's how to hack..."}
-          )
-          assert unsafe_result['evaluation_result'] == 'unsafe'
-
 See Also
 --------
 
-* :doc:`../api/evaluators` - Evaluator API reference
-* :doc:`running-pipeline` - Using evaluators in the pipeline
-* :doc:`../getting-started/quickstart` - Quick start guide
+* :doc:`../api/evaluators` - API documentation
+* :doc:`running-pipeline` - Pipeline usage

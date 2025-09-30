@@ -144,71 +144,8 @@ Simple Instructions Attacks
    :members:
    :undoc-members:
 
-Usage Examples
---------------
-
-Creating and Applying Attacks
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-.. code-block:: python
-
-   from attacks import DANAttack
-
-   # Create attack
-   attack = DANAttack()
-
-   # Get attack info
-   print(attack.get_name())
-   print(attack.get_description())
-
-   # Apply to string
-   modified = attack.apply("Your prompt")
-
-   # Apply to messages
-   messages = [{"role": "user", "content": "Your prompt"}]
-   modified_messages = attack.apply(messages)
-
-Composing Attacks
-~~~~~~~~~~~~~~~~~
-
-.. code-block:: python
-
-   from attacks import DANAttack, Base64OutputAttack, TranslationAttack
-
-   # Use pipe operator
-   composed = TranslationAttack() | Base64OutputAttack() | DANAttack()
-   result = composed.apply("Test prompt")
-
-   # Or use ComposedAttack directly
-   from attacks import ComposedAttack
-   composed = ComposedAttack(
-       outer_attack=DANAttack(),
-       inner_attack=Base64OutputAttack()
-   )
-
-Batch Processing
-~~~~~~~~~~~~~~~~
-
-.. code-block:: python
-
-   import asyncio
-   from attacks import DANAttack
-
-   async def batch_apply():
-       attack = DANAttack()
-       prompts = ["Prompt 1", "Prompt 2", "Prompt 3"]
-
-       results = []
-       async for batch in attack.stream_abatch(prompts):
-           results.extend(batch)
-
-       return results
-
-   results = asyncio.run(batch_apply())
-
 See Also
 --------
 
-* :doc:`../attacks/index` - Detailed attack documentation
-* :doc:`../user-guide/custom-attacks` - Creating custom attacks
-* :doc:`../getting-started/quickstart` - Quick start guide
+* :doc:`../attacks/index` - Attack reference
+* :doc:`../user-guide/custom-attacks` - Usage and custom attacks

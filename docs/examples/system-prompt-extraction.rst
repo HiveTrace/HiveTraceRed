@@ -418,40 +418,8 @@ Create a custom evaluator for specific detection needs:
        sensitive_keywords=["confidential", "internal", "secret", "BankCorp"]
    )
 
-Mitigation Strategies
----------------------
-
-Tips for protecting system prompts:
-
-.. code-block:: python
-
-   # 1. Use prompt filtering
-   def filter_extraction_attempts(user_prompt: str) -> bool:
-       """Detect and block extraction attempts."""
-       forbidden_phrases = [
-           "system prompt",
-           "your instructions",
-           "repeat",
-           "what are you",
-           "tell me your",
-       ]
-       return any(phrase in user_prompt.lower() for phrase in forbidden_phrases)
-
-   # 2. Implement response filtering
-   def filter_system_prompt_leakage(response: str, system_prompt: str) -> str:
-       """Remove system prompt content from responses."""
-       # Check for significant overlap
-       # Redact or refuse if detected
-       pass
-
-   # 3. Monitor for extraction patterns
-   def monitor_extraction_patterns(conversation_history):
-       """Detect patterns of extraction attempts."""
-       pass
-
 See Also
 --------
 
-* :doc:`../api/evaluators` - Evaluator API reference
-* :doc:`../user-guide/running-pipeline` - Complete pipeline documentation
-* :doc:`../user-guide/evaluators` - Creating custom evaluators
+* :doc:`../api/evaluators` - API documentation
+* :doc:`../user-guide/evaluators` - Custom evaluators

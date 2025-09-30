@@ -69,20 +69,7 @@ Edit ``.env`` and add your API credentials:
 .. note::
    You only need to configure API keys for the LLM providers you plan to use.
 
-Verify Installation
--------------------
-
-Test that the installation is working:
-
-.. code-block:: python
-
-   from attacks import DANAttack
-   from models import OpenAIModel
-
-   print("Installation successful!")
-
 Next Steps
 ----------
 
-* :doc:`quickstart` - Run your first red teaming test
-* :doc:`configuration` - Learn about configuration options
+:doc:`quickstart` - Run your first red teaming test

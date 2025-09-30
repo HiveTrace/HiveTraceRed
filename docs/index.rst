@@ -54,7 +54,6 @@ Table of Contents
    :caption: Attacks Reference
 
    attacks/index
-   attacks/roleplay
 
 .. toctree::
    :maxdepth: 2

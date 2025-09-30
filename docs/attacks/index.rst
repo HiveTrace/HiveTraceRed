@@ -9,15 +9,7 @@ Attack Categories Overview
 Roleplay Attacks
 ~~~~~~~~~~~~~~~~
 
-Attacks that use persona or roleplay techniques to bypass safety measures.
-
-* DAN (Do Anything Now) - Classic jailbreak using alternate persona
-* AIM (Always Intelligent and Machiavellian) - Unethical advisor persona
-* STAN (Strive To Avoid Norms) - Norm-breaking persona
-* Evil Confidant - Trusted advisor persona
-* And more...
-
-See :doc:`roleplay` for detailed examples and usage.
+Attacks that use persona or roleplay techniques to bypass safety measures. Examples include DAN (Do Anything Now), AIM (Always Intelligent and Machiavellian), Evil Confidant, and other persona-based jailbreaks.
 
 Persuasion Attacks
 ~~~~~~~~~~~~~~~~~~
@@ -110,116 +102,28 @@ Direct instruction-based attacks.
 Using Attacks
 -------------
 
-Basic Usage
-~~~~~~~~~~~
-
-.. code-block:: python
-
-   from attacks import DANAttack
-
-   attack = DANAttack()
-   modified_prompt = attack.apply("Your prompt here")
-
-Composing Attacks
-~~~~~~~~~~~~~~~~~
-
 .. code-block:: python
 
    from attacks import DANAttack, Base64OutputAttack
 
-   # Chain attacks
+   # Basic usage
+   attack = DANAttack()
+   modified_prompt = attack.apply("Your prompt here")
+
+   # Composing attacks
    composed = Base64OutputAttack() | DANAttack()
    result = composed.apply("Your prompt")
 
-Batch Processing
-~~~~~~~~~~~~~~~~
+For detailed usage examples, see :doc:`../user-guide/custom-attacks`.
 
-.. code-block:: python
+Attack Selection
+----------------
 
-   import asyncio
-   from attacks import DANAttack
+* **Basic Testing**: Start with NoneAttack (baseline) and DANAttack
+* **Advanced Testing**: Use composed attacks and encoding techniques
+* **Robustness Testing**: Mix categories and test multilingual attacks
 
-   async def process_batch():
-       attack = DANAttack()
-       prompts = ["Prompt 1", "Prompt 2"]
-
-       results = []
-       async for batch in attack.stream_abatch(prompts):
-           results.extend(batch)
-
-       return results
-
-   asyncio.run(process_batch())
-
-Attack Selection Guide
-----------------------
-
-Choose attacks based on your testing goals:
-
-Testing Basic Safety
-~~~~~~~~~~~~~~~~~~~~
-
-Start with:
-
-* NoneAttack (baseline)
-* DANAttack (classic jailbreak)
-* Simple prefix/suffix injection
-
-Testing Advanced Safety
-~~~~~~~~~~~~~~~~~~~~~~~
-
-Progress to:
-
-* Composed attacks (multiple techniques)
-* Encoding-based attacks
-* Context switching
-
-Testing Robustness
-~~~~~~~~~~~~~~~~~~
-
-Use diverse attacks:
-
-* Mix attack categories
-* Combine persuasion with technical attacks
-* Test multilingual attacks
-
-Custom Attacks
---------------
-
-Create custom attacks for specific test scenarios:
-
-.. code-block:: python
-
-   from attacks import TemplateAttack
-
-   class CustomAttack(TemplateAttack):
-       def __init__(self):
-           template = "Your custom template with {prompt}"
-           super().__init__(
-               name="CustomAttack",
-               description="Custom attack description",
-               template=template
-           )
-
-See :doc:`../user-guide/custom-attacks` for detailed guide.
-
-Attack Effectiveness
---------------------
-
-Factors affecting attack success:
-
-1. **Model Robustness**: Some models are better defended
-2. **Attack Sophistication**: Complex attacks may be more effective
-3. **Target Content**: Some content is easier to jailbreak
-4. **Composition**: Combining attacks can increase success rate
-
-Best Practices
---------------
-
-1. **Start Simple**: Begin with baseline and simple attacks
-2. **Document Results**: Track which attacks work on which models
-3. **Iterate**: Refine attacks based on results
-4. **Ethical Use**: Only test on models you have permission to test
+For custom attack creation and detailed strategies, see :doc:`../user-guide/custom-attacks`.
 
 See Also
 --------

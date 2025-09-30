@@ -1,5 +1,6 @@
 name: Publish Sphinx docs to GitHub Pages
 on:
+  workflow_dispatch:
   push:
     branches: [ master ] # change to your default branch
 

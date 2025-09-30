@@ -9,6 +9,7 @@ Base Class
 .. automodule:: models
    :members:
    :undoc-members:
+   :no-index:
 
 Model
 ~~~~~

@@ -10,6 +10,7 @@ Base Classes
    :members:
    :undoc-members:
    :show-inheritance:
+   :no-index:
 
 BaseAttack
 ~~~~~~~~~~
@@ -65,6 +66,7 @@ Roleplay Attacks
 .. automodule:: attacks.types.roleplay
    :members:
    :undoc-members:
+   :no-index:
 
 .. autoclass:: attacks.types.roleplay.DANAttack
    :members:
@@ -87,6 +89,7 @@ Persuasion Attacks
 .. automodule:: attacks.types.persuasion
    :members:
    :undoc-members:
+   :no-index:
 
 Token Smuggling Attacks
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -94,6 +97,7 @@ Token Smuggling Attacks
 .. automodule:: attacks.types.token_smuggling
    :members:
    :undoc-members:
+   :no-index:
 
 Context Switching Attacks
 ~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -101,6 +105,7 @@ Context Switching Attacks
 .. automodule:: attacks.types.context_switching
    :members:
    :undoc-members:
+   :no-index:
 
 In-Context Learning Attacks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -108,6 +113,7 @@ In-Context Learning Attacks
 .. automodule:: attacks.types.in_context_learning
    :members:
    :undoc-members:
+   :no-index:
 
 Task Deflection Attacks
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -115,6 +121,7 @@ Task Deflection Attacks
 .. automodule:: attacks.types.task_deflection
    :members:
    :undoc-members:
+   :no-index:
 
 Text Structure Modification Attacks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -122,6 +129,7 @@ Text Structure Modification Attacks
 .. automodule:: attacks.types.text_structure_modification
    :members:
    :undoc-members:
+   :no-index:
 
 Output Formatting Attacks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -129,6 +137,7 @@ Output Formatting Attacks
 .. automodule:: attacks.types.output_formatting
    :members:
    :undoc-members:
+   :no-index:
 
 Irrelevant Information Attacks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -136,6 +145,7 @@ Irrelevant Information Attacks
 .. automodule:: attacks.types.irrelevant_information
    :members:
    :undoc-members:
+   :no-index:
 
 Simple Instructions Attacks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -143,6 +153,7 @@ Simple Instructions Attacks
 .. automodule:: attacks.types.simple_instructions
    :members:
    :undoc-members:
+   :no-index:
 
 See Also
 --------

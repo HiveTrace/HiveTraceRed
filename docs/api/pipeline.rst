@@ -9,21 +9,26 @@ Module Overview
 .. automodule:: pipeline
    :members:
    :undoc-members:
+   :no-index:
 
 Constants
 ---------
 
-.. autodata:: pipeline.MODEL_CLASSES
-   :annotation: = Dictionary mapping model names to model classes
+**MODEL_CLASSES**
+   Dictionary mapping model names to their implementation classes.
+   Allows dynamic instantiation of models based on configuration strings.
 
-.. autodata:: pipeline.ATTACK_TYPES
-   :annotation: = List of all available attack types
+**ATTACK_TYPES**
+   Dictionary categorizing attack types and their corresponding attack classes.
+   Used for organizing attacks by their strategy/approach.
 
-.. autodata:: pipeline.ATTACK_CLASSES
-   :annotation: = Dictionary mapping attack names to attack classes
+**ATTACK_CLASSES**
+   Dictionary mapping attack names to their implementation classes and types.
+   Allows dynamic instantiation of attacks based on configuration strings.
 
-.. autodata:: pipeline.EVALUATOR_CLASSES
-   :annotation: = Dictionary mapping evaluator names to evaluator classes
+**EVALUATOR_CLASSES**
+   Dictionary mapping evaluator names to their implementation classes.
+   Allows dynamic instantiation of evaluators based on configuration strings.
 
 Pipeline Functions
 ------------------

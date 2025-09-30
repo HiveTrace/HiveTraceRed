@@ -9,6 +9,7 @@ Base Class
 .. automodule:: evaluators
    :members:
    :undoc-members:
+   :no-index:
 
 BaseEvaluator
 ~~~~~~~~~~~~~

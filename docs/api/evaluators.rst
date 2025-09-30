@@ -266,5 +266,5 @@ See Also
 --------
 
 * :doc:`../user-guide/evaluators` - Evaluator guide
-* :doc:`../examples/basic-usage` - Usage examples
+* :doc:`../getting-started/quickstart` - Quick start guide
 * :doc:`../examples/system-prompt-extraction` - System prompt detection example

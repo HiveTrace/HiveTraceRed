@@ -324,5 +324,5 @@ See Also
 --------
 
 * :doc:`../getting-started/configuration` - Configuration reference
-* :doc:`../examples/full-pipeline` - Complete pipeline example
+* :doc:`../getting-started/quickstart` - Quick start guide
 * :doc:`../api/pipeline` - Pipeline API reference

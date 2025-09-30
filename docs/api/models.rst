@@ -215,5 +215,5 @@ See Also
 --------
 
 * :doc:`../user-guide/model-integration` - Model integration guide
-* :doc:`../examples/basic-usage` - Usage examples
+* :doc:`../getting-started/quickstart` - Quick start guide
 * :doc:`../getting-started/configuration` - Configuration options

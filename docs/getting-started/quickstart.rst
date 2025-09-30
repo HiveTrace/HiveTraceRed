@@ -146,5 +146,5 @@ Next Steps
 ----------
 
 * :doc:`configuration` - Learn about all configuration options
+* :doc:`../user-guide/running-pipeline` - Detailed pipeline documentation
 * :doc:`../user-guide/custom-attacks` - Create your own attacks
-* :doc:`../examples/full-pipeline` - Detailed pipeline example

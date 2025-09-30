@@ -20,8 +20,8 @@ Quick Links
 
 * :doc:`getting-started/installation` - Get started quickly
 * :doc:`getting-started/quickstart` - Your first red teaming test
-* :doc:`api/index` - Complete API reference
 * :doc:`attacks/index` - Explore attack types
+* :doc:`api/attacks` - API reference
 
 Table of Contents
 -----------------
@@ -47,8 +47,6 @@ Table of Contents
    :maxdepth: 2
    :caption: Examples
 
-   examples/basic-usage
-   examples/full-pipeline
    examples/system-prompt-extraction
 
 .. toctree::
@@ -57,32 +55,15 @@ Table of Contents
 
    attacks/index
    attacks/roleplay
-   attacks/persuasion
-   attacks/token-smuggling
-   attacks/context-switching
-   attacks/in-context-learning
-   attacks/task-deflection
-   attacks/text-structure
-   attacks/output-formatting
-   attacks/irrelevant-information
-   attacks/simple-instructions
 
 .. toctree::
    :maxdepth: 2
    :caption: API Reference
 
-   api/index
    api/attacks
    api/models
    api/evaluators
    api/pipeline
-   api/utils
-
-.. toctree::
-   :maxdepth: 1
-   :caption: Additional Information
-
-   license
 
 Indices and tables
 ==================

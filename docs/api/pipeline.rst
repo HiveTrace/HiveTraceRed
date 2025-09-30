@@ -345,5 +345,5 @@ See Also
 --------
 
 * :doc:`../user-guide/running-pipeline` - Pipeline usage guide
-* :doc:`../examples/full-pipeline` - Complete pipeline example
+* :doc:`../user-guide/running-pipeline` - Complete pipeline documentation
 * :doc:`../getting-started/configuration` - Configuration reference

@@ -410,4 +410,4 @@ See Also
 
 * :doc:`../api/models` - Model API reference
 * :doc:`running-pipeline` - Using models in the pipeline
-* :doc:`../examples/basic-usage` - Model usage examples
+* :doc:`../getting-started/quickstart` - Quick start guide

@@ -211,4 +211,4 @@ See Also
 
 * :doc:`../attacks/index` - Detailed attack documentation
 * :doc:`../user-guide/custom-attacks` - Creating custom attacks
-* :doc:`../examples/basic-usage` - Usage examples
+* :doc:`../getting-started/quickstart` - Quick start guide

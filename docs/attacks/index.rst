@@ -3,25 +3,8 @@ Attack Types Reference
 
 HiveTraceRed includes 80+ attack implementations organized into 10 categories. This section provides detailed information about each attack type.
 
-Attack Categories
------------------
-
-.. toctree::
-   :maxdepth: 2
-
-   roleplay
-   persuasion
-   token-smuggling
-   context-switching
-   in-context-learning
-   task-deflection
-   text-structure
-   output-formatting
-   irrelevant-information
-   simple-instructions
-
-Category Overview
------------------
+Attack Categories Overview
+--------------------------
 
 Roleplay Attacks
 ~~~~~~~~~~~~~~~~
@@ -34,7 +17,7 @@ Attacks that use persona or roleplay techniques to bypass safety measures.
 * Evil Confidant - Trusted advisor persona
 * And more...
 
-:doc:`roleplay` - Detailed documentation
+See :doc:`roleplay` for detailed examples and usage.
 
 Persuasion Attacks
 ~~~~~~~~~~~~~~~~~~
@@ -45,8 +28,6 @@ Attacks using persuasive techniques and social engineering.
 * Emotional appeal
 * Urgency-based persuasion
 * 40+ persuasion variations
-
-:doc:`persuasion` - Detailed documentation
 
 Token Smuggling
 ~~~~~~~~~~~~~~~
@@ -59,8 +40,6 @@ Attacks that use encoding, obfuscation, or special characters to hide malicious 
 * Unicode manipulation
 * Payload splitting
 
-:doc:`token-smuggling` - Detailed documentation
-
 Context Switching
 ~~~~~~~~~~~~~~~~~
 
@@ -71,8 +50,6 @@ Attacks that switch conversation context to confuse the model.
 * Format switching
 * Role switching
 
-:doc:`context-switching` - Detailed documentation
-
 In-Context Learning
 ~~~~~~~~~~~~~~~~~~~
 
@@ -81,8 +58,6 @@ Attacks using few-shot examples to teach undesired behavior.
 * Few-shot jailbreaking
 * Example-based attacks
 * Pattern completion
-
-:doc:`in-context-learning` - Detailed documentation
 
 Task Deflection
 ~~~~~~~~~~~~~~~
@@ -94,8 +69,6 @@ Attacks that reframe harmful requests as legitimate tasks.
 * Research framing
 * Translation requests
 
-:doc:`task-deflection` - Detailed documentation
-
 Text Structure Modification
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -105,8 +78,6 @@ Attacks that modify text structure to bypass detection.
 * Word insertion
 * Sentence fragmentation
 * Formatting manipulation
-
-:doc:`text-structure` - Detailed documentation
 
 Output Formatting
 ~~~~~~~~~~~~~~~~~
@@ -118,8 +89,6 @@ Attacks that request specific output formats to bypass safety.
 * Table formatting
 * Structured data requests
 
-:doc:`output-formatting` - Detailed documentation
-
 Irrelevant Information
 ~~~~~~~~~~~~~~~~~~~~~~
 
@@ -129,8 +98,6 @@ Attacks that add irrelevant content to confuse safety filters.
 * Context dilution
 * Noise injection
 
-:doc:`irrelevant-information` - Detailed documentation
-
 Simple Instructions
 ~~~~~~~~~~~~~~~~~~~
 
@@ -139,8 +106,6 @@ Direct instruction-based attacks.
 * Prefix injection
 * Suffix injection
 * System override attempts
-
-:doc:`simple-instructions` - Detailed documentation
 
 Using Attacks
 -------------
@@ -261,4 +226,4 @@ See Also
 
 * :doc:`../api/attacks` - Attack API reference
 * :doc:`../user-guide/custom-attacks` - Creating custom attacks
-* :doc:`../examples/basic-usage` - Usage examples
+* :doc:`../getting-started/quickstart` - Quick start guide

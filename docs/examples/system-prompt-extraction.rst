@@ -453,5 +453,5 @@ See Also
 --------
 
 * :doc:`../api/evaluators` - Evaluator API reference
-* :doc:`full-pipeline` - Complete pipeline example
+* :doc:`../user-guide/running-pipeline` - Complete pipeline documentation
 * :doc:`../user-guide/evaluators` - Creating custom evaluators

@@ -200,4 +200,4 @@ See Also
 
 * :doc:`../api/attacks` - Attack API reference
 * :doc:`index` - All attack categories
-* :doc:`../examples/basic-usage` - Usage examples
+* :doc:`../getting-started/quickstart` - Quick start guide

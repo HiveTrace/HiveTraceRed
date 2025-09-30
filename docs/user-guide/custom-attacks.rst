@@ -366,4 +366,4 @@ See Also
 
 * :doc:`../attacks/index` - Browse all built-in attacks
 * :doc:`../api/attacks` - Attack API reference
-* :doc:`../examples/basic-usage` - Attack usage examples
+* :doc:`../getting-started/quickstart` - Quick start guide

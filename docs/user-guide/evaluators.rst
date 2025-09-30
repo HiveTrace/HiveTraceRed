@@ -467,4 +467,4 @@ See Also
 
 * :doc:`../api/evaluators` - Evaluator API reference
 * :doc:`running-pipeline` - Using evaluators in the pipeline
-* :doc:`../examples/full-pipeline` - Complete evaluation examples
+* :doc:`../getting-started/quickstart` - Quick start guide

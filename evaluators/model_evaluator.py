@@ -76,7 +76,7 @@ class ModelEvaluator(BaseEvaluator):
         """
         evaluation_prompt = self.create_evaluation_prompt(prompt, response)
         evaluation_response = self.model.invoke(evaluation_prompt)
-        return self.parse_evaluation_response(evaluation_response)
+        return self._parse_evaluation_response(evaluation_response)
     
     
     @abstractmethod

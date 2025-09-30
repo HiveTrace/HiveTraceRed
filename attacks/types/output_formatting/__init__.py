@@ -9,6 +9,7 @@ from attacks.types.output_formatting.json_output_attack import JSONOutputAttack
 from attacks.types.output_formatting.csv_output_attack import CSVOutputAttack
 from attacks.types.output_formatting.language_output_attack import LanguageOutputAttack
 from attacks.types.output_formatting.base64_output_attack import Base64OutputAttack
+from attacks.types.output_formatting.gradient_methods import GCGTransferHarmbenchAttack, GCGTransferUniversalAttack
 
 __all__ = [
     "PrefixInjectionAttack",
@@ -17,5 +18,7 @@ __all__ = [
     "JSONOutputAttack",
     "CSVOutputAttack",
     "LanguageOutputAttack",
-    "Base64OutputAttack"
+    "Base64OutputAttack",
+    "GCGTransferHarmbenchAttack",
+    "GCGTransferUniversalAttack"
 ] 

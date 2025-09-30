@@ -48,9 +48,9 @@ class UnsafeWordVariableAttack(BaseAttack):
         elif isinstance(prompt, list):
             transformed_messages = prompt[:-1]
 
-            if prompt[-1].get("type") == "human":
+            if prompt[-1].get("role") == "human":
                 prompt_without_unsafe_word = "var = " + unsafe_word + "\n" + prompt[-1]["content"].replace(unsafe_word, "[var]")
-                transformed_messages.append({"type": "human", "content": prompt_without_unsafe_word})
+                transformed_messages.append({"role": "human", "content": prompt_without_unsafe_word})
             else:
                 raise ValueError("Last message in prompt is not a human message")
 
@@ -136,7 +136,7 @@ class UnsafeWordVariableFullAttack(ModelAttack):
                 return prompt
         
         elif isinstance(prompt, list):
-            if prompt[-1].get("type") == "human":
+            if prompt[-1].get("role") == "human":
                 if unsafe_word:
                     return self.unsafe_word_attack.apply(prompt, unsafe_word)
                 else:
@@ -162,7 +162,7 @@ class UnsafeWordVariableFullAttack(ModelAttack):
             if isinstance(prompt, str):
                 # Format the attacker prompt with the user prompt
                 formatted_prompts.append(self.attacker_prompt.format(prompt=prompt))
-            elif isinstance(prompt, list) and prompt and prompt[-1].get("type") == "human":
+            elif isinstance(prompt, list) and prompt and prompt[-1].get("role") == "human":
                 # Format the attacker prompt with the last message content
                 formatted_prompts.append(self.attacker_prompt.format(prompt=prompt[-1]["content"]))
             else:
@@ -178,7 +178,7 @@ class UnsafeWordVariableFullAttack(ModelAttack):
                 transformed_messages = prompts[i][:-1]
                 # Post-process the response
                 processed_response = self.unsafe_word_attack.apply(prompts[i], self.post_process_response(response["content"]))
-                transformed_messages.append({"type": "human", "content": processed_response})
+                transformed_messages.append({"role": "human", "content": processed_response})
                 yield transformed_messages
             i += 1
             

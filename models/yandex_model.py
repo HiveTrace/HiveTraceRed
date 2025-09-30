@@ -66,7 +66,7 @@ class YandexGPTModel(Model):
             # Convert LangChain message format to Yandex GPT format
             formatted_messages = []
             for message in prompt:
-                role = message.get("type", "").lower()
+                role = message.get("role", "").lower()
                 if role == "system":
                     formatted_messages.append({"role": "system", "text": message["content"]})
                 elif role == "human" or role == "user":

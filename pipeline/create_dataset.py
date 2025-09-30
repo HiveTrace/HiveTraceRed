@@ -83,8 +83,8 @@ def create_prompt(base_prompt: str, system_prompt: Optional[str] = None) -> Any:
     """
     if system_prompt:
         return [
-            {"type": "system", "content": system_prompt},
-            {"type": "human", "content": base_prompt}
+            {"role": "system", "content": system_prompt},
+            {"role": "human", "content": base_prompt}
         ]
     return base_prompt
 

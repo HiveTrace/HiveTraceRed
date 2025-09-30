@@ -12,7 +12,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import model classes
-from models import GigaChatModel, OpenAIModel, YandexGPTModel, GeminiModel, GeminiNativeModel
+from models import GigaChatModel, OpenAIModel, YandexGPTModel, GeminiModel, GeminiNativeModel, SberCloudModel, OpenRouterModel
 
 # Import all attack classes and types
 from attacks.base_attack import BaseAttack
@@ -35,10 +35,8 @@ from attacks import ModelAttack
 from attacks.types import *
 
 # Import evaluators
-from evaluators import KeywordEvaluator, WildGuardGPTEvaluator, WildGuardGPTRuEvaluator
+from evaluators import KeywordEvaluator, WildGuardGPTEvaluator, WildGuardGPTRuEvaluator, WildGuardGPTRuHalEvaluator, SystemPromptDetectionEvaluator
 
-# Registry mapping model names to their implementation classes
-# Allows dynamic instantiation of models based on configuration strings
 MODEL_CLASSES = {
     "gigachat": GigaChatModel,
     "gigachat-pro": GigaChatModel,
@@ -57,10 +55,21 @@ MODEL_CLASSES = {
     "gemini-1.5-pro": GeminiModel,
     "gemini-1.5-flash": GeminiModel,
     "gemini-2.5-pro-preview-03-25": GeminiModel,
+    # SberCloud models
+    "GigaChat/GigaChat-2-Max": SberCloudModel,
+    "openai/gpt-oss-120b": SberCloudModel,
+    "Qwen/Qwen3-Next-80B-A3B-Instruct": SberCloudModel,
+    "meta-llama/Llama-3.3-70B-Instruct": SberCloudModel,
+    "t-tech/T-pro-it-2.0": SberCloudModel,
+    # OpenRouter models
+    "x-ai/grok-4-fast:free": OpenRouterModel,
+    "nvidia/nemotron-nano-9b-v2:free": OpenRouterModel,
+    "cognitivecomputations/dolphin-mistral-24b-venice-edition:free": OpenRouterModel,
+    "deepseek/deepseek-chat-v3.1:free": OpenRouterModel,
 }
+"""Registry mapping model names to their implementation classes.
+Allows dynamic instantiation of models based on configuration strings."""
 
-# Categorization of attack types and their corresponding attack classes
-# Used for organizing attacks by their strategy/approach
 ATTACK_TYPES = {
     "simple_instructions": simple_instructions_all,
     "roleplay": roleplay_all,
@@ -73,19 +82,22 @@ ATTACK_TYPES = {
     "irrelevant_information": irrelevant_information_all,
     "in_context_learning": in_context_learning_all
 }
+"""Categorization of attack types and their corresponding attack classes.
+Used for organizing attacks by their strategy/approach."""
 
-# Registry mapping attack names to their implementation classes and types
-# Allows dynamic instantiation of attacks based on configuration strings
 ATTACK_CLASSES = {}
 for attack_type, attack_names in ATTACK_TYPES.items():
     for attack_name in attack_names:
         ATTACK_CLASSES[attack_name] = {"attack_class": globals()[attack_name], "attack_type": attack_type}
+"""Registry mapping attack names to their implementation classes and types.
+Allows dynamic instantiation of attacks based on configuration strings."""
 
-# Registry of available evaluator classes for assessing model responses
-# Allows dynamic instantiation of evaluators based on configuration strings
 EVALUATOR_CLASSES: Dict[str, Any] = {
     "KeywordEvaluator": KeywordEvaluator,
     "WildGuardGPTEvaluator": WildGuardGPTEvaluator,
     "WildGuardGPTRuEvaluator": WildGuardGPTRuEvaluator,
+    "WildGuardGPTRuHalEvaluator": WildGuardGPTRuHalEvaluator,
+    "SystemPromptDetectionEvaluator": SystemPromptDetectionEvaluator,
 }
-
+"""Registry of available evaluator classes for assessing model responses.
+Allows dynamic instantiation of evaluators based on configuration strings."""

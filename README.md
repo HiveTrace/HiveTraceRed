@@ -1,49 +1,72 @@
-# HiveTraceRed: LLM Red Teaming Framework
+# HiveTrace Red: LLM Red Teaming Framework
+
+[![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
+[![Documentation](https://img.shields.io/badge/docs-latest-brightgreen.svg)](https://hivetrace.github.io/HiveTraceRed/)
 
 A security framework for testing Large Language Model (LLM) vulnerabilities through systematic attack methodologies and evaluation pipelines.
 
+## Requirements
+
+- Python 3.10 or higher
+- pip package manager
+- Virtual environment (recommended)
+
 ## Features
 
-- **80+ Attack Types**: Comprehensive library across 10 categories (roleplay, persuasion, token smuggling, etc.)
+- **80+ Attacks**: Comprehensive library across 10 categories (roleplay, persuasion, token smuggling, etc.)
 - **Multiple LLM Providers**: OpenAI, GigaChat, YandexGPT, Google Gemini, and more
-- **Advanced Evaluation**: WildGuard evaluators and systematic safety assessment
+- **Advanced Evaluation**: WildGuard evaluators and systematic response assessment
 - **Async Pipeline**: Efficient streaming architecture for large-scale testing
 - **Multi-Language Support**: Testing across multiple languages including Russian
 
-## Quick Start
+## Attack Categories
 
-```bash
-git clone https://github.com/HiveTrace/HiveTraceRed.git
-cd HiveTraceRed
-pip install -r requirements.txt
+| Category | Description |
+|----------|-------------|
+| **Roleplay** | Persona-based jailbreaks using specific character roles |
+| **Persuasion** | Social engineering techniques and psychological manipulation |
+| **Token Smuggling** | Encoding and obfuscation methods to hide malicious intent |
+| **Context Switching** | Conversation redirection to confuse safety filters |
+| **In-Context Learning** | Few-shot examples to teach undesired behavior |
+| **Task Deflection** | Reframing harmful requests as legitimate tasks |
+| **Text Structure Modification** | Format manipulation to bypass detection |
+| **Output Formatting** | Specific output format requests to bypass safety |
+| **Irrelevant Information** | Content dilution to confuse safety filters |
+| **Simple Instructions** | Direct instruction-based attacks |
+
+## How It Works
+
+```
+Base Prompts → Apply Attacks → Modified Prompts → Target Model → Responses → Evaluator → Results
 ```
 
-Set up API keys in `.env`:
-```bash
-OPENAI_API_KEY=your_openai_api_key_here
-GIGACHAT_CREDENTIALS=your_gigachat_credentials_here
-```
-
-### Example
-
-```python
-from attacks import DANAttack
-from models import OpenAIModel
-
-# Apply attack
-attack = DANAttack()
-modified_prompt = attack.apply("Your prompt here")
-
-# Use with model
-model = OpenAIModel(model="gpt-4.1")
-response = await model.ainvoke(modified_prompt)
-```
-
-Run with configuration:
-```bash
-python run.py --config config.yaml
-```
+The framework provides a 3-stage pipeline:
+1. **Attack Generation**: Apply various attack techniques to base prompts
+2. **Model Testing**: Send modified prompts to target LLMs
+3. **Evaluation**: Assess responses using WildGuard or custom evaluators
 
 ## Documentation
 
-📖 **[Complete Documentation](docs/index.rst)** - Installation, tutorials, API reference, and attack guides
+📖 **[Complete Documentation](https://hivetrace.github.io/HiveTraceRed/)** - Installation, tutorials, API reference, and attack guides
+
+## Responsible Use
+
+⚠️ **This tool is designed for defensive security research only.**
+
+HiveTrace Red should be used exclusively for:
+- Testing and improving your own LLM systems
+- Developing robust AI safety mechanisms
+- Conducting authorized security assessments
+- Academic research on LLM vulnerabilities
+
+**Do NOT use this tool for:**
+- Attacking systems you don't own or have permission to test
+- Malicious purposes or causing harm
+- Bypassing safety measures in production systems without authorization
+
+Users are responsible for ensuring their use complies with applicable laws and the terms of service of the LLM providers they test.
+
+## License
+
+This project is licensed under the Apache License 2.0 - see the [LICENSE](LICENSE) file for details.

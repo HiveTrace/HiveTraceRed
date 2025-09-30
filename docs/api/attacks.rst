@@ -6,16 +6,10 @@ The attacks module provides the framework for creating and applying adversarial 
 Base Classes
 ------------
 
-.. automodule:: attacks
-   :members:
-   :undoc-members:
-   :show-inheritance:
-   :no-index:
-
 BaseAttack
 ~~~~~~~~~~
 
-.. autoclass:: attacks.BaseAttack
+.. autoclass:: attacks.base_attack.BaseAttack
    :members:
    :undoc-members:
    :show-inheritance:
@@ -24,7 +18,7 @@ BaseAttack
 TemplateAttack
 ~~~~~~~~~~~~~~
 
-.. autoclass:: attacks.TemplateAttack
+.. autoclass:: attacks.template_attack.TemplateAttack
    :members:
    :undoc-members:
    :show-inheritance:
@@ -33,7 +27,7 @@ TemplateAttack
 AlgoAttack
 ~~~~~~~~~~
 
-.. autoclass:: attacks.AlgoAttack
+.. autoclass:: attacks.algo_attack.AlgoAttack
    :members:
    :undoc-members:
    :show-inheritance:
@@ -42,7 +36,7 @@ AlgoAttack
 ModelAttack
 ~~~~~~~~~~~
 
-.. autoclass:: attacks.ModelAttack
+.. autoclass:: attacks.model_attack.ModelAttack
    :members:
    :undoc-members:
    :show-inheritance:
@@ -51,7 +45,7 @@ ModelAttack
 ComposedAttack
 ~~~~~~~~~~~~~~
 
-.. autoclass:: attacks.ComposedAttack
+.. autoclass:: attacks.composed_attack.ComposedAttack
    :members:
    :undoc-members:
    :show-inheritance:
@@ -67,21 +61,6 @@ Roleplay Attacks
    :members:
    :undoc-members:
    :no-index:
-
-.. autoclass:: attacks.types.roleplay.DANAttack
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. autoclass:: attacks.types.roleplay.AIMAttack
-   :members:
-   :undoc-members:
-   :show-inheritance:
-
-.. autoclass:: attacks.types.roleplay.EvilConfidantAttack
-   :members:
-   :undoc-members:
-   :show-inheritance:
 
 Persuasion Attacks
 ~~~~~~~~~~~~~~~~~~

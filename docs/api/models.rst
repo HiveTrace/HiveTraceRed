@@ -14,7 +14,7 @@ Base Class
 Model
 ~~~~~
 
-.. autoclass:: models.Model
+.. autoclass:: models.base_model.Model
    :members:
    :undoc-members:
    :show-inheritance:
@@ -26,7 +26,7 @@ Model Implementations
 OpenAI Models
 ~~~~~~~~~~~~~
 
-.. autoclass:: models.OpenAIModel
+.. autoclass:: models.openai_model.OpenAIModel
    :members:
    :undoc-members:
    :show-inheritance:
@@ -35,7 +35,7 @@ OpenAI Models
 GigaChat Models
 ~~~~~~~~~~~~~~~
 
-.. autoclass:: models.GigaChatModel
+.. autoclass:: models.gigachat_model.GigaChatModel
    :members:
    :undoc-members:
    :show-inheritance:
@@ -44,7 +44,7 @@ GigaChat Models
 Yandex Models
 ~~~~~~~~~~~~~
 
-.. autoclass:: models.YandexGPTModel
+.. autoclass:: models.yandex_model.YandexGPTModel
    :members:
    :undoc-members:
    :show-inheritance:
@@ -53,13 +53,13 @@ Yandex Models
 Google Gemini Models
 ~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: models.GeminiModel
+.. autoclass:: models.gemini_model.GeminiModel
    :members:
    :undoc-members:
    :show-inheritance:
    :special-members: __init__
 
-.. autoclass:: models.GeminiNativeModel
+.. autoclass:: models.gemini_native_model.GeminiNativeModel
    :members:
    :undoc-members:
    :show-inheritance:
@@ -68,7 +68,7 @@ Google Gemini Models
 Sber Cloud Models
 ~~~~~~~~~~~~~~~~~
 
-.. autoclass:: models.SberCloudModel
+.. autoclass:: models.sber_cloud_model.SberCloudModel
    :members:
    :undoc-members:
    :show-inheritance:
@@ -77,7 +77,7 @@ Sber Cloud Models
 OpenRouter Models
 ~~~~~~~~~~~~~~~~~
 
-.. autoclass:: models.OpenRouterModel
+.. autoclass:: models.openrouter_model.OpenRouterModel
    :members:
    :undoc-members:
    :show-inheritance:

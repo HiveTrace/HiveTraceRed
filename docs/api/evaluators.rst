@@ -14,7 +14,7 @@ Base Class
 BaseEvaluator
 ~~~~~~~~~~~~~
 
-.. autoclass:: evaluators.BaseEvaluator
+.. autoclass:: evaluators.base_evaluator.BaseEvaluator
    :members:
    :undoc-members:
    :show-inheritance:
@@ -26,19 +26,19 @@ Evaluator Implementations
 WildGuard Evaluators
 ~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: evaluators.WildGuardGPTEvaluator
+.. autoclass:: evaluators.wild_guard_evaluator.WildGuardGPTEvaluator
    :members:
    :undoc-members:
    :show-inheritance:
    :special-members: __init__
 
-.. autoclass:: evaluators.WildGuardGPTRuEvaluator
+.. autoclass:: evaluators.wild_guard_ru_evaluator.WildGuardGPTRuEvaluator
    :members:
    :undoc-members:
    :show-inheritance:
    :special-members: __init__
 
-.. autoclass:: evaluators.WildGuardGPTRuHalEvaluator
+.. autoclass:: evaluators.wild_guard_ru_hal_evaluator.WildGuardGPTRuHalEvaluator
    :members:
    :undoc-members:
    :show-inheritance:
@@ -47,7 +47,7 @@ WildGuard Evaluators
 Keyword Evaluator
 ~~~~~~~~~~~~~~~~~
 
-.. autoclass:: evaluators.KeywordEvaluator
+.. autoclass:: evaluators.keyword_evaluator.KeywordEvaluator
    :members:
    :undoc-members:
    :show-inheritance:
@@ -56,7 +56,7 @@ Keyword Evaluator
 Model Evaluator
 ~~~~~~~~~~~~~~~
 
-.. autoclass:: evaluators.ModelEvaluator
+.. autoclass:: evaluators.model_evaluator.ModelEvaluator
    :members:
    :undoc-members:
    :show-inheritance:
@@ -65,7 +65,7 @@ Model Evaluator
 System Prompt Detection Evaluator
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: evaluators.SystemPromptDetectionEvaluator
+.. autoclass:: evaluators.system_prompt_detection_evaluator.SystemPromptDetectionEvaluator
    :members:
    :undoc-members:
    :show-inheritance:

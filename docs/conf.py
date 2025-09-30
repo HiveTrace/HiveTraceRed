@@ -58,10 +58,27 @@ autodoc_default_options = {
     'undoc-members': True,
     'show-inheritance': True,
     'special-members': '__init__',
+    'imported-members': True,
 }
 
 autodoc_typehints = 'description'
 autodoc_typehints_description_target = 'documented'
+
+# Mock imports for optional dependencies
+autodoc_mock_imports = [
+    'transliterate',
+    'langchain_gigachat',
+    'langchain_google_genai',
+    'langchain_openai',
+    'dotenv',
+    'tqdm',
+    'langchain_core',
+    'yandex_cloud_ml_sdk',
+    'aiohttp',
+    'requests',
+    'google',
+    'google.genai',
+]
 
 # autosummary configuration
 autosummary_generate = True

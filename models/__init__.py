@@ -12,6 +12,7 @@ from models.gemini_native_model import GeminiNativeModel
 from models.sber_cloud_model import SberCloudModel
 from models.openrouter_model import OpenRouterModel
 from models.ollama_model import OllamaModel
+from models.llamacpp_model import LlamaCppModel
 
 __all__ = [
     "Model",
@@ -22,5 +23,6 @@ __all__ = [
     "GeminiNativeModel",
     "SberCloudModel",
     "OpenRouterModel",
-    "OllamaModel"
+    "OllamaModel",
+    "LlamaCppModel"
 ]

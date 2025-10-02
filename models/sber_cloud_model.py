@@ -20,6 +20,7 @@ class SberCloudModel(LangchainModel):
         rpm: int = 60,
         api_key: str = os.getenv("SBER_CLOUD_API_KEY"),
         base_url: str = "https://foundation-models.api.cloud.ru/v1",
+        max_retries: int = 3,
         **kwargs: Any,
     ):
         """
@@ -31,12 +32,14 @@ class SberCloudModel(LangchainModel):
             rpm: Requests-per-minute soft limit enforced client-side.
             api_key: API key; defaults to GIGACHAT_CLOUD_API_KEY env var.
             base_url: Override API base URL; defaults to Cloud.ru endpoint.
+            max_retries: Maximum number of retry attempts on transient errors (default: 3)
             **kwargs: Passed to ChatOpenAI (e.g., temperature, max_tokens, top_p).
         """
         load_dotenv(override=True)
 
         self.model_name = model
         self.batch_size = batch_size
+        self.max_retries = max_retries
 
         # Defaults
         self.kwargs = kwargs or {}
@@ -57,5 +60,6 @@ class SberCloudModel(LangchainModel):
             rate_limiter=rate_limiter,
             **self.kwargs,
         )
+        self.client = self._add_retry_policy(self.client)
 
 

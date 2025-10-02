@@ -40,56 +40,40 @@ async def stream_model_responses(
     # Create a mapping from prompt index to attack prompt data
     prompt_index_to_data = [prompt_data for prompt_data in attack_prompts]
     prompts = [prompt_data.get("prompt", "") for prompt_data in attack_prompts]
-   
-    # For saving intermediate and final results
-    yielded_results = []
-    
+
+    # Keep track of processed prompts
+    processed_count = 0
+
     # Process prompts and handle responses as they complete
-    try:
-        # Keep track of processed prompts
-        processed_count = 0
-        
-        # Use the model's abatch_ordered_as_completed method
-        async for response in model.stream_abatch(prompts):
-            # Get corresponding prompt data
-            prompt_data = prompt_index_to_data[processed_count]
-            
-            # Create response data
-            response_data = {
-                **prompt_data,
-                "model": model.__class__.__name__,
-                "model_params": model.get_params(),
-                "response": response.get("content", ""),
-                "raw_response": response,
-                # "response_timestamp": get_timestamp(),
-                "is_blocked": model.is_answer_blocked(response),
-            }
-            
-            # Yield the response data
-            yield response_data
-            
-            # Increment processed count
-            processed_count += 1
-            
-            
-    except Exception as e:
-        print(f"Error processing batch: {str(e)}")
-        # Add error response for remaining prompts
-        for i in range(processed_count, len(prompts)):
-            prompt_data = prompt_index_to_data[i]
-            response_data = {
-                **prompt_data,
-                "model": model.__class__.__name__,
-                "model_params": model.get_params(),
-                "response": "",
-                "raw_response": {"error": str(e)},
-                # "response_timestamp": get_timestamp(),
-                "is_blocked": True,
-                "error": str(e)
-            }
-            # Yield the error response
-            yield response_data
-    
+    # Individual errors are now handled at the model level
+    async for response in model.stream_abatch(prompts):
+        # Get corresponding prompt data
+        prompt_data = prompt_index_to_data[processed_count]
+
+        # Check if this response has an error
+        has_error = "error" in response
+
+        # Create response data
+        response_data = {
+            **prompt_data,
+            "model": model.__class__.__name__,
+            "model_params": model.get_params(),
+            "response": response.get("content", ""),
+            "raw_response": response,
+            # "response_timestamp": get_timestamp(),
+            "is_blocked": model.is_answer_blocked(response),
+        }
+
+        # Add error field if present
+        if has_error:
+            response_data["error"] = response["error"]
+
+        # Yield the response data
+        yield response_data
+
+        # Increment processed count
+        processed_count += 1
+
     print(f"✓ Processed {processed_count} responses from model {model.__class__.__name__}")
 
 

@@ -5,6 +5,7 @@ Data I/O utility functions for saving and loading pipeline data using pandas.
 import os
 import pandas as pd
 import numpy as np
+import pyarrow as pa
 from typing import Dict, Any, List, Optional
 from datetime import datetime
 from models.base_model import Model
@@ -13,6 +14,15 @@ from attacks.base_attack import BaseAttack
 def get_filename_timestamp() -> str:
     """Get a timestamp string for filenames."""
     return datetime.now().strftime("%Y%m%d_%H%M%S")
+
+def is_parquet_serializable(value) -> bool:
+    """Check if a value can be serialized to Parquet."""
+    try:
+        # Try to infer the PyArrow type
+        pa.infer_type([value])
+        return True
+    except (pa.ArrowInvalid, pa.ArrowTypeError, TypeError, ValueError):
+        return False
 
 def make_parquet_compatible(value):
     # Check for basic Parquet-compatible types
@@ -39,18 +49,23 @@ def make_parquet_compatible(value):
             if isinstance(v, dict) and not v:
                 res[k] = None
             else:
-                res[k] = make_parquet_compatible(v)
+                converted = make_parquet_compatible(v)
+                # Only add if the converted value is serializable
+                if is_parquet_serializable(converted):
+                    res[k] = converted
         return res
     # Convert any other type to its string representation
     else:
-        print(value)
         name = value.__class__.__name__
         args = value.__dict__
         res_args = {}
         for k, v in args.items():
             if not k.startswith("_"):
-                res_args[k] = make_parquet_compatible(v)
-        return {name: res_args}
+                converted = make_parquet_compatible(v)
+                # Only add if the converted value is serializable
+                if is_parquet_serializable(converted):
+                    res_args[k] = converted
+        return {name: res_args} if res_args else str(value)
     
 def save_to_parquet(data: Dict[str, Any], output_dir: str, filename: str) -> str:
     """

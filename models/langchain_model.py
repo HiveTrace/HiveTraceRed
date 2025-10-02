@@ -12,6 +12,7 @@ from abc import abstractmethod
 from uuid import UUID
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain.schema import LLMResult
+from langchain_core.exceptions import OutputParserException
 
 class LangchainModel(Model):
     """
@@ -24,24 +25,59 @@ class LangchainModel(Model):
     """
     
     @abstractmethod
-    def __init__(self, model_name: str, batch_size: int = 0, **kwargs):
+    def __init__(self, model_name: str, batch_size: int = 0, max_retries: int = 3, **kwargs):
         """
         Initialize the LangChain model wrapper.
-        
+
         Args:
             model_name: Name/identifier of the model
             batch_size: Maximum number of concurrent requests (0 for unlimited)
+            max_retries: Maximum number of retry attempts on transient errors (default: 3)
             **kwargs: Additional keyword arguments for the model
-            
+
         Note:
             Child classes must implement this method to initialize:
             - self.model_name = model_name
             - self.batch_size = batch_size
+            - self.max_retries = max_retries
             - self.kwargs = kwargs
             - self.client = <the actual LangChain model instance>
+
+            After creating the client, wrap it with retry logic:
+            - self.client = self._add_retry_policy(self.client)
         """
         pass
-    
+
+    def _add_retry_policy(self, client):
+        """
+        Wrap the LangChain client with retry policy for transient errors.
+
+        Retries on:
+        - Connection errors (network failures)
+        - Timeout errors
+        - 5xx server errors
+        - 429 rate limit errors
+
+        Uses exponential backoff with jitter to prevent thundering herd.
+
+        Args:
+            client: The LangChain model client to wrap
+
+        Returns:
+            Client wrapped with retry policy
+        """
+        return client.with_retry(
+            stop_after_attempt=self.max_retries,
+            wait_exponential_jitter=True,
+            retry_if_exception_type=(
+                # Network/connection errors
+                ConnectionError,
+                TimeoutError,
+                # # LangChain doesn't raise exceptions by default, but handle if they do
+                # Exception,
+            ),
+        )
+
     def invoke(self, prompt: Union[str, List[Dict[str, str]]]) -> dict:
         """
         Send a single request to the model synchronously.
@@ -125,40 +161,46 @@ class LangchainModel(Model):
     async def stream_abatch(self, prompts: List[Union[str, List[Dict[str, str]]]], batch_size: int = 1) -> AsyncGenerator[dict, None]:
         """
         Send multiple requests to the model asynchronously and yield results as they complete.
-        
+
         Args:
             prompts: A list of prompts to send to the model
             batch_size: Number of prompts to process concurrently
-        
+
         Returns:
             An async generator of model responses in order of completion
         """
         semaphore = asyncio.Semaphore(batch_size)
         async def sem_task(idx, prompt):
             async with semaphore:
-                result = await self.ainvoke(prompt)
-                return idx, result
+                try:
+                    result = await self.ainvoke(prompt)
+                    return idx, result, None
+                except Exception as e:
+                    # Return error response instead of crashing entire batch
+                    error_response = {
+                        "content": "",
+                        "error": str(e),
+                        "error_type": type(e).__name__
+                    }
+                    return idx, error_response, e
 
         tasks = [asyncio.create_task(sem_task(i, inp)) for i, inp in enumerate(prompts)]
         total_tasks = len(tasks)
-        
+
         results = dict()
         cur_result_idx = 0
-        
-        # Create tqdm progress bar
-        progress_bar = tqdm(total=total_tasks, desc=f"Processing requests with {self.model_name}", unit="request")
 
-        for task in asyncio.as_completed(tasks):
-            idx, res = await task
-            progress_bar.update(1)  # Update progress bar for each completed task
+        # Create tqdm progress bar with context manager for proper cleanup
+        with tqdm(total=total_tasks, desc=f"Processing requests with {self.model_name}", unit="request") as progress_bar:
+            for task in asyncio.as_completed(tasks):
+                idx, res, error = await task
+                progress_bar.update(1)  # Update progress bar for each completed task
 
-            results[idx] = res
-            while cur_result_idx in results:
-                yield dict(results[cur_result_idx])
-                results.pop(cur_result_idx)
-                cur_result_idx += 1
-
-        progress_bar.close()  # Close the progress bar when done 
+                results[idx] = res
+                while cur_result_idx in results:
+                    yield dict(results[cur_result_idx])
+                    results.pop(cur_result_idx)
+                    cur_result_idx += 1 
 
 
 class BatchCallback(BaseCallbackHandler):

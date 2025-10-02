@@ -11,6 +11,7 @@ from models.gemini_model import GeminiModel
 from models.gemini_native_model import GeminiNativeModel
 from models.sber_cloud_model import SberCloudModel
 from models.openrouter_model import OpenRouterModel
+from models.ollama_model import OllamaModel
 
 __all__ = [
     "Model",
@@ -20,5 +21,6 @@ __all__ = [
     "GeminiModel",
     "GeminiNativeModel",
     "SberCloudModel",
-    "OpenRouterModel"
+    "OpenRouterModel",
+    "OllamaModel"
 ]

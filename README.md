@@ -51,6 +51,16 @@ The framework provides a 3-stage pipeline:
 2. **Model Testing**: Send modified prompts to target LLMs
 3. **Evaluation**: Assess responses using WildGuard or custom evaluators
 
+### Results Example
+
+The framework provides detailed attack analysis showing success rates across different attack types and individual attack techniques:
+
+![Attack Analysis Results](assets/Results.png)
+
+The analysis includes:
+- **Success Rate by Attack Type**: Comparative effectiveness of different attack categories (persuasion, roleplay, simple instructions, etc.)
+- **Success Rate by Attack Name**: Granular breakdown of individual attack technique performance
+
 ## Documentation
 
 📖 **[Complete Documentation](https://hivetrace.github.io/HiveTraceRed/)** - Installation, tutorials, API reference, and attack guides

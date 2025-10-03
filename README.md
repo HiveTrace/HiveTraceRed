@@ -1,4 +1,7 @@
+![HiveTrace Red](assets/HiveTraceRed.jpg)
+
 # HiveTrace Red: LLM Red Teaming Framework
+
 
 [![License](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
@@ -6,11 +9,13 @@
 
 A security framework for testing Large Language Model (LLM) vulnerabilities through systematic attack methodologies and evaluation pipelines.
 
-## Requirements
+HiveTrace Red can be used for:
+- **Red teaming your LLM applications** - Test safety guardrails before deployment
+- **Research & benchmarking** - Systematic evaluation of LLM robustness across attack vectors
+- **Compliance testing** - Validate AI safety requirements and regulatory standards
+- **Attack technique research** - Explore and compose novel jailbreak methodologies
 
-- Python 3.10 or higher
-- pip package manager
-- Virtual environment (recommended)
+HiveTrace Red combines static attack templates, dynamic prompt manipulation, and adaptive evaluation to systematically explore LLM failure modes. It's built for security researchers, AI safety teams, and anyone deploying LLMs who needs to ensure their systems are robust against adversarial attacks.
 
 ## Features
 
@@ -46,9 +51,25 @@ The framework provides a 3-stage pipeline:
 2. **Model Testing**: Send modified prompts to target LLMs
 3. **Evaluation**: Assess responses using WildGuard or custom evaluators
 
+### Results Example
+
+The framework provides detailed attack analysis showing success rates across different attack types and individual attack techniques:
+
+![Attack Analysis Results](assets/Results.png)
+
+The analysis includes:
+- **Success Rate by Attack Type**: Comparative effectiveness of different attack categories (persuasion, roleplay, simple instructions, etc.)
+- **Success Rate by Attack Name**: Granular breakdown of individual attack technique performance
+
 ## Documentation
 
 📖 **[Complete Documentation](https://hivetrace.github.io/HiveTraceRed/)** - Installation, tutorials, API reference, and attack guides
+
+## Requirements
+
+- Python 3.10 or higher
+- pip package manager
+- Virtual environment (recommended)
 
 ## Responsible Use
 

@@ -12,7 +12,7 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 # Import model classes
-from models import GigaChatModel, OpenAIModel, YandexGPTModel, GeminiModel, GeminiNativeModel, SberCloudModel, OpenRouterModel
+from models import GigaChatModel, OpenAIModel, YandexGPTModel, GeminiModel, GeminiNativeModel, SberCloudModel, OpenRouterModel, OllamaModel
 
 # Import all attack classes and types
 from attacks.base_attack import BaseAttack
@@ -66,6 +66,7 @@ MODEL_CLASSES = {
     "nvidia/nemotron-nano-9b-v2:free": OpenRouterModel,
     "cognitivecomputations/dolphin-mistral-24b-venice-edition:free": OpenRouterModel,
     "deepseek/deepseek-chat-v3.1:free": OpenRouterModel,
+    "ollama/qwen3:0.6b": OllamaModel,
 }
 """Registry mapping model names to their implementation classes.
 Allows dynamic instantiation of models based on configuration strings."""

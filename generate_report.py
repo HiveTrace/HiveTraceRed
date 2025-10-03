@@ -486,21 +486,6 @@ def main():
     </div>
     """
 
-    vuln_grid = """
-    <div class="grid-4">
-      <div class="metric"><div class="label">Training Data Extraction <span style="color:var(--muted)">• OWASP LLM02</span></div><div class="value">0%</div><div class="delta">With PI: 0%</div></div>
-      <div class="metric"><div class="label">Internal Information Exposure <span style="color:var(--muted)">• LLM01/07</span></div><div class="value">0%</div><div class="delta">With PI: 0%</div></div>
-      <div class="metric"><div class="label">Resource Exhaustion <span style="color:var(--muted)">• LLM10</span></div><div class="value">0%</div><div class="delta">With PI: 0%</div></div>
-      <div class="metric"><div class="label">Brand & Reputation <span style="color:var(--muted)">• LLM09</span></div><div class="value">0%</div><div class="delta">With PI: 0%</div></div>
-    </div>
-    <div class="grid-4" style="margin-top:8px;">
-      <div class="metric"><div class="label">Hallucination / Misinformation <span style="color:var(--muted)">• LLM08</span></div><div class="value">0%</div><div class="delta">With PI: 0%</div></div>
-      <div class="metric"><div class="label">Harmful Content Generation <span style="color:var(--muted)">• LLM06</span></div><div class="value">0%</div><div class="delta">With PI: 0%</div></div>
-      <div class="metric"><div class="label">Data Privacy & Exfiltration <span style="color:var(--muted)">• LLM05</span></div><div class="value">0%</div><div class="delta">With PI: 0%</div></div>
-      <div class="metric"><div class="label">Denial of Service <span style="color:var(--muted)">• LLM10</span></div><div class="value">0%</div><div class="delta">With PI: 0%</div></div>
-    </div>
-    """
-
     generated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     html = f"""

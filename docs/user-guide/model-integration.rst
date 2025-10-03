@@ -17,6 +17,8 @@ HiveTraceRed provides the following model classes for various LLM providers:
 * **GeminiNativeModel**: Google Gemini models
 * **OpenRouterModel**: Access to multiple model providers
 * **SberCloudModel**: Sber Cloud ML models
+* **OllamaModel**: Local models via Ollama server
+* **LlamaCppModel**: Local GGUF models via llama.cpp (direct inference)
 
 Using Built-in Models
 ----------------------
@@ -103,6 +105,62 @@ OpenRouter
    )
 
    response = await model.ainvoke("Tell me a joke")
+
+Ollama Models
+~~~~~~~~~~~~~
+
+.. code-block:: python
+
+   from models import OllamaModel
+
+   # Requires Ollama server running (https://ollama.com)
+   model = OllamaModel(
+       model="qwen3:0.6b",
+       base_url="http://localhost:11434"
+   )
+
+   response = await model.ainvoke("Explain quantum computing")
+
+Llama.cpp Models (Local GGUF)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: python
+
+   from models import LlamaCppModel
+
+   # CPU-only inference
+   model = LlamaCppModel(
+       model_path="/path/to/model.gguf",
+       n_ctx=8192,
+       batch_size=5
+   )
+
+   # GPU-accelerated inference
+   model = LlamaCppModel(
+       model_path="/path/to/llama-3.2-8b-instruct-q5.gguf",
+       n_gpu_layers=-1,  # Auto-detect and use all GPU layers
+       n_ctx=16384,
+       temperature=0.7,
+       max_tokens=2048
+   )
+
+   response = await model.ainvoke("Explain machine learning")
+
+**Installation for GPU acceleration:**
+
+.. code-block:: bash
+
+   # NVIDIA GPU (CUDA)
+   CMAKE_ARGS="-DGGML_CUDA=on" pip install llama-cpp-python
+
+   # Apple Silicon (Metal)
+   CMAKE_ARGS="-DGGML_METAL=on" pip install llama-cpp-python
+
+**Download GGUF models:**
+
+GGUF models are available on Hugging Face: https://huggingface.co/models?library=gguf
+
+Popular model families include Llama, Mistral, Qwen, Phi, and more in various quantization levels (Q4, Q5, Q8).
 
 Model Interface
 ---------------

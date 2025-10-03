@@ -8,6 +8,7 @@ from models.base_model import Model
 from dotenv import load_dotenv
 import requests
 from yandex_cloud_ml_sdk import YCloudML
+from yandexcloud import SDK, RetryPolicy
 import time
 import threading
 from concurrent.futures import ThreadPoolExecutor
@@ -22,13 +23,14 @@ class YandexGPTModel(Model):
     and asynchronous operations, batched requests, and error handling.
     """
     
-    def __init__(self, model="yandexgpt", batch_size: int = 10, **kwargs):
+    def __init__(self, model="yandexgpt", batch_size: int = 10, max_retries: int = 3, **kwargs):
         """
         Initialize the Yandex GPT model client with the specified configuration.
-        
+
         Args:
             model: Yandex model identifier (e.g., "yandexgpt", "yandexgpt-lite")
             batch_size: Maximum number of concurrent requests in batch operations
+            max_retries: Maximum number of retry attempts on transient errors (default: 3)
             **kwargs: Additional parameters for model configuration:
                      - temperature: Sampling temperature (lower = more deterministic)
                      - max_tokens: Maximum tokens in generated responses
@@ -37,14 +39,24 @@ class YandexGPTModel(Model):
         load_dotenv(override=True)
         self.model_name = model
         self.batch_size = batch_size
+        self.max_retries = max_retries
         self.kwargs = kwargs or {}
 
         if not "temperature" in self.kwargs:
             self.kwargs["temperature"] = 0.000001
-            
+
+        # Configure retry policy with exponential backoff and jitter
+        retry_policy = RetryPolicy(
+            max_retry_count=self.max_retries,
+            exponential_backoff_base=2,  # 2^n seconds
+            initial_delay=1.0,  # Start with 1 second delay
+            max_delay=60.0,  # Max 60 seconds between retries
+        )
+
         sdk = YCloudML(
             folder_id=os.getenv("YANDEX_FOLDER_ID"),
-            auth=os.getenv("YANDEX_GPT_API_KEY")
+            auth=os.getenv("YANDEX_GPT_API_KEY"),
+            retry_policy=retry_policy,  # Pass retry policy to SDK
         )
         self.client = sdk.models.completions(self.model_name).configure(
             **self.kwargs
@@ -264,30 +276,31 @@ class YandexGPTModel(Model):
         
         formatted_prompts = [self._format_prompt(prompt) for prompt in prompts]
         # Yandex GPT API has a limit of 10 async requests per second
-        for i in tqdm(range(0, len(formatted_prompts), self.batch_size), 
-                     desc=f"Submitting batches with {self.model_name}", 
+        for i in tqdm(range(0, len(formatted_prompts), self.batch_size),
+                     desc=f"Submitting batches with {self.model_name}",
                      unit="batch"):
             for prompt in formatted_prompts[i:i + self.batch_size]:
                 try:
                     operation = self.client.run_deferred(prompt)
                     operations.append(operation)
                 except AioRpcError as e:
+                    # Return error response with proper error metadata
                     operations.append({
                         'content': 'В интернете есть много сайтов с информацией на эту тему. [Посмотрите, что нашлось в поиске](https://ya.ru)',
                         'role': 'assistant',
-                        'status': 4
+                        'status': 4,
+                        'error': str(e),
+                        'error_type': type(e).__name__
                     })
             time.sleep(1)
 
-        progress_bar = tqdm(total=len(operations), desc=f"Processing requests with {self.model_name}", unit="request")
-        
-        for operation in operations:
-            progress_bar.update(1)
+        # Use context manager for proper cleanup even if errors occur
+        with tqdm(total=len(operations), desc=f"Processing requests with {self.model_name}", unit="request") as progress_bar:
+            for operation in operations:
+                progress_bar.update(1)
 
-            if isinstance(operation, dict):
-                yield operation
-            else:
-                response = operation.wait()
-                yield self._format_response(response)
-        
-        progress_bar.close()
+                if isinstance(operation, dict):
+                    yield operation
+                else:
+                    response = operation.wait()
+                    yield self._format_response(response)

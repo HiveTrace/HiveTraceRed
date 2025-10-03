@@ -31,8 +31,8 @@ base_prompts:
 
 # Alternatively, load prompts from a file
 base_prompts_file: prompts/malicious_prompts.txt
-attack_prompts_file: results/run_20250503_103026/attack_prompts_results_20250503_103109.parquet
-model_responses_file: results/run_20250503_105014/model_responses_results_20250503_105022.parquet
+attack_prompts_file: results/attacks/attack_prompts.parquet
+model_responses_file: results/responses/model_responses.parquet
 
 stages:
   create_attack_prompts: true

@@ -75,14 +75,21 @@ autodoc_mock_imports = [
     'langchain_gigachat',
     'langchain_google_genai',
     'langchain_openai',
+    'langchain_ollama',
+    'langchain_community',
+    'langchain',
     'dotenv',
     'tqdm',
     'langchain_core',
     'yandex_cloud_ml_sdk',
+    'yandexcloud',
     'aiohttp',
     'requests',
     'google',
     'google.genai',
+    'tenacity',
+    'pandas',
+    'pyarrow',
 ]
 
 # autosummary configuration

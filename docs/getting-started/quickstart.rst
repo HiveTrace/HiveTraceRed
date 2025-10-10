@@ -10,7 +10,7 @@ Apply a single attack to a prompt:
 
 .. code-block:: python
 
-   from attacks import DANAttack
+   from hivetracered.attacks import DANAttack
 
    # Create an attack instance
    attack = DANAttack()
@@ -30,8 +30,8 @@ Test an attack against an LLM:
 .. code-block:: python
 
    import asyncio
-   from attacks import DANAttack
-   from models import OpenAIModel
+   from hivetracered.attacks import DANAttack
+   from hivetracered.models import OpenAIModel
 
    async def test_attack():
        # Initialize attack and model
@@ -57,9 +57,9 @@ Use an evaluator to assess the model's safety:
 .. code-block:: python
 
    import asyncio
-   from attacks import DANAttack
-   from models import OpenAIModel
-   from evaluators import WildGuardGPTEvaluator
+   from hivetracered.attacks import DANAttack
+   from hivetracered.models import OpenAIModel
+   from hivetracered.evaluators import WildGuardGPTEvaluator
 
    async def evaluate_response():
        # Setup
@@ -87,10 +87,10 @@ Process multiple prompts efficiently using streaming functions:
 .. code-block:: python
 
    import asyncio
-   from attacks import DANAttack, AIMAttack, NoneAttack
-   from models import OpenAIModel
-   from evaluators import WildGuardGPTEvaluator
-   from pipeline import stream_attack_prompts, stream_model_responses, stream_evaluated_responses
+   from hivetracered.attacks import DANAttack, AIMAttack, NoneAttack
+   from hivetracered.models import OpenAIModel
+   from hivetracered.evaluators import WildGuardGPTEvaluator
+   from hivetracered.pipeline import stream_attack_prompts, stream_model_responses, stream_evaluated_responses
 
    async def batch_process_prompts():
        # Setup

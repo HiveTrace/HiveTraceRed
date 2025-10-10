@@ -6,7 +6,7 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.io as pio
-from pipeline.owasp_mapping import map_to_owasp, get_owasp_description
+from hivetracered.pipeline.owasp_mapping import map_to_owasp, get_owasp_description
 
 def get_chart_style():
     return {

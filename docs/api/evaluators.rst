@@ -6,15 +6,10 @@ The evaluators module provides tools for assessing model responses for safety vi
 Base Class
 ----------
 
-.. automodule:: evaluators
-   :members:
-   :undoc-members:
-   :no-index:
-
 BaseEvaluator
 ~~~~~~~~~~~~~
 
-.. autoclass:: evaluators.base_evaluator.BaseEvaluator
+.. autoclass:: hivetracered.evaluators.base_evaluator.BaseEvaluator
    :members:
    :undoc-members:
    :show-inheritance:
@@ -26,19 +21,19 @@ Evaluator Implementations
 WildGuard Evaluators
 ~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: evaluators.wild_guard_evaluator.WildGuardGPTEvaluator
+.. autoclass:: hivetracered.evaluators.wild_guard_evaluator.WildGuardGPTEvaluator
    :members:
    :undoc-members:
    :show-inheritance:
    :special-members: __init__
 
-.. autoclass:: evaluators.wild_guard_ru_evaluator.WildGuardGPTRuEvaluator
+.. autoclass:: hivetracered.evaluators.wild_guard_ru_evaluator.WildGuardGPTRuEvaluator
    :members:
    :undoc-members:
    :show-inheritance:
    :special-members: __init__
 
-.. autoclass:: evaluators.wild_guard_ru_hal_evaluator.WildGuardGPTRuHalEvaluator
+.. autoclass:: hivetracered.evaluators.wild_guard_ru_hal_evaluator.WildGuardGPTRuHalEvaluator
    :members:
    :undoc-members:
    :show-inheritance:
@@ -47,7 +42,7 @@ WildGuard Evaluators
 Keyword Evaluator
 ~~~~~~~~~~~~~~~~~
 
-.. autoclass:: evaluators.keyword_evaluator.KeywordEvaluator
+.. autoclass:: hivetracered.evaluators.keyword_evaluator.KeywordEvaluator
    :members:
    :undoc-members:
    :show-inheritance:
@@ -56,7 +51,7 @@ Keyword Evaluator
 Model Evaluator
 ~~~~~~~~~~~~~~~
 
-.. autoclass:: evaluators.model_evaluator.ModelEvaluator
+.. autoclass:: hivetracered.evaluators.model_evaluator.ModelEvaluator
    :members:
    :undoc-members:
    :show-inheritance:
@@ -65,7 +60,7 @@ Model Evaluator
 System Prompt Detection Evaluator
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: evaluators.system_prompt_detection_evaluator.SystemPromptDetectionEvaluator
+.. autoclass:: hivetracered.evaluators.system_prompt_detection_evaluator.SystemPromptDetectionEvaluator
    :members:
    :undoc-members:
    :show-inheritance:
@@ -74,7 +69,7 @@ System Prompt Detection Evaluator
 Utility Functions
 -----------------
 
-.. autofunction:: evaluators.load_keywords
+.. autofunction:: hivetracered.evaluators.load_keywords
 
 See Also
 --------

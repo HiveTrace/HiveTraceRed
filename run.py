@@ -25,7 +25,7 @@ from typing import Dict, List, Any, Optional, Union
 import pandas as pd
 
 # Import pipeline components
-from pipeline import (
+from hivetracered.pipeline import (
     setup_attacks, 
     stream_attack_prompts, 
     stream_model_responses, 
@@ -34,12 +34,12 @@ from pipeline import (
 )
 
 # Import model and evaluator classes
-from models import (
+from hivetracered.models import (
     Model,
 )
 
 # Import evaluator classes
-from evaluators import (
+from hivetracered.evaluators import (
     BaseEvaluator,
     ModelEvaluator,
 )
@@ -95,7 +95,7 @@ DEFAULT_CONFIG = {
     "timestamp_format": "%Y%m%d_%H%M%S"
 }
 
-from pipeline.constants import MODEL_CLASSES, EVALUATOR_CLASSES
+from hivetracered.pipeline.constants import MODEL_CLASSES, EVALUATOR_CLASSES
 
 
 def load_config(config_path: str) -> Dict[str, Any]:

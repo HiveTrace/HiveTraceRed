@@ -23,7 +23,7 @@ Basic Template Attack
 
 .. code-block:: python
 
-   from attacks import TemplateAttack
+   from hivetracered.attacks import TemplateAttack
 
    class MyCustomAttack(TemplateAttack):
        def __init__(self):
@@ -56,7 +56,7 @@ Basic Algorithmic Attack
 
 .. code-block:: python
 
-   from attacks import AlgoAttack
+   from hivetracered.attacks import AlgoAttack
    from typing import Union, List, Dict
 
    class ReverseAttack(AlgoAttack):
@@ -77,7 +77,7 @@ Encoding Attack Example
 .. code-block:: python
 
    import base64
-   from attacks import AlgoAttack
+   from hivetracered.attacks import AlgoAttack
 
    class CustomBase64Attack(AlgoAttack):
        def __init__(self):
@@ -96,7 +96,7 @@ Translation Attack Example
 
 .. code-block:: python
 
-   from attacks import AlgoAttack
+   from hivetracered.attacks import AlgoAttack
    from transliterate import translit
 
    class TransliterationAttack(AlgoAttack):
@@ -125,8 +125,8 @@ Basic Model Attack
 
 .. code-block:: python
 
-   from attacks import ModelAttack
-   from models import OpenAIModel
+   from hivetracered.attacks import ModelAttack
+   from hivetracered.models import OpenAIModel
 
    class ParaphraseAttack(ModelAttack):
        def __init__(self, model):
@@ -155,7 +155,7 @@ Advanced Model Attack
 
 .. code-block:: python
 
-   from attacks import ModelAttack
+   from hivetracered.attacks import ModelAttack
 
    class StealthRewriteAttack(ModelAttack):
        def __init__(self, model, style="innocent"):
@@ -184,7 +184,7 @@ Using the Pipe Operator
 
 .. code-block:: python
 
-   from attacks import TranslationAttack, Base64OutputAttack, DANAttack
+   from hivetracered.attacks import TranslationAttack, Base64OutputAttack, DANAttack
 
    # Compose with | operator
    composed = TranslationAttack("Chinese") | Base64OutputAttack() | DANAttack()
@@ -197,7 +197,7 @@ Programmatic Composition
 
 .. code-block:: python
 
-   from attacks import ComposedAttack, DANAttack, PrefixInjectionAttack
+   from hivetracered.attacks import ComposedAttack, DANAttack, PrefixInjectionAttack
 
    # Create composed attack
    attack = ComposedAttack(
@@ -213,7 +213,7 @@ Multi-Stage Composition
 
 .. code-block:: python
 
-   from attacks import (
+   from hivetracered.attacks import (
        TranslationAttack,
        Base64OutputAttack,
        Base64InputOnlyAttack,

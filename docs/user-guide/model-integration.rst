@@ -28,7 +28,7 @@ OpenAI Models
 
 .. code-block:: python
 
-   from models import OpenAIModel
+   from hivetracered.models import OpenAIModel
 
    # Basic usage
    model = OpenAIModel(model="gpt-4.1")
@@ -53,7 +53,7 @@ GigaChat Models
 
 .. code-block:: python
 
-   from models import GigaChatModel
+   from hivetracered.models import GigaChatModel
 
    model = GigaChatModel(
        model="gigachat",
@@ -68,7 +68,7 @@ Yandex Models
 
 .. code-block:: python
 
-   from models import YandexGPTModel
+   from hivetracered.models import YandexGPTModel
 
    model = YandexGPTModel(
        model="yandexgpt-lite",
@@ -83,7 +83,7 @@ Google Gemini Models
 
 .. code-block:: python
 
-   from models import GeminiNativeModel
+   from hivetracered.models import GeminiNativeModel
 
    model = GeminiNativeModel(
        model="gemini-2.5-flash-preview-04-17",
@@ -97,7 +97,7 @@ OpenRouter
 
 .. code-block:: python
 
-   from models import OpenRouterModel
+   from hivetracered.models import OpenRouterModel
 
    model = OpenRouterModel(
        model="openai/gpt-4.1",
@@ -111,7 +111,7 @@ Ollama Models
 
 .. code-block:: python
 
-   from models import OllamaModel
+   from hivetracered.models import OllamaModel
 
    # Requires Ollama server running (https://ollama.com)
    model = OllamaModel(
@@ -126,7 +126,7 @@ Llama.cpp Models (Local GGUF)
 
 .. code-block:: python
 
-   from models import LlamaCppModel
+   from hivetracered.models import LlamaCppModel
 
    # CPU-only inference
    model = LlamaCppModel(

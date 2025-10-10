@@ -3,14 +3,6 @@ Pipeline API
 
 The pipeline module orchestrates the complete red teaming workflow.
 
-Module Overview
----------------
-
-.. automodule:: pipeline
-   :members:
-   :undoc-members:
-   :no-index:
-
 Constants
 ---------
 
@@ -36,27 +28,27 @@ Pipeline Functions
 Attack Setup
 ~~~~~~~~~~~~
 
-.. autofunction:: pipeline.setup_attacks
+.. autofunction:: hivetracered.pipeline.setup_attacks
 
 Attack Prompt Generation
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autofunction:: pipeline.stream_attack_prompts
+.. autofunction:: hivetracered.pipeline.stream_attack_prompts
 
 Model Response Collection
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. autofunction:: pipeline.stream_model_responses
+.. autofunction:: hivetracered.pipeline.stream_model_responses
 
 Response Evaluation
 ~~~~~~~~~~~~~~~~~~~
 
-.. autofunction:: pipeline.stream_evaluated_responses
+.. autofunction:: hivetracered.pipeline.stream_evaluated_responses
 
 Results Saving
 ~~~~~~~~~~~~~~
 
-.. autofunction:: pipeline.save_pipeline_results
+.. autofunction:: hivetracered.pipeline.save_pipeline_results
 
 See Also
 --------

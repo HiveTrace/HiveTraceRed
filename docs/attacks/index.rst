@@ -104,7 +104,7 @@ Using Attacks
 
 .. code-block:: python
 
-   from attacks import DANAttack, Base64OutputAttack
+   from hivetracered.attacks import DANAttack, Base64OutputAttack
 
    # Basic usage
    attack = DANAttack()

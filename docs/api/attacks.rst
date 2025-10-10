@@ -9,7 +9,7 @@ Base Classes
 BaseAttack
 ~~~~~~~~~~
 
-.. autoclass:: attacks.base_attack.BaseAttack
+.. autoclass:: hivetracered.attacks.base_attack.BaseAttack
    :members:
    :undoc-members:
    :show-inheritance:
@@ -18,7 +18,7 @@ BaseAttack
 TemplateAttack
 ~~~~~~~~~~~~~~
 
-.. autoclass:: attacks.template_attack.TemplateAttack
+.. autoclass:: hivetracered.attacks.template_attack.TemplateAttack
    :members:
    :undoc-members:
    :show-inheritance:
@@ -27,7 +27,7 @@ TemplateAttack
 AlgoAttack
 ~~~~~~~~~~
 
-.. autoclass:: attacks.algo_attack.AlgoAttack
+.. autoclass:: hivetracered.attacks.algo_attack.AlgoAttack
    :members:
    :undoc-members:
    :show-inheritance:
@@ -36,7 +36,7 @@ AlgoAttack
 ModelAttack
 ~~~~~~~~~~~
 
-.. autoclass:: attacks.model_attack.ModelAttack
+.. autoclass:: hivetracered.attacks.model_attack.ModelAttack
    :members:
    :undoc-members:
    :show-inheritance:
@@ -45,7 +45,7 @@ ModelAttack
 ComposedAttack
 ~~~~~~~~~~~~~~
 
-.. autoclass:: attacks.composed_attack.ComposedAttack
+.. autoclass:: hivetracered.attacks.composed_attack.ComposedAttack
    :members:
    :undoc-members:
    :show-inheritance:
@@ -57,7 +57,7 @@ Attack Types
 Roleplay Attacks
 ~~~~~~~~~~~~~~~~
 
-.. automodule:: attacks.types.roleplay
+.. automodule:: hivetracered.attacks.types.roleplay
    :members:
    :undoc-members:
    :no-index:
@@ -65,7 +65,7 @@ Roleplay Attacks
 Persuasion Attacks
 ~~~~~~~~~~~~~~~~~~
 
-.. automodule:: attacks.types.persuasion
+.. automodule:: hivetracered.attacks.types.persuasion
    :members:
    :undoc-members:
    :no-index:
@@ -73,7 +73,7 @@ Persuasion Attacks
 Token Smuggling Attacks
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-.. automodule:: attacks.types.token_smuggling
+.. automodule:: hivetracered.attacks.types.token_smuggling
    :members:
    :undoc-members:
    :no-index:
@@ -81,7 +81,7 @@ Token Smuggling Attacks
 Context Switching Attacks
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. automodule:: attacks.types.context_switching
+.. automodule:: hivetracered.attacks.types.context_switching
    :members:
    :undoc-members:
    :no-index:
@@ -89,7 +89,7 @@ Context Switching Attacks
 In-Context Learning Attacks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. automodule:: attacks.types.in_context_learning
+.. automodule:: hivetracered.attacks.types.in_context_learning
    :members:
    :undoc-members:
    :no-index:
@@ -97,7 +97,7 @@ In-Context Learning Attacks
 Task Deflection Attacks
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-.. automodule:: attacks.types.task_deflection
+.. automodule:: hivetracered.attacks.types.task_deflection
    :members:
    :undoc-members:
    :no-index:
@@ -105,7 +105,7 @@ Task Deflection Attacks
 Text Structure Modification Attacks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. automodule:: attacks.types.text_structure_modification
+.. automodule:: hivetracered.attacks.types.text_structure_modification
    :members:
    :undoc-members:
    :no-index:
@@ -113,7 +113,7 @@ Text Structure Modification Attacks
 Output Formatting Attacks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. automodule:: attacks.types.output_formatting
+.. automodule:: hivetracered.attacks.types.output_formatting
    :members:
    :undoc-members:
    :no-index:
@@ -121,7 +121,7 @@ Output Formatting Attacks
 Irrelevant Information Attacks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. automodule:: attacks.types.irrelevant_information
+.. automodule:: hivetracered.attacks.types.irrelevant_information
    :members:
    :undoc-members:
    :no-index:
@@ -129,7 +129,7 @@ Irrelevant Information Attacks
 Simple Instructions Attacks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. automodule:: attacks.types.simple_instructions
+.. automodule:: hivetracered.attacks.types.simple_instructions
    :members:
    :undoc-members:
    :no-index:

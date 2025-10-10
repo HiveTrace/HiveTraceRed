@@ -57,7 +57,7 @@ Programmatic Usage
 .. code-block:: python
 
    import asyncio
-   from pipeline import setup_attacks, stream_attack_prompts
+   from hivetracered.pipeline import setup_attacks, stream_attack_prompts
 
    async def create_attacks():
        # Setup attacks
@@ -128,8 +128,8 @@ Programmatic Usage
 .. code-block:: python
 
    import asyncio
-   from models import OpenAIModel
-   from pipeline import stream_model_responses
+   from hivetracered.models import OpenAIModel
+   from hivetracered.pipeline import stream_model_responses
 
    async def get_responses():
        # Initialize model
@@ -201,8 +201,8 @@ Programmatic Usage
 .. code-block:: python
 
    import asyncio
-   from evaluators import WildGuardGPTEvaluator
-   from pipeline import stream_evaluated_responses
+   from hivetracered.evaluators import WildGuardGPTEvaluator
+   from hivetracered.pipeline import stream_evaluated_responses
 
    async def evaluate():
        # Initialize evaluator
@@ -269,7 +269,7 @@ The pipeline processes prompts in batches for efficiency:
 
 .. code-block:: python
 
-   from models import OpenAIModel
+   from hivetracered.models import OpenAIModel
 
    # Batch size controls concurrent requests
    model = OpenAIModel(model="gpt-4")

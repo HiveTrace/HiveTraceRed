@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.io as pio
+from pipeline.owasp_mapping import map_to_owasp, get_owasp_description
 
 def get_chart_style():
     return {
@@ -75,12 +76,40 @@ def calculate_metrics(df):
         total_prompts = int(df["base_prompt"].nunique())
         vulnerable_prompts_rate = float(vulnerable_prompts / total_prompts * 100) if total_prompts > 0 else 0.0
 
+    # OWASP Top 10 for LLM
+    base_category = df["category"].iloc[0] if "category" in df.columns and len(df) else "Unknown"
+    attack_names = df["attack_name"].unique().tolist() if "attack_name" in df.columns else []
+    subcategories = df["subcategory"].unique().tolist() if "subcategory" in df.columns else None
+    owasp_categories = sorted(map_to_owasp(base_category, attack_names, subcategories))
+
+    # Calculate average ASR for NoneAttack
+    asr_none_attack = 0.0
+    if "attack_name" in df.columns and "success" in df.columns and len(df):
+        none_attack_df = df[df["attack_name"] == "NoneAttack"]
+        if len(none_attack_df) > 0:
+            asr_none_attack = float(none_attack_df["success"].mean() * 100)
+
+    # Calculate max of average ASR for each other attack (non-NoneAttack)
+    asr_max_attack = 0.0
+    best_attack_name_detailed = "-"
+    if "attack_name" in df.columns and "success" in df.columns and len(df):
+        injection_df = df[df["attack_name"] != "NoneAttack"]
+        if len(injection_df) > 0:
+            # Group by attack_name and get average ASR for each attack
+            attack_stats = injection_df.groupby("attack_name")["success"].mean()
+            if len(attack_stats) > 0:
+                asr_max_attack = float(attack_stats.max() * 100)
+                best_attack_name_detailed = str(attack_stats.idxmax())
+
     return {
         "total_tests": total_tests, "success_rate": success_rate, "blocked_rate": blocked_rate,
         "error_rate": error_rate, "model_name": model_name, "n_attack_types": n_attack_types,
         "n_attacks": n_attacks, "best_attack_name": best_attack_name, "best_attack_rate": best_attack_rate,
         "vulnerable_prompts": vulnerable_prompts, "total_prompts": total_prompts,
-        "vulnerable_prompts_rate": vulnerable_prompts_rate
+        "vulnerable_prompts_rate": vulnerable_prompts_rate,
+        "base_category": base_category, "owasp_categories": owasp_categories,
+        "asr_none_attack": asr_none_attack, "asr_max_attack": asr_max_attack,
+        "best_attack_name_detailed": best_attack_name_detailed
     }
 
 def create_charts(df):
@@ -488,6 +517,14 @@ def main():
 
     generated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
+    # Build OWASP categories HTML
+    owasp_badges_html = ""
+    if metrics.get('owasp_categories'):
+        owasp_badges = []
+        for cat in metrics['owasp_categories']:
+            owasp_badges.append(f'<div class="badge" style="background:#1a1e3a; border-color:#2a3a5a; color:#9bb4e3;" title="{get_owasp_description(cat)}">{cat}</div>')
+        owasp_badges_html = "\n          ".join(owasp_badges)
+
     html = f"""
     <!DOCTYPE html>
     <html lang="en">
@@ -535,6 +572,29 @@ def main():
         <div class="kf">
           <div class="badge">Most Effective Attack: <strong>{metrics['best_attack_name']}</strong> ({metrics['best_attack_rate']:.1f}% ASR)</div>
           <div class="badge warn">Vulnerable Prompts: <strong>{metrics['vulnerable_prompts']}/{metrics['total_prompts'] or 0}</strong> ({metrics['vulnerable_prompts_rate']:.1f}%)</div>
+        </div>
+
+        <h3>📊 OWASP Top 10 for LLM</h3>
+        <div style="background:#0f1420; border:1px solid var(--border); padding:16px; border-radius:12px; margin-bottom:16px;">
+          <div style="margin-bottom:12px;"><strong>Category:</strong> <span style="color:var(--accent2);">{metrics.get('base_category', 'Unknown')}</span></div>
+          <div style="margin-bottom:8px;"><strong>OWASP Categories:</strong></div>
+          <div class="kf">
+            {owasp_badges_html if owasp_badges_html else '<div style="color:var(--muted);">No OWASP categories mapped</div>'}
+          </div>
+        </div>
+
+        <h3>🎯 Attack Success Rate (ASR) Analysis</h3>
+        <div class="grid-2">
+          <div class="metric">
+            <div class="label">ASR without Prompt Injections</div>
+            <div class="value" style="color:var(--good);">{metrics.get('asr_none_attack', 0.0):.1f}%</div>
+            <div class="delta">Average for NoneAttack - baseline vulnerability</div>
+          </div>
+          <div class="metric">
+            <div class="label">ASR with Prompt Injections</div>
+            <div class="value" style="color:var(--accent);">{metrics.get('asr_max_attack', 0.0):.1f}%</div>
+            <div class="delta">Average for {metrics.get('best_attack_name_detailed', '-')}</div>
+          </div>
         </div>
 
         <h3>Top 3 Most Successful Attack Types</h3>

@@ -1,0 +1,100 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hivetracered"
+version = "1.0.0"
+description = "LLM Red Teaming Framework for defensive security research"
+readme = "README.md"
+license = {text = "Apache-2.0"}
+authors = [
+    {name = "HiveTrace", email = "noreply@hivetrace.com"}
+]
+requires-python = ">=3.10"
+keywords = ["llm", "red-team", "security", "testing", "adversarial", "ai-safety"]
+classifiers = [
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Security",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+    "pandas>=2.0.0",
+    "pyarrow>=21.0.0",
+    "pyyaml>=6.0.0",
+    "python-dotenv>=1.0.0",
+    "tqdm>=4.0.0",
+    "aiohttp>=3.0.0",
+    "requests>=2.0.0",
+    "langchain-core>=0.3.0",
+    "langchain-openai>=0.3.0",
+    "langchain-gigachat>=0.3.0",
+    "langchain-google-genai>=2.0.0",
+    "google-generativeai>=0.8.0",
+    "yandex-cloud-ml-sdk>=0.16.0",
+    "transliterate>=1.0.0",
+]
+
+[project.optional-dependencies]
+
+docs = [
+    "sphinx>=8.0.0",
+    "sphinx-autodoc-typehints>=3.0.0",
+    "furo>=2025.0.0",
+]
+all = ["hivetracered[dev,docs]"]
+
+[project.urls]
+Homepage = "https://github.com/HiveTrace/HiveTraceRed"
+Documentation = "https://hivetrace.github.io/HiveTraceRed/"
+Repository = "https://github.com/HiveTrace/HiveTraceRed"
+Issues = "https://github.com/HiveTrace/HiveTraceRed/issues"
+
+[project.scripts]
+hivetracered = "hivetracered.__main__:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["hivetracered*"]
+
+[tool.setuptools.package-data]
+hivetracered = [
+    "evaluators/data/*.txt",
+    "attacks/types/**/*.txt",
+]
+
+[tool.black]
+line-length = 100
+target-version = ["py310", "py311", "py312", "py313"]
+include = '\.pyi?$'
+
+[tool.isort]
+profile = "black"
+line_length = 100
+multi_line_output = 3
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+python_files = "test_*.py"
+python_classes = "Test*"
+python_functions = "test_*"
+asyncio_mode = "auto"
+addopts = "-v --tb=short"
+
+[tool.mypy]
+python_version = "3.10"
+warn_return_any = true
+warn_unused_configs = true
+disallow_untyped_defs = false
+ignore_missing_imports = true

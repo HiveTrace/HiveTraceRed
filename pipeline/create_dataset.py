@@ -70,43 +70,72 @@ def setup_attacks(attack_configs: List[dict], attacker_model: Optional[Model] = 
             print(f"Warning: Failed to initialize attack from config {attack_config}: {str(e)}")
     return attacks
 
-def create_prompt(base_prompt: str, system_prompt: Optional[str] = None) -> Any:
+def extract_prompt_text(base_prompt: Any) -> str:
+    """
+    Extract prompt text from various input formats.
+
+    Args:
+        base_prompt: String or dict containing prompt
+
+    Returns:
+        Prompt text as string
+    """
+    if isinstance(base_prompt, str):
+        return base_prompt
+    elif isinstance(base_prompt, dict):
+        # Try common prompt field names
+        for key in ['prompt', 'Prompt', 'text', 'Text', 'question', 'Question']:
+            if key in base_prompt:
+                return base_prompt[key]
+        raise ValueError(f"No prompt field found in dict. Available keys: {list(base_prompt.keys())}")
+    else:
+        raise ValueError(f"Unsupported base_prompt type: {type(base_prompt)}")
+
+def create_prompt(base_prompt: Any, system_prompt: Optional[str] = None) -> Any:
     """
     Format a prompt with optional system instructions.
-    
+
     Args:
-        base_prompt: The user prompt content
+        base_prompt: The user prompt content (string or dict)
         system_prompt: Optional system instructions
-        
+
     Returns:
         String prompt or list of message dictionaries
     """
+    prompt_text = extract_prompt_text(base_prompt)
     if system_prompt:
         return [
             {"role": "system", "content": system_prompt},
-            {"role": "human", "content": base_prompt}
+            {"role": "human", "content": prompt_text}
         ]
-    return base_prompt
+    return prompt_text
 
-async def generate_attack_prompt(attack: BaseAttack, base_prompt: str, 
+async def generate_attack_prompt(attack: BaseAttack, base_prompt: Any,
                                 system_prompt: Optional[str] = None) -> Dict[str, Any]:
     """
     Apply an attack to a single prompt.
-    
+
     Args:
         attack: Attack instance to apply
-        base_prompt: Original prompt content
+        base_prompt: Original prompt content (string or dict with columns)
         system_prompt: Optional system instructions
-        
+
     Returns:
-        Dictionary with attack result and metadata
+        Dictionary with attack result and metadata (preserves all base_prompt columns)
     """
     prompt = create_prompt(base_prompt, system_prompt)
     attack_name = attack.__class__.__name__
+
+    # Extract base fields if base_prompt is a dict
+    base_fields = {}
+    if isinstance(base_prompt, dict):
+        base_fields = {k: v for k, v in base_prompt.items()}
+
     try:
         attack_prompt = attack.apply(prompt)
         return {
-            "base_prompt": base_prompt,
+            **base_fields,  # Preserve all original columns
+            "base_prompt": extract_prompt_text(base_prompt),
             "prompt": attack_prompt,
             "attack_name": attack_name,
             "attack_type": ATTACK_CLASSES[attack_name]["attack_type"],
@@ -117,7 +146,8 @@ async def generate_attack_prompt(attack: BaseAttack, base_prompt: str,
     except Exception as e:
         print(f"Error generating prompt for attack {attack_name}: {str(e)}")
         return {
-            "base_prompt": base_prompt,
+            **base_fields,  # Preserve all original columns
+            "base_prompt": extract_prompt_text(base_prompt) if not isinstance(base_prompt, str) else base_prompt,
             "prompt": "",
             "attack_name": attack_name,
             "attack_type": ATTACK_CLASSES[attack_name]["attack_type"],
@@ -126,18 +156,18 @@ async def generate_attack_prompt(attack: BaseAttack, base_prompt: str,
             "error": str(e)
         }
 
-async def stream_attack(attack: BaseAttack, 
-                        base_prompts: List[str], system_prompt: Optional[str] = None) -> AsyncGenerator[Dict[str, Any], None]:
+async def stream_attack(attack: BaseAttack,
+                        base_prompts: List[Any], system_prompt: Optional[str] = None) -> AsyncGenerator[Dict[str, Any], None]:
     """
     Apply an attack to multiple prompts in streaming mode.
-    
+
     Args:
         attack: Attack instance to apply
-        base_prompts: List of original prompts
+        base_prompts: List of original prompts (strings or dicts with columns)
         system_prompt: Optional system instructions
-        
+
     Yields:
-        Attack result dictionaries with metadata
+        Attack result dictionaries with metadata (preserves all base_prompt columns)
     """
     # Format all prompts
     formatted_prompts = [create_prompt(prompt, system_prompt) for prompt in base_prompts]
@@ -146,8 +176,14 @@ async def stream_attack(attack: BaseAttack,
         # Apply the attack to all prompts at once
         i = 0
         async for attack_prompt in attack.stream_abatch(formatted_prompts):
+            # Extract base fields if base_prompt is a dict
+            base_fields = {}
+            if isinstance(base_prompts[i], dict):
+                base_fields = {k: v for k, v in base_prompts[i].items()}
+
             yield {
-                    "base_prompt": base_prompts[i],
+                    **base_fields,  # Preserve all original columns
+                    "base_prompt": extract_prompt_text(base_prompts[i]),
                     "prompt": attack_prompt,
                     "attack_name": attack_name,
                     "attack_type": ATTACK_CLASSES[attack_name]["attack_type"],
@@ -159,8 +195,14 @@ async def stream_attack(attack: BaseAttack,
     except Exception as e:
         print(f"Error generating prompts for model attack {attack_name}: {str(e)}")
         for base_prompt in base_prompts:
+            # Extract base fields if base_prompt is a dict
+            base_fields = {}
+            if isinstance(base_prompt, dict):
+                base_fields = {k: v for k, v in base_prompt.items()}
+
             yield {
-                "base_prompt": base_prompt,
+                **base_fields,  # Preserve all original columns
+                "base_prompt": extract_prompt_text(base_prompt),
                 "prompt": "",
                 "attack_name": attack_name,
                 "attack_type": ATTACK_CLASSES[attack_name]["attack_type"],
@@ -171,17 +213,17 @@ async def stream_attack(attack: BaseAttack,
 
 
 async def stream_attack_prompts(attacks: Dict[str, BaseAttack],
-                                base_prompts: List[str], system_prompt: Optional[str] = None) -> AsyncGenerator[Dict[str, Any], None]:
+                                base_prompts: List[Any], system_prompt: Optional[str] = None) -> AsyncGenerator[Dict[str, Any], None]:
     """
     Process all attacks on all base prompts and stream results.
-    
+
     Args:
         attacks: Dictionary of attack instances
-        base_prompts: List of original prompts
+        base_prompts: List of original prompts (strings or dicts with columns)
         system_prompt: Optional system instructions
-        
+
     Yields:
-        Attack result dictionaries with metadata
+        Attack result dictionaries with metadata (preserves all base_prompt columns)
     """
     
     # Initialize result list

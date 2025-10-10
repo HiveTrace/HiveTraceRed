@@ -193,15 +193,15 @@ def setup_evaluator(evaluator_config: Dict[str, Any], model: Optional[Model] = N
     return None
 
 
-def load_base_prompts(config: Dict[str, Any]) -> List[str]:
+def load_base_prompts(config: Dict[str, Any]) -> List[Union[str, Dict[str, Any]]]:
     """
     Load base prompts from config or file.
-    
+
     Args:
         config: Configuration dictionary
-        
+
     Returns:
-        List of base prompts
+        List of base prompts (strings or dicts with all columns preserved)
     """
     # First check if a file path is provided
     file_path = config.get("base_prompts_file")
@@ -220,7 +220,7 @@ def load_base_prompts(config: Dict[str, Any]) -> List[str]:
                 df = pd.read_parquet(file_path)
             else:
                 raise ValueError(f"Unsupported file extension: {ext}")
-            
+
             prompt_column_names = [
                 "Prompt", "Text", "Question", "Query", "Input", "Input_text", "Input_query", "Input_question",
                 "prompt", "text", "question", "query", "input", "input_text", "input_query", "input_question",
@@ -228,12 +228,18 @@ def load_base_prompts(config: Dict[str, Any]) -> List[str]:
 
             for prompt_column_name in prompt_column_names:
                 if prompt_column_name in df.columns:
-                    return df[prompt_column_name].tolist()
+                    # Return full records to preserve all columns
+                    records = df.to_dict('records')
+                    # Add 'prompt' field if it doesn't exist, using the identified column
+                    for record in records:
+                        if 'prompt' not in record:
+                            record['prompt'] = record[prompt_column_name]
+                    return records
             else:
                 raise ValueError(f"No valid prompt column found in file '{file_path}'. Available columns: {df.columns.tolist()}")
         except Exception as e:
             print(f"Error loading prompts from file '{file_path}': {str(e)}")
-    
+
     # Fallback to prompts in config
     return config.get("base_prompts", [])
 

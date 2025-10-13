@@ -45,6 +45,8 @@ dependencies = [
     "google-genai>=1.0.0",
     "yandex-cloud-ml-sdk>=0.1.0",
     "transliterate>=1.10.0",
+    "plotly>=5.0.0",
+    "numpy>=1.24.0",
 ]
 
 [project.optional-dependencies]
@@ -68,6 +70,7 @@ Issues = "https://github.com/HiveTrace/HiveTraceRed/issues"
 
 [project.scripts]
 hivetracered = "hivetracered.__main__:main"
+hivetracered-report = "hivetracered.report:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

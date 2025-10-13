@@ -51,6 +51,21 @@ The framework provides a 3-stage pipeline:
 2. **Model Testing**: Send modified prompts to target LLMs
 3. **Evaluation**: Assess responses using WildGuard or custom evaluators
 
+### Report Generation
+
+After running your tests, generate comprehensive HTML reports with interactive visualizations:
+
+```bash
+hivetracered-report --data-file results.parquet --output report.html
+```
+
+The report includes:
+- Executive summary with key metrics and OWASP LLM Top 10 mapping
+- Interactive charts showing attack success rates by type and name
+- Content analysis with response length distributions
+- Data explorer with filtering capabilities
+- Sample prompts and responses for detailed inspection
+
 ### Results Example
 
 The framework provides detailed attack analysis showing success rates across different attack types and individual attack techniques:

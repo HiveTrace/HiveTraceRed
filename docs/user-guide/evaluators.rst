@@ -182,7 +182,7 @@ Basic Custom Evaluator
 
 .. code-block:: python
 
-   from evaluators.base_evaluator import BaseEvaluator
+   from hivetracered.evaluators.base_evaluator import BaseEvaluator
    from typing import Dict, Any, Union, List
 
    class MyCustomEvaluator(BaseEvaluator):
@@ -320,7 +320,7 @@ Multi-Criteria Evaluator
 
 .. code-block:: python
 
-   from evaluators.base_evaluator import BaseEvaluator
+   from hivetracered.evaluators.base_evaluator import BaseEvaluator
 
    class MultiCriteriaEvaluator(BaseEvaluator):
        def __init__(self, criteria_evaluators: List[BaseEvaluator]):
@@ -378,7 +378,7 @@ Add to the evaluator registry:
 .. code-block:: python
 
    # In pipeline/constants.py
-   from evaluators.my_evaluator import MyCustomEvaluator
+   from hivetracered.evaluators.my_evaluator import MyCustomEvaluator
 
    EVALUATOR_CLASSES = {
        "MyCustomEvaluator": MyCustomEvaluator,

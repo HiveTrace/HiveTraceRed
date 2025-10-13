@@ -8,8 +8,37 @@ Requirements
 * pip package manager
 * Virtual environment (recommended)
 
-Basic Installation
-------------------
+Installation from PyPI
+----------------------
+
+The recommended way to install HiveTraceRed is via pip:
+
+.. code-block:: bash
+
+   pip install hivetracered
+
+This will install the package and make the ``hivetracered`` and ``hivetracered-report`` CLI commands available.
+
+Optional Dependencies
+~~~~~~~~~~~~~~~~~~~~~
+
+Install with optional dependencies for development or documentation:
+
+.. code-block:: bash
+
+   # For development (includes build tools)
+   pip install hivetracered[dev]
+
+   # For building documentation
+   pip install hivetracered[docs]
+
+   # Install everything
+   pip install hivetracered[all]
+
+Development Installation
+------------------------
+
+If you want to contribute to HiveTraceRed or modify the source code, install from source:
 
 Clone the repository:
 
@@ -25,20 +54,22 @@ Create and activate a virtual environment (recommended):
    python3 -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-Install dependencies:
+Install in editable mode with development dependencies:
 
 .. code-block:: bash
 
-   pip install -r requirements.txt
+   pip install -e '.[dev]'
 
-Additional Dependencies for Documentation
-------------------------------------------
+Build Documentation Locally
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-If you want to build the documentation locally:
+If you want to build the documentation:
 
 .. code-block:: bash
 
-   pip install sphinx furo sphinx-autodoc-typehints
+   pip install -e '.[docs]'
+   cd docs
+   make html
 
 Environment Setup
 -----------------

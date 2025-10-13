@@ -51,15 +51,7 @@ The framework provides a 3-stage pipeline:
 2. **Model Testing**: Send modified prompts to target LLMs
 3. **Evaluation**: Assess responses using WildGuard or custom evaluators
 
-### Report Generation
-
-After running your tests, generate comprehensive HTML reports with interactive visualizations:
-
-```bash
-hivetracered-report --data-file results.parquet --output report.html
-```
-
-The report includes:
+The `hivetracered-report` command generates comprehensive HTML reports with:
 - Executive summary with key metrics and OWASP LLM Top 10 mapping
 - Interactive charts showing attack success rates by type and name
 - Content analysis with response length distributions
@@ -75,6 +67,24 @@ The framework provides detailed attack analysis showing success rates across dif
 The analysis includes:
 - **Success Rate by Attack Type**: Comparative effectiveness of different attack categories (persuasion, roleplay, simple instructions, etc.)
 - **Success Rate by Attack Name**: Granular breakdown of individual attack technique performance
+
+## Installation
+
+Install HiveTraceRed via pip:
+
+```bash
+pip install hivetracered
+```
+
+This will install the package and make the `hivetracered` and `hivetracered-report` CLI commands available.
+
+Alternatively, install from source:
+
+```bash
+git clone https://github.com/HiveTrace/HiveTraceRed.git
+cd HiveTraceRed
+pip install -e .
+```
 
 ## Documentation
 

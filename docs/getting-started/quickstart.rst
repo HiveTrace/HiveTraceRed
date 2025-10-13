@@ -136,7 +136,10 @@ Process multiple prompts efficiently using streaming functions:
 Running the Full Pipeline
 --------------------------
 
-Use the configuration file to run the complete red teaming pipeline:
+Use the configuration file to run the complete red teaming pipeline.
+
+Using the CLI Command
+~~~~~~~~~~~~~~~~~~~~~
 
 1. Create a configuration file ``config.yaml``:
 
@@ -172,13 +175,33 @@ Use the configuration file to run the complete red teaming pipeline:
    # Output
    output_dir: results
 
-2. Run the pipeline:
+2. Run the pipeline using the CLI command:
 
 .. code-block:: bash
 
-   python run.py --config config.yaml
+   hivetracered --config config.yaml
 
 3. Results will be saved in the ``results/`` directory as Parquet files.
+
+4. Generate an HTML report:
+
+.. code-block:: bash
+
+   hivetracered-report --data-file results/run_*/evaluated_responses_results*.parquet --output report.html
+
+Using as a Python Module
+~~~~~~~~~~~~~~~~~~~~~~~~~
+
+You can also run the pipeline programmatically from Python:
+
+.. code-block:: python
+
+   from hivetracered.__main__ import main
+   import sys
+
+   # Set command line arguments
+   sys.argv = ['hivetracered', '--config', 'config.yaml']
+   main()
 
 Next Steps
 ----------

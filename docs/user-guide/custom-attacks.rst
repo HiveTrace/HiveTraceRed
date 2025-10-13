@@ -307,13 +307,13 @@ To use custom attacks in the pipeline:
    .. code-block:: python
 
       # In your custom module
-      from attacks.base_attack import BaseAttack
+      from hivetracered.attacks.base_attack import BaseAttack
 
       class MyAttack(BaseAttack):
           # Implementation
           pass
 
-      # Register in pipeline/constants.py
+      # Register in hivetracered/pipeline/constants.py
       ATTACK_CLASSES = {
           "MyAttack": MyAttack,
           # ... other attacks

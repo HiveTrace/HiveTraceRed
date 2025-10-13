@@ -9,7 +9,7 @@ description = "LLM Red Teaming Framework for defensive security research"
 readme = "README.md"
 license = {text = "Apache-2.0"}
 authors = [
-    {name = "HiveTrace", email = "noreply@hivetrace.com"}
+    {name = "HiveTrace", email = "sales@raftds.com"}
 ]
 requires-python = ">=3.10"
 keywords = ["llm", "red-team", "security", "testing", "adversarial", "ai-safety"]
@@ -28,27 +28,35 @@ classifiers = [
 
 dependencies = [
     "pandas>=2.0.0",
-    "pyarrow>=21.0.0",
-    "pyyaml>=6.0.0",
+    "pyarrow>=10.0.0",
+    "pyyaml>=6.0",
     "python-dotenv>=1.0.0",
-    "tqdm>=4.0.0",
-    "aiohttp>=3.0.0",
-    "requests>=2.0.0",
-    "langchain-core>=0.3.0",
-    "langchain-openai>=0.3.0",
-    "langchain-gigachat>=0.3.0",
-    "langchain-google-genai>=2.0.0",
-    "google-generativeai>=0.8.0",
-    "yandex-cloud-ml-sdk>=0.16.0",
-    "transliterate>=1.0.0",
+    "tqdm>=4.65.0",
+    "aiohttp>=3.8.0",
+    "requests>=2.28.0",
+    "langchain>=0.3.0",
+    "langchain-core>=0.1.0",
+    "langchain-community>=0.3.0",
+    "langchain-openai>=0.0.5",
+    "langchain-ollama>=0.3.0",
+    "langchain-gigachat>=0.1.0",
+    "langchain-google-genai>=1.0.0",
+    "google-generativeai>=0.3.0",
+    "google-genai>=1.0.0",
+    "yandex-cloud-ml-sdk>=0.1.0",
+    "transliterate>=1.10.0",
 ]
 
 [project.optional-dependencies]
-
+dev = [
+    "build>=1.3.0",
+    "twine>=6.0.0",
+]
 docs = [
-    "sphinx>=8.0.0",
-    "sphinx-autodoc-typehints>=3.0.0",
-    "furo>=2025.0.0",
+    "sphinx>=5.0.0",
+    "sphinx-autodoc-typehints>=1.22.0",
+    "furo>=2023.3.27",
+    "roman>=5.0"
 ]
 all = ["hivetracered[dev,docs]"]
 
@@ -70,31 +78,5 @@ include = ["hivetracered*"]
 
 [tool.setuptools.package-data]
 hivetracered = [
-    "evaluators/data/*.txt",
-    "attacks/types/**/*.txt",
+    "evaluators/data/*.csv",  # Changed from *.txt
 ]
-
-[tool.black]
-line-length = 100
-target-version = ["py310", "py311", "py312", "py313"]
-include = '\.pyi?$'
-
-[tool.isort]
-profile = "black"
-line_length = 100
-multi_line_output = 3
-
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-python_files = "test_*.py"
-python_classes = "Test*"
-python_functions = "test_*"
-asyncio_mode = "auto"
-addopts = "-v --tb=short"
-
-[tool.mypy]
-python_version = "3.10"
-warn_return_any = true
-warn_unused_configs = true
-disallow_untyped_defs = false
-ignore_missing_imports = true

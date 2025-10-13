@@ -240,7 +240,7 @@ Basic Custom Model
 
 .. code-block:: python
 
-   from models.base_model import Model
+   from hivetracered.models.base_model import Model
    from typing import Union, List, Dict
    import asyncio
 
@@ -298,7 +298,7 @@ Advanced Custom Model
 
 .. code-block:: python
 
-   from models.base_model import Model
+   from hivetracered.models.base_model import Model
    import aiohttp
 
    class AdvancedCustomModel(Model):
@@ -406,7 +406,7 @@ Add to the model registry for use in configuration files:
 .. code-block:: python
 
    # In pipeline/constants.py
-   from models.my_custom_model import MyCustomModel
+   from hivetracered.models.my_custom_model import MyCustomModel
 
    MODEL_CLASSES = {
        "my-custom-model": MyCustomModel,

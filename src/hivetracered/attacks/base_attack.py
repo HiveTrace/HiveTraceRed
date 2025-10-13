@@ -72,7 +72,7 @@ class BaseAttack(ABC):
         Returns:
             A ComposedAttack instance that applies attacks in sequence
         """
-        from attacks.composed_attack import ComposedAttack
+        from hivetracered.attacks.composed_attack import ComposedAttack
         if not isinstance(other, BaseAttack):
             return NotImplemented
         return ComposedAttack(outer_attack=self, inner_attack=other)

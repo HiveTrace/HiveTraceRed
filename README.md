@@ -1,4 +1,4 @@
-![HiveTrace Red](assets/HiveTraceRed.jpg)
+![HiveTrace Red](https://raw.githubusercontent.com/HiveTrace/HiveTraceRed/master/assets/HiveTraceRed.jpg)
 
 # HiveTrace Red: LLM Red Teaming Framework
 
@@ -55,7 +55,7 @@ The framework provides a 3-stage pipeline:
 
 The framework provides detailed attack analysis showing success rates across different attack types and individual attack techniques:
 
-![Attack Analysis Results](assets/Results.png)
+![Attack Analysis Results](https://raw.githubusercontent.com/HiveTrace/HiveTraceRed/master/assets/Results.png)
 
 The analysis includes:
 - **Success Rate by Attack Type**: Comparative effectiveness of different attack categories (persuasion, roleplay, simple instructions, etc.)

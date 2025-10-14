@@ -104,4 +104,6 @@ Edit ``.env`` and add your API credentials:
 Next Steps
 ----------
 
-:doc:`quickstart` - Run your first red teaming test
+:doc:`quickstart-api` - Run your first test with cloud APIs
+
+:doc:`quickstart-local` - Run your first test on-premise with Ollama

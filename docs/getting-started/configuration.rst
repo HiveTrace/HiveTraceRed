@@ -216,5 +216,6 @@ Results are saved in timestamped directories:
 See Also
 --------
 
-* :doc:`quickstart` - Quick start guide
+* :doc:`quickstart-api` - Quick start guide (cloud APIs)
+* :doc:`quickstart-local` - Quick start guide (on-premise)
 * :doc:`../user-guide/running-pipeline` - Pipeline usage

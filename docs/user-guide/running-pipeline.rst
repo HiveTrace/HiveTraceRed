@@ -377,5 +377,6 @@ See Also
 --------
 
 * :doc:`../getting-started/configuration` - Configuration reference
-* :doc:`../getting-started/quickstart` - Quick start guide
+* :doc:`../getting-started/quickstart-api` - Quick start guide (cloud APIs)
+* :doc:`../getting-started/quickstart-local` - Quick start guide (on-premise)
 * :doc:`../api/pipeline` - Pipeline API reference

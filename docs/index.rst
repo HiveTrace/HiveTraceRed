@@ -19,7 +19,8 @@ Quick Links
 -----------
 
 * :doc:`getting-started/installation` - Get started quickly
-* :doc:`getting-started/quickstart` - Your first red teaming test
+* :doc:`getting-started/quickstart-api` - Your first test (cloud APIs)
+* :doc:`getting-started/quickstart-local` - Your first test (on-premise)
 * :doc:`attacks/index` - Explore attack types
 * :doc:`api/attacks` - API reference
 
@@ -31,7 +32,8 @@ Table of Contents
    :caption: Getting Started
 
    getting-started/installation
-   getting-started/quickstart
+   getting-started/quickstart-api
+   getting-started/quickstart-local
    getting-started/configuration
 
 .. toctree::

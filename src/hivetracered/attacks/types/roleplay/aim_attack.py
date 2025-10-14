@@ -11,7 +11,4 @@ class AIMAttack(TemplateAttack):
             template=template,
             name="AIM",
             description="AIM (Always Intelligent and Machiavellian) attack that uses a roleplay format to bypass filters."
-        ) 
-
-
-        from attacks.template_attack import TemplateAttack
+        )

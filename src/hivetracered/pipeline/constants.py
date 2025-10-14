@@ -7,8 +7,7 @@ and configuration based on string identifiers in configuration files.
 from typing import Dict, Any, Callable
 
 # Import model classes
-from hivetracered.models import GigaChatModel, OpenAIModel, YandexGPTModel, GeminiModel, GeminiNativeModel, SberCloudModel, OpenRouterModel, OllamaModel
-
+from hivetracered.models import GigaChatModel, OpenAIModel, YandexGPTModel, GeminiModel, GeminiNativeModel, SberCloudModel, OpenRouterModel, OllamaModel, LlamaCppModel
 # Import all attack classes and types
 from hivetracered.attacks.base_attack import BaseAttack
 
@@ -61,7 +60,19 @@ MODEL_CLASSES = {
     "nvidia/nemotron-nano-9b-v2:free": OpenRouterModel,
     "cognitivecomputations/dolphin-mistral-24b-venice-edition:free": OpenRouterModel,
     "deepseek/deepseek-chat-v3.1:free": OpenRouterModel,
-    "ollama/qwen3:0.6b": OllamaModel,
+    "openai/gpt-oss-20b:free": OpenRouterModel,
+    "qwen3:0.6b": OllamaModel,
+
+    #Model classes
+    "GigaChatModel": GigaChatModel,
+    "OpenAIModel": OpenAIModel,
+    "YandexGPTModel": YandexGPTModel,
+    "GeminiNativeModel": GeminiNativeModel,
+    "GeminiModel": GeminiModel,
+    "SberCloudModel": SberCloudModel,
+    "OpenRouterModel": OpenRouterModel,
+    "OllamaModel": OllamaModel,
+    "LlamaCppModel": LlamaCppModel,
 }
 """Registry mapping model names to their implementation classes.
 Allows dynamic instantiation of models based on configuration strings."""

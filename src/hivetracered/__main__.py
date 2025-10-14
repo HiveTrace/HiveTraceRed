@@ -56,11 +56,11 @@ DEFAULT_CONFIG = {
 
     # Models configuration
     "attacker_model": {
-        "name": "gemini-2.5-flash-preview-04-17",  # Model used for model-based attacks
+        "name": "gpt-4.1-nano",  # Model used for model-based attacks
         "params": {"temperature": 0.000001}
     },
     "response_model": {
-        "name": "yandexgpt-lite",
+        "name": "gpt-4.1-nano",
         "params": {"temperature": 0.000001}
     },
     "evaluation_model": {
@@ -68,7 +68,7 @@ DEFAULT_CONFIG = {
     },
 
     "evaluator": {
-        "name": "WildGuardGPTRuEvaluator"
+        "name": "WildGuardGPTRuHalEvaluator"
     },
 
     # Attacks configuration
@@ -148,6 +148,8 @@ def setup_model(model_config: Dict[str, Any]) -> Optional[Model]:
     if not model_name:
         return None
 
+    model_class = model_config.get("model", None)
+
     params = model_config.get("params", {})
 
     if model_name in MODEL_CLASSES:
@@ -156,6 +158,12 @@ def setup_model(model_config: Dict[str, Any]) -> Optional[Model]:
             return model_class(model=model_name, **params)
         except Exception as e:
             print(f"Error initializing model '{model_name}': {str(e)}")
+    elif model_class in MODEL_CLASSES:
+        try:
+            model_class = MODEL_CLASSES[model_class]
+            return model_class(model=model_name, **params)
+        except Exception as e:
+            print(f"Error initializing model '{model_class}': {str(e)}")
     else:
         print(f"Warning: Unknown model '{model_name}'.")
 

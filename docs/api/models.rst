@@ -6,15 +6,10 @@ The models module provides unified interfaces for various LLM providers.
 Base Class
 ----------
 
-.. automodule:: models
-   :members:
-   :undoc-members:
-   :no-index:
-
 Model
 ~~~~~
 
-.. autoclass:: models.base_model.Model
+.. autoclass:: hivetracered.models.base_model.Model
    :members:
    :undoc-members:
    :show-inheritance:
@@ -26,7 +21,7 @@ Model Implementations
 OpenAI Models
 ~~~~~~~~~~~~~
 
-.. autoclass:: models.openai_model.OpenAIModel
+.. autoclass:: hivetracered.models.openai_model.OpenAIModel
    :members:
    :undoc-members:
    :show-inheritance:
@@ -35,7 +30,7 @@ OpenAI Models
 GigaChat Models
 ~~~~~~~~~~~~~~~
 
-.. autoclass:: models.gigachat_model.GigaChatModel
+.. autoclass:: hivetracered.models.gigachat_model.GigaChatModel
    :members:
    :undoc-members:
    :show-inheritance:
@@ -44,7 +39,7 @@ GigaChat Models
 Yandex Models
 ~~~~~~~~~~~~~
 
-.. autoclass:: models.yandex_model.YandexGPTModel
+.. autoclass:: hivetracered.models.yandex_model.YandexGPTModel
    :members:
    :undoc-members:
    :show-inheritance:
@@ -53,13 +48,13 @@ Yandex Models
 Google Gemini Models
 ~~~~~~~~~~~~~~~~~~~~
 
-.. autoclass:: models.gemini_model.GeminiModel
+.. autoclass:: hivetracered.models.gemini_model.GeminiModel
    :members:
    :undoc-members:
    :show-inheritance:
    :special-members: __init__
 
-.. autoclass:: models.gemini_native_model.GeminiNativeModel
+.. autoclass:: hivetracered.models.gemini_native_model.GeminiNativeModel
    :members:
    :undoc-members:
    :show-inheritance:
@@ -68,7 +63,7 @@ Google Gemini Models
 Sber Cloud Models
 ~~~~~~~~~~~~~~~~~
 
-.. autoclass:: models.sber_cloud_model.SberCloudModel
+.. autoclass:: hivetracered.models.sber_cloud_model.SberCloudModel
    :members:
    :undoc-members:
    :show-inheritance:
@@ -77,7 +72,7 @@ Sber Cloud Models
 OpenRouter Models
 ~~~~~~~~~~~~~~~~~
 
-.. autoclass:: models.openrouter_model.OpenRouterModel
+.. autoclass:: hivetracered.models.openrouter_model.OpenRouterModel
    :members:
    :undoc-members:
    :show-inheritance:

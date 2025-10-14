@@ -8,15 +8,8 @@ Requirements
 * pip package manager
 * Virtual environment (recommended)
 
-Basic Installation
-------------------
-
-Clone the repository:
-
-.. code-block:: bash
-
-   git clone https://github.com/HiveTrace/HiveTraceRed.git
-   cd HiveTraceRed
+Installation from PyPI
+----------------------
 
 Create and activate a virtual environment (recommended):
 
@@ -25,20 +18,59 @@ Create and activate a virtual environment (recommended):
    python3 -m venv venv
    source venv/bin/activate  # On Windows: venv\Scripts\activate
 
-Install dependencies:
+The recommended way to install HiveTraceRed is via pip:
 
 .. code-block:: bash
 
-   pip install -r requirements.txt
+   pip install hivetracered
 
-Additional Dependencies for Documentation
-------------------------------------------
+This will install the package and make the ``hivetracered`` and ``hivetracered-report`` CLI commands available.
 
-If you want to build the documentation locally:
+Optional Dependencies
+~~~~~~~~~~~~~~~~~~~~~
+
+Install with optional dependencies for development or documentation:
 
 .. code-block:: bash
 
-   pip install sphinx furo sphinx-autodoc-typehints
+   # For development (includes build tools)
+   pip install hivetracered[dev]
+
+   # For building documentation
+   pip install hivetracered[docs]
+
+   # Install everything
+   pip install hivetracered[all]
+
+Development Installation
+------------------------
+
+If you want to contribute to HiveTraceRed or modify the source code, install from source:
+
+Clone the repository:
+
+.. code-block:: bash
+
+   git clone https://github.com/HiveTrace/HiveTraceRed.git
+   cd HiveTraceRed
+
+
+Install in editable mode with development dependencies:
+
+.. code-block:: bash
+
+   pip install -e '.[dev]'
+
+Build Documentation Locally
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+If you want to build the documentation:
+
+.. code-block:: bash
+
+   pip install -e '.[docs]'
+   cd docs
+   make html
 
 Environment Setup
 -----------------
@@ -72,4 +104,6 @@ Edit ``.env`` and add your API credentials:
 Next Steps
 ----------
 
-:doc:`quickstart` - Run your first red teaming test
+:doc:`quickstart-api` - Run your first test with cloud APIs
+
+:doc:`quickstart-local` - Run your first test on-premise with Ollama

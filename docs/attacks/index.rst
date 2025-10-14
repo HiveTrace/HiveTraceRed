@@ -104,7 +104,7 @@ Using Attacks
 
 .. code-block:: python
 
-   from attacks import DANAttack, Base64OutputAttack
+   from hivetracered.attacks import DANAttack, Base64OutputAttack
 
    # Basic usage
    attack = DANAttack()
@@ -130,4 +130,5 @@ See Also
 
 * :doc:`../api/attacks` - Attack API reference
 * :doc:`../user-guide/custom-attacks` - Creating custom attacks
-* :doc:`../getting-started/quickstart` - Quick start guide
+* :doc:`../getting-started/quickstart-api` - Quick start guide (cloud APIs)
+* :doc:`../getting-started/quickstart-local` - Quick start guide (on-premise)

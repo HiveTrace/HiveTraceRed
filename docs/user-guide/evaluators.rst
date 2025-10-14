@@ -15,8 +15,8 @@ WildGuard evaluators use GPT models for safety assessment.
 
 .. code-block:: python
 
-   from evaluators import WildGuardGPTEvaluator
-   from models import OpenAIModel
+   from hivetracered.evaluators import WildGuardGPTEvaluator
+   from hivetracered.models import OpenAIModel
 
    model = OpenAIModel(model="gpt-4.1-nano")
    evaluator = WildGuardGPTEvaluator(model=model)
@@ -31,7 +31,7 @@ WildGuard evaluators use GPT models for safety assessment.
 
 .. code-block:: python
 
-   from evaluators import WildGuardGPTRuEvaluator
+   from hivetracered.evaluators import WildGuardGPTRuEvaluator
 
    evaluator = WildGuardGPTRuEvaluator()
    result = evaluator.evaluate(
@@ -43,7 +43,7 @@ WildGuard evaluators use GPT models for safety assessment.
 
 .. code-block:: python
 
-   from evaluators import WildGuardGPTRuHalEvaluator
+   from hivetracered.evaluators import WildGuardGPTRuHalEvaluator
 
    evaluator = WildGuardGPTRuHalEvaluator()
    result = evaluator.evaluate(prompt, response)
@@ -55,7 +55,7 @@ Checks responses for presence of unsafe keywords:
 
 .. code-block:: python
 
-   from evaluators import KeywordEvaluator, load_keywords
+   from hivetracered.evaluators import KeywordEvaluator, load_keywords
 
    # Load keyword list
    keywords = load_keywords('harmful_keywords.txt')
@@ -73,8 +73,8 @@ Uses a custom model for evaluation:
 
 .. code-block:: python
 
-   from evaluators import ModelEvaluator
-   from models import OpenAIModel
+   from hivetracered.evaluators import ModelEvaluator
+   from hivetracered.models import OpenAIModel
 
    model = OpenAIModel(model="gpt-4.1")
    evaluator = ModelEvaluator(model=model)
@@ -88,7 +88,7 @@ Detects if the model leaked its system prompt:
 
 .. code-block:: python
 
-   from evaluators import SystemPromptDetectionEvaluator
+   from hivetracered.evaluators import SystemPromptDetectionEvaluator
 
    evaluator = SystemPromptDetectionEvaluator(
        system_prompt="You are a helpful assistant..."
@@ -121,8 +121,8 @@ Programmatic Usage
 .. code-block:: python
 
    import asyncio
-   from evaluators import WildGuardGPTEvaluator
-   from models import OpenAIModel
+   from hivetracered.evaluators import WildGuardGPTEvaluator
+   from hivetracered.models import OpenAIModel
 
    async def evaluate_responses():
        model = OpenAIModel(model="gpt-4.1-nano")
@@ -182,7 +182,7 @@ Basic Custom Evaluator
 
 .. code-block:: python
 
-   from evaluators.base_evaluator import BaseEvaluator
+   from hivetracered.evaluators.base_evaluator import BaseEvaluator
    from typing import Dict, Any, Union, List
 
    class MyCustomEvaluator(BaseEvaluator):
@@ -261,8 +261,8 @@ For custom LLM-based evaluators, inherit from ``ModelEvaluator`` to leverage bui
 
 .. code-block:: python
 
-   from evaluators.model_evaluator import ModelEvaluator
-   from models import OpenAIModel
+   from hivetracered.evaluators.model_evaluator import ModelEvaluator
+   from hivetracered.models import OpenAIModel
    from typing import Dict, Any
 
    class LLMEvaluator(ModelEvaluator):
@@ -320,7 +320,7 @@ Multi-Criteria Evaluator
 
 .. code-block:: python
 
-   from evaluators.base_evaluator import BaseEvaluator
+   from hivetracered.evaluators.base_evaluator import BaseEvaluator
 
    class MultiCriteriaEvaluator(BaseEvaluator):
        def __init__(self, criteria_evaluators: List[BaseEvaluator]):
@@ -378,7 +378,7 @@ Add to the evaluator registry:
 .. code-block:: python
 
    # In pipeline/constants.py
-   from evaluators.my_evaluator import MyCustomEvaluator
+   from hivetracered.evaluators.my_evaluator import MyCustomEvaluator
 
    EVALUATOR_CLASSES = {
        "MyCustomEvaluator": MyCustomEvaluator,

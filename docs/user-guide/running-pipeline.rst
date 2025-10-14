@@ -19,13 +19,23 @@ The complete pipeline flow:
 Running the Complete Pipeline
 ------------------------------
 
-Create a configuration file and run:
+Create a configuration file and run using the CLI command:
 
 .. code-block:: bash
 
-   python run.py --config config.yaml
+   hivetracered --config config.yaml
 
 This will execute all three stages and save results to the output directory.
+
+CLI Command Options
+~~~~~~~~~~~~~~~~~~~
+
+.. code-block:: bash
+
+   hivetracered --config config.yaml          # Run with config file
+   hivetracered --help                        # Show help message
+
+The ``hivetracered`` command is installed automatically when you install the package via pip.
 
 Stage 1: Creating Attack Prompts
 ---------------------------------
@@ -57,7 +67,7 @@ Programmatic Usage
 .. code-block:: python
 
    import asyncio
-   from pipeline import setup_attacks, stream_attack_prompts
+   from hivetracered.pipeline import setup_attacks, stream_attack_prompts
 
    async def create_attacks():
        # Setup attacks
@@ -128,8 +138,8 @@ Programmatic Usage
 .. code-block:: python
 
    import asyncio
-   from models import OpenAIModel
-   from pipeline import stream_model_responses
+   from hivetracered.models import OpenAIModel
+   from hivetracered.pipeline import stream_model_responses
 
    async def get_responses():
        # Initialize model
@@ -201,8 +211,8 @@ Programmatic Usage
 .. code-block:: python
 
    import asyncio
-   from evaluators import WildGuardGPTEvaluator
-   from pipeline import stream_evaluated_responses
+   from hivetracered.evaluators import WildGuardGPTEvaluator
+   from hivetracered.pipeline import stream_evaluated_responses
 
    async def evaluate():
        # Initialize evaluator
@@ -269,7 +279,7 @@ The pipeline processes prompts in batches for efficiency:
 
 .. code-block:: python
 
-   from models import OpenAIModel
+   from hivetracered.models import OpenAIModel
 
    # Batch size controls concurrent requests
    model = OpenAIModel(model="gpt-4")
@@ -320,9 +330,53 @@ Load and analyze results using pandas:
    top_attacks = success_by_attack.sort_values(ascending=False).head(5)
    print(f"Top 5 attacks:\n{top_attacks}")
 
+Generating HTML Reports
+-----------------------
+
+After running your pipeline, generate comprehensive HTML reports with interactive visualizations:
+
+.. code-block:: bash
+
+   hivetracered-report --data-file results/run_*/evaluated_responses_results*.parquet --output report.html
+
+Command Options
+~~~~~~~~~~~~~~~
+
+.. code-block:: bash
+
+   hivetracered-report --data-file <path_to_parquet>    # Input data file (required)
+   hivetracered-report --output <output.html>           # Output HTML file (default: report.html)
+   hivetracered-report --help                           # Show help message
+
+Report Contents
+~~~~~~~~~~~~~~~
+
+The generated HTML report includes:
+
+* **Executive Summary**: Key metrics, total attacks tested, success rates, and OWASP LLM Top 10 mapping
+* **Attack Analysis**: Interactive charts showing success rates by attack type and attack name
+* **Content Analysis**: Response length distributions and content characteristics
+* **Data Explorer**: Filterable table with all prompts, responses, and evaluation results
+* **Sample Data**: Detailed examples of successful and failed attacks
+
+Example:
+
+.. code-block:: bash
+
+   # Generate report from specific run
+   hivetracered-report \
+     --data-file results/run_20250503_103026/evaluated_responses_results_20250503_103145.parquet \
+     --output analysis_report.html
+
+   # Open the report in your browser
+   open analysis_report.html  # macOS
+   xdg-open analysis_report.html  # Linux
+   start analysis_report.html  # Windows
+
 See Also
 --------
 
 * :doc:`../getting-started/configuration` - Configuration reference
-* :doc:`../getting-started/quickstart` - Quick start guide
+* :doc:`../getting-started/quickstart-api` - Quick start guide (cloud APIs)
+* :doc:`../getting-started/quickstart-local` - Quick start guide (on-premise)
 * :doc:`../api/pipeline` - Pipeline API reference

@@ -1,0 +1,85 @@
+[build-system]
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "hivetracered"
+version = "1.0.1"
+description = "LLM Red Teaming Framework for defensive security research"
+readme = "README.md"
+license = {text = "Apache-2.0"}
+authors = [
+    {name = "HiveTrace", email = "sales@raftds.com"}
+]
+requires-python = ">=3.10"
+keywords = ["llm", "red-team", "security", "testing", "adversarial", "ai-safety"]
+classifiers = [
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "License :: OSI Approved :: Apache Software License",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "Topic :: Security",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+
+dependencies = [
+    "pandas>=2.0.0",
+    "pyarrow>=10.0.0",
+    "pyyaml>=6.0",
+    "python-dotenv>=1.0.0",
+    "tqdm>=4.65.0",
+    "aiohttp>=3.8.0",
+    "requests>=2.28.0",
+    "langchain>=0.3.0",
+    "langchain-core>=0.1.0",
+    "langchain-community>=0.3.0",
+    "langchain-openai>=0.0.5",
+    "langchain-ollama>=0.3.0",
+    "langchain-gigachat>=0.1.0",
+    "langchain-google-genai>=1.0.0",
+    "google-generativeai>=0.3.0",
+    "google-genai>=1.0.0",
+    "yandex-cloud-ml-sdk>=0.1.0",
+    "transliterate>=1.10.0",
+    "plotly>=5.0.0",
+    "numpy>=1.24.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "build>=1.3.0",
+    "twine>=6.0.0",
+]
+docs = [
+    "sphinx>=5.0.0",
+    "sphinx-autodoc-typehints>=1.22.0",
+    "furo>=2023.3.27",
+    "roman>=5.0"
+]
+all = ["hivetracered[dev,docs]"]
+
+[project.urls]
+Homepage = "https://github.com/HiveTrace/HiveTraceRed"
+Documentation = "https://hivetrace.github.io/HiveTraceRed/"
+Repository = "https://github.com/HiveTrace/HiveTraceRed"
+Issues = "https://github.com/HiveTrace/HiveTraceRed/issues"
+
+[project.scripts]
+hivetracered = "hivetracered.__main__:main"
+hivetracered-report = "hivetracered.report:main"
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["hivetracered*"]
+
+[tool.setuptools.package-data]
+hivetracered = [
+    "evaluators/data/*.csv",  # Changed from *.txt
+]

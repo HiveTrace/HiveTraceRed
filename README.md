@@ -1,4 +1,4 @@
-![HiveTrace Red](assets/HiveTraceRed.jpg)
+![HiveTrace Red](https://raw.githubusercontent.com/HiveTrace/HiveTraceRed/master/assets/HiveTraceRed.jpg)
 
 # HiveTrace Red: LLM Red Teaming Framework
 
@@ -51,15 +51,40 @@ The framework provides a 3-stage pipeline:
 2. **Model Testing**: Send modified prompts to target LLMs
 3. **Evaluation**: Assess responses using WildGuard or custom evaluators
 
+The `hivetracered-report` command generates comprehensive HTML reports with:
+- Executive summary with key metrics and OWASP LLM Top 10 mapping
+- Interactive charts showing attack success rates by type and name
+- Content analysis with response length distributions
+- Data explorer with filtering capabilities
+- Sample prompts and responses for detailed inspection
+
 ### Results Example
 
 The framework provides detailed attack analysis showing success rates across different attack types and individual attack techniques:
 
-![Attack Analysis Results](assets/Results.png)
+![Attack Analysis Results](https://raw.githubusercontent.com/HiveTrace/HiveTraceRed/master/assets/Results.png)
 
 The analysis includes:
 - **Success Rate by Attack Type**: Comparative effectiveness of different attack categories (persuasion, roleplay, simple instructions, etc.)
 - **Success Rate by Attack Name**: Granular breakdown of individual attack technique performance
+
+## Installation
+
+Install HiveTraceRed via pip:
+
+```bash
+pip install hivetracered
+```
+
+This will install the package and make the `hivetracered` and `hivetracered-report` CLI commands available.
+
+Alternatively, install from source:
+
+```bash
+git clone https://github.com/HiveTrace/HiveTraceRed.git
+cd HiveTraceRed
+pip install -e .
+```
 
 ## Documentation
 

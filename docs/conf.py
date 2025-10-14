@@ -5,7 +5,12 @@
 
 import os
 import sys
-sys.path.insert(0, os.path.abspath('..'))
+
+# For local development, add src to path if package not installed
+try:
+    import hivetracered  # noqa: F401
+except ImportError:
+    sys.path.insert(0, os.path.abspath('../src'))
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
@@ -13,7 +18,7 @@ sys.path.insert(0, os.path.abspath('..'))
 project = 'HiveTraceRed'
 copyright = '2025, HiveTrace'
 author = 'HiveTrace'
-release = '1.0.0'
+release = '1.0.1'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -70,14 +75,21 @@ autodoc_mock_imports = [
     'langchain_gigachat',
     'langchain_google_genai',
     'langchain_openai',
+    'langchain_ollama',
+    'langchain_community',
+    'langchain',
     'dotenv',
     'tqdm',
     'langchain_core',
     'yandex_cloud_ml_sdk',
+    'yandexcloud',
     'aiohttp',
     'requests',
     'google',
     'google.genai',
+    'tenacity',
+    'pandas',
+    'pyarrow',
 ]
 
 # autosummary configuration

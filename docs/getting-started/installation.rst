@@ -11,6 +11,13 @@ Requirements
 Installation from PyPI
 ----------------------
 
+Create and activate a virtual environment (recommended):
+
+.. code-block:: bash
+
+   python3 -m venv venv
+   source venv/bin/activate  # On Windows: venv\Scripts\activate
+
 The recommended way to install HiveTraceRed is via pip:
 
 .. code-block:: bash
@@ -47,12 +54,6 @@ Clone the repository:
    git clone https://github.com/HiveTrace/HiveTraceRed.git
    cd HiveTraceRed
 
-Create and activate a virtual environment (recommended):
-
-.. code-block:: bash
-
-   python3 -m venv venv
-   source venv/bin/activate  # On Windows: venv\Scripts\activate
 
 Install in editable mode with development dependencies:
 

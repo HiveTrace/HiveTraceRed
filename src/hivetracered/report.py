@@ -116,17 +116,25 @@ def create_charts(df):
     charts = {}
 
     fig_top_types_html = ""
-    if {"attack_type","success","attack_name"}.issubset(df.columns):
-        # Calculate max success rate within each attack type
-        # First, get mean success rate for each individual attack
-        attack_means = df.groupby(["attack_type", "attack_name"])["success"].mean().reset_index()
-        # Then get the max of those means for each attack type
-        top_types = attack_means.groupby("attack_type")["success"].max().reset_index()
-        top_types.columns = ["attack_type", "Success Rate"]
-        # Also get counts for reference
-        counts = df.groupby("attack_type")["success"].agg(["count","sum"]).reset_index()
-        top_types = top_types.merge(counts, on="attack_type")
-        top_types = top_types.rename(columns={"count":"Total Tests","sum":"Successes"})
+    if {"attack_type","success","attack_name","base_prompt"}.issubset(df.columns):
+        # Calculate success rate based on unique prompts
+        # For each attack type, count unique prompts that succeeded in ANY attack of that type
+        type_stats = []
+        for attack_type in df["attack_type"].unique():
+            type_df = df[df["attack_type"] == attack_type]
+            # Get all unique prompts tested in this type
+            total_unique_prompts = type_df["base_prompt"].nunique()
+            # Get unique prompts that succeeded at least once in this type
+            successful_prompts = type_df[type_df["success"] == True]["base_prompt"].nunique()
+            # Calculate ASR
+            success_rate = successful_prompts / total_unique_prompts if total_unique_prompts > 0 else 0.0
+            type_stats.append({
+                "attack_type": attack_type,
+                "Success Rate": success_rate,
+                "Total Unique Prompts": total_unique_prompts,
+                "Successful Prompts": successful_prompts
+            })
+        top_types = pd.DataFrame(type_stats)
         top_types["Success Rate"] = top_types["Success Rate"] * 100
         top_types = top_types.sort_values("Success Rate", ascending=False).head(3).reset_index(drop=True)
         fig_top_types = px.bar(
@@ -135,7 +143,7 @@ def create_charts(df):
         )
         fig_top_types.update_traces(texttemplate="%{text:.1f}%", textposition="outside")
         fig_top_types.update_layout(
-            xaxis_title="Max Success Rate (%)", yaxis_title="Attack Type", height=350, margin=dict(l=10,r=10,t=30,b=10),
+            xaxis_title="Success Rate (% of Unique Prompts)", yaxis_title="Attack Type", height=350, margin=dict(l=10,r=10,t=30,b=10),
             **get_chart_style()
         )
         fig_top_types_html = pio.to_html(fig_top_types, include_plotlyjs=True, full_html=False)
@@ -163,33 +171,35 @@ def create_charts(df):
             fig_top_attacks_html = pio.to_html(fig_top_attacks, include_plotlyjs=True, full_html=False)
 
     fig_attack_type_html = ""
-    if {"attack_type","success","is_blocked","attack_name"}.issubset(df.columns):
-        # Calculate max success rate within each attack type
-        # First, get mean success rate for each individual attack
-        attack_means = df.groupby(["attack_type", "attack_name"])["success"].mean().reset_index()
-        # Then get the max of those means for each attack type
-        max_success = attack_means.groupby("attack_type")["success"].max().reset_index()
-        max_success.columns = ["attack_type", "Success Rate"]
-        
-        # Get other stats
-        other_stats = (
-            df.groupby("attack_type")
-            .agg({"success":["count","sum"], "is_blocked":"mean"})
-        )
-        other_stats.columns = ["Total Tests","Successes","Block Rate"]
-        other_stats = other_stats.reset_index()
-        
-        # Merge stats
-        attack_type_stats = max_success.merge(other_stats, on="attack_type")
-        attack_type_stats["Success Rate"] = attack_type_stats["Success Rate"] * 100
-        attack_type_stats["Block Rate"] = attack_type_stats["Block Rate"] * 100
+    if {"attack_type","success","is_blocked","attack_name","base_prompt"}.issubset(df.columns):
+        # Calculate success rate based on unique prompts
+        # For each attack type, count unique prompts that succeeded in ANY attack of that type
+        type_stats = []
+        for attack_type in df["attack_type"].unique():
+            type_df = df[df["attack_type"] == attack_type]
+            # Get all unique prompts tested in this type
+            total_unique_prompts = type_df["base_prompt"].nunique()
+            # Get unique prompts that succeeded at least once in this type
+            successful_prompts = type_df[type_df["success"] == True]["base_prompt"].nunique()
+            # Calculate ASR
+            success_rate = successful_prompts / total_unique_prompts if total_unique_prompts > 0 else 0.0
+            # Get block rate
+            block_rate = type_df["is_blocked"].mean()
+            type_stats.append({
+                "attack_type": attack_type,
+                "Success Rate": success_rate * 100,
+                "Total Unique Prompts": total_unique_prompts,
+                "Successful Prompts": successful_prompts,
+                "Block Rate": block_rate * 100
+            })
+        attack_type_stats = pd.DataFrame(type_stats)
 
         attack_type_stats = attack_type_stats[attack_type_stats["Success Rate"] > 3]
 
         if len(attack_type_stats) > 0:
             fig_attack_type = px.bar(attack_type_stats, x="attack_type", y="Success Rate")
             fig_attack_type.update_layout(
-                xaxis_title="Attack Type", yaxis_title="Max Success Rate (%)", height=400, margin=dict(l=10,r=10,t=30,b=10),
+                xaxis_title="Attack Type", yaxis_title="Success Rate (% of Unique Prompts)", height=400, margin=dict(l=10,r=10,t=30,b=10),
                 **get_chart_style()
             )
             fig_attack_type_html = pio.to_html(fig_attack_type, include_plotlyjs=False, full_html=False)
@@ -614,8 +624,8 @@ def main():
           </div>
         </div>
 
-        <h3>Top 3 Most Successful Attack Types (Max ASR)</h3>
-        <div style="color:var(--muted); font-size:13px; margin-bottom:8px;">Showing the maximum success rate achieved by any attack within each type</div>
+        <h3>Top 3 Most Successful Attack Types</h3>
+        <div style="color:var(--muted); font-size:13px; margin-bottom:8px;">Based on unique prompts that succeeded in at least one attack of this type</div>
         {charts['fig_top_types_html']}
 
         <h3>Top 3 Most Successful Individual Attacks</h3>
@@ -627,8 +637,8 @@ def main():
       <div id="tab2" class="section" style="display:none;">
         <h2>⚔️ Attack Analysis</h2>
         
-        <h3>Maximum Success Rate by Attack Type</h3>
-        <div style="color:var(--muted); font-size:13px; margin-bottom:8px;">Showing the maximum success rate achieved by any attack within each type</div>
+        <h3>Success Rate by Attack Type</h3>
+        <div style="color:var(--muted); font-size:13px; margin-bottom:8px;">Based on unique prompts that succeeded in at least one attack of this type</div>
         <div class="plot-container">
           {charts['fig_attack_type_html']}
         </div>

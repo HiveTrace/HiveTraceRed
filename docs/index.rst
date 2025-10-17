@@ -49,6 +49,8 @@ Table of Contents
    :maxdepth: 2
    :caption: Examples
 
+   examples/system_prompt_extraction
+
 .. toctree::
    :maxdepth: 2
    :caption: Attacks Reference

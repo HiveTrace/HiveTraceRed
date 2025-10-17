@@ -50,7 +50,8 @@ docs/
 ├── conf.py                   # Sphinx configuration
 ├── getting-started/          # Installation and quickstart guides
 │   ├── installation.rst
-│   ├── quickstart.rst
+│   ├── quickstart-local.rst
+│   ├── quickstart-api.rst
 │   └── configuration.rst
 ├── user-guide/              # User guides
 │   ├── running-pipeline.rst

@@ -46,7 +46,9 @@ async def stream_model_responses(
 
     # Process prompts and handle responses as they complete
     # Individual errors are now handled at the model level
-    async for response in model.stream_abatch(prompts):
+    # Use the model's configured batch_size for concurrency
+    batch_size = getattr(model, 'batch_size', 1)
+    async for response in model.stream_abatch(prompts, batch_size=batch_size):
         # Get corresponding prompt data
         prompt_data = prompt_index_to_data[processed_count]
 

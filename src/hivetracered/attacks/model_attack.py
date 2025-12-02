@@ -185,9 +185,7 @@ class ModelAttack(BaseAttack):
                 raise ValueError("Prompt must be either a string or a list with the last message from human")
         
         i = 0
-        # Use the model's configured batch_size for concurrency
-        batch_size = getattr(self.model, 'batch_size', 1)
-        async for response in self.model.stream_abatch(formatted_prompts, batch_size=batch_size):
+        async for response in self.model.stream_abatch(formatted_prompts):
             if isinstance(prompts[i], str):
                 # For string prompts, return the model response content with post-processing
                 yield self.post_process_response(response["content"])

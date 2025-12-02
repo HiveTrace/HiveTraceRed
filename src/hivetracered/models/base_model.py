@@ -85,13 +85,12 @@ class Model(ABC):
         return self.__dict__
     
     @abstractmethod
-    async def stream_abatch(self, prompts: List[Union[str, List[Dict[str, str]]]], batch_size: int = 1) -> AsyncGenerator[dict, None]:
+    async def stream_abatch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> AsyncGenerator[dict, None]:
         """
         Send multiple requests to the model asynchronously and yield results as they complete.
         
         Args:
             prompts: A list of prompts to send to the model
-            batch_size: Number of prompts to process concurrently
 
         Yields:
             Response dictionaries as they become available, not necessarily in input order

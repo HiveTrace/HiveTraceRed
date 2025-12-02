@@ -158,18 +158,17 @@ class LangchainModel(Model):
             "batch_size": self.batch_size
         }
     
-    async def stream_abatch(self, prompts: List[Union[str, List[Dict[str, str]]]], batch_size: int = 1) -> AsyncGenerator[dict, None]:
+    async def stream_abatch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> AsyncGenerator[dict, None]:
         """
         Send multiple requests to the model asynchronously and yield results as they complete.
 
         Args:
             prompts: A list of prompts to send to the model
-            batch_size: Number of prompts to process concurrently
 
         Returns:
             An async generator of model responses in order of completion
         """
-        semaphore = asyncio.Semaphore(batch_size)
+        semaphore = asyncio.Semaphore(self.batch_size)
         async def sem_task(idx, prompt):
             async with semaphore:
                 try:

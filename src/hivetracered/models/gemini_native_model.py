@@ -271,19 +271,19 @@ class GeminiNativeModel(Model):
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, self.invoke, prompt)
     
-    def batch(self, prompts: List[Union[str, List[Dict[str, str]]]], batch_size: int = None) -> List[dict]:
+    def batch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> List[dict]:
         """
         Send multiple requests to the model synchronously.
         
         Args:
             prompts: A list of prompts to send to the model
-            batch_size: Override the instance batch_size if provided
             
         Returns:
             A list of model responses
         """
-        batch_size = batch_size or self.batch_size or len(prompts)
         results = []
+
+        batch_size = self.batch_size or len(prompts)
         
         for i in tqdm(range(0, len(prompts), batch_size), desc=f"Processing with {self.model_name}"):
             batch_prompts = prompts[i:i+batch_size]
@@ -297,20 +297,20 @@ class GeminiNativeModel(Model):
         
         return results
     
-    async def abatch(self, prompts: List[Union[str, List[Dict[str, str]]]], batch_size: int = None) -> List[dict]:
+    async def abatch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> List[dict]:
         """
         Send multiple requests to the model asynchronously.
         
         Args:
             prompts: A list of prompts to send to the model
-            batch_size: Override the instance batch_size if provided
             
         Returns:
             A list of model responses
         """
-        batch_size = batch_size or self.batch_size or len(prompts)
         results = []
         
+        batch_size = self.batch_size or len(prompts)
+
         for i in range(0, len(prompts), batch_size):
             batch_prompts = prompts[i:i+batch_size]
             tasks = [self.ainvoke(prompt) for prompt in batch_prompts]
@@ -319,18 +319,18 @@ class GeminiNativeModel(Model):
         
         return results 
         
-    async def stream_abatch(self, prompts: List[Union[str, List[Dict[str, str]]]], batch_size: int = None) -> AsyncGenerator[dict, None]:
+    async def stream_abatch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> AsyncGenerator[dict, None]:
         """
         Send multiple requests to the model asynchronously and yield results as they complete.
 
         Args:
             prompts: A list of prompts to send to the model
-            batch_size: Override the instance batch_size if provided
 
         Returns:
             An async generator of model responses in order of completion
         """
-        batch_size = batch_size or self.batch_size or len(prompts)
+
+        batch_size = self.batch_size or len(prompts)
 
         async def safe_ainvoke(prompt):
             """Wrapper that catches exceptions and returns error response."""

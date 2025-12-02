@@ -91,9 +91,8 @@ class ModelEvaluator(BaseEvaluator):
         Stream a batch of evaluations.
         """
         evaluation_prompts = [self.create_evaluation_prompt(prompt, response) for prompt, response in zip(prompts, responses)]
-        # Use the model's configured batch_size for concurrency
-        batch_size = getattr(self.model, 'batch_size', 1)
-        async for evaluation_response in self.model.stream_abatch(evaluation_prompts, batch_size=batch_size):
+        
+        async for evaluation_response in self.model.stream_abatch(evaluation_prompts):
             yield self._parse_evaluation_response(evaluation_response)
 
     def get_name(self) -> str:

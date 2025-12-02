@@ -8,7 +8,9 @@ from hivetracered.models.base_model import Model
 from dotenv import load_dotenv
 import requests
 from yandex_cloud_ml_sdk import YCloudML
-from yandexcloud import SDK, RetryPolicy
+from yandexcloud import SDK
+from yandex_cloud_ml_sdk._retry import RetryPolicy
+
 import time
 import threading
 from concurrent.futures import ThreadPoolExecutor
@@ -47,10 +49,7 @@ class YandexGPTModel(Model):
 
         # Configure retry policy with exponential backoff and jitter
         retry_policy = RetryPolicy(
-            max_retry_count=self.max_retries,
-            exponential_backoff_base=2,  # 2^n seconds
-            initial_delay=1.0,  # Start with 1 second delay
-            max_delay=60.0,  # Max 60 seconds between retries
+            max_attempts=self.max_retries,
         )
 
         sdk = YCloudML(

@@ -71,7 +71,7 @@ autodoc_typehints_description_target = 'documented'
 
 # Mock imports for optional dependencies
 autodoc_mock_imports = [
-    'transliterate',
+    'cyrtranslit',
     'langchain_gigachat',
     'langchain_google_genai',
     'langchain_openai',

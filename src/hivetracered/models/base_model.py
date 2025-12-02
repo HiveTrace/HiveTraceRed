@@ -36,13 +36,12 @@ class Model(ABC):
         pass
     
     @abstractmethod
-    def batch(self, prompts: List[Union[str, List[Dict[str, str]]]], batch_size: int = 10) -> List[dict]:
+    def batch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> List[dict]:
         """
         Send multiple requests to the model synchronously.
         
         Args:
             prompts: A list of prompts to send to the model
-            batch_size: Number of prompts to process in each batch
             
         Returns:
             List of response dictionaries in the same order as the input prompts
@@ -50,13 +49,12 @@ class Model(ABC):
         pass
     
     @abstractmethod
-    async def abatch(self, prompts: List[Union[str, List[Dict[str, str]]]], batch_size: int = 10) -> List[dict]:
+    async def abatch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> List[dict]:
         """
         Send multiple requests to the model asynchronously.
         
         Args:
             prompts: A list of prompts to send to the model
-            batch_size: Number of prompts to process concurrently
             
         Returns:
             List of response dictionaries in the same order as the input prompts

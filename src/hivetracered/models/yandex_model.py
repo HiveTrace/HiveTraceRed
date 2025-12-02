@@ -257,13 +257,12 @@ class YandexGPTModel(Model):
             **self.kwargs
         }
 
-    async def stream_abatch(self, prompts: List[Union[str, List[Dict[str, str]]]], batch_size: int = 1) -> AsyncGenerator[dict, None]:
+    async def stream_abatch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> AsyncGenerator[dict, None]:
         """
         Send multiple requests to the model asynchronously and yield results as they complete.
         
         Args:
             prompts: A list of prompts to send to the model
-            batch_size: Number of prompts to process concurrently (overrides instance batch_size)
 
         Yields:
             Response dictionaries as they become available
@@ -275,10 +274,11 @@ class YandexGPTModel(Model):
         
         formatted_prompts = [self._format_prompt(prompt) for prompt in prompts]
         # Yandex GPT API has a limit of 10 async requests per second
-        for i in tqdm(range(0, len(formatted_prompts), self.batch_size),
+        batch_size = self.batch_size or len(formatted_prompts)
+        for i in tqdm(range(0, len(formatted_prompts), batch_size),
                      desc=f"Submitting batches with {self.model_name}",
                      unit="batch"):
-            for prompt in formatted_prompts[i:i + self.batch_size]:
+            for prompt in formatted_prompts[i:i + batch_size]:
                 try:
                     operation = self.client.run_deferred(prompt)
                     operations.append(operation)

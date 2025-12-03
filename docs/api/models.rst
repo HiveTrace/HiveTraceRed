@@ -63,7 +63,7 @@ Google Gemini Models
 Sber Cloud Models
 ~~~~~~~~~~~~~~~~~
 
-.. autoclass:: hivetracered.models.sber_cloud_model.SberCloudModel
+.. autoclass:: hivetracered.models.cloud_ru_model.CloudRuModel
    :members:
    :undoc-members:
    :show-inheritance:

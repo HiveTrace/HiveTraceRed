@@ -9,7 +9,7 @@ from hivetracered.models.openai_model import OpenAIModel
 from hivetracered.models.yandex_model import YandexGPTModel
 from hivetracered.models.gemini_model import GeminiModel
 from hivetracered.models.gemini_native_model import GeminiNativeModel
-from hivetracered.models.sber_cloud_model import SberCloudModel
+from hivetracered.models.cloud_ru_model import CloudRuModel
 from hivetracered.models.openrouter_model import OpenRouterModel
 from hivetracered.models.ollama_model import OllamaModel
 from hivetracered.models.llamacpp_model import LlamaCppModel
@@ -21,7 +21,7 @@ __all__ = [
     "YandexGPTModel",
     "GeminiModel",
     "GeminiNativeModel",
-    "SberCloudModel",
+    "CloudRuModel",
     "OpenRouterModel",
     "OllamaModel",
     "LlamaCppModel"

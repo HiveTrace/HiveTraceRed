@@ -7,7 +7,7 @@ and configuration based on string identifiers in configuration files.
 from typing import Dict, Any, Callable
 
 # Import model classes
-from hivetracered.models import GigaChatModel, OpenAIModel, YandexGPTModel, GeminiModel, GeminiNativeModel, SberCloudModel, OpenRouterModel, OllamaModel, LlamaCppModel
+from hivetracered.models import GigaChatModel, OpenAIModel, YandexGPTModel, GeminiModel, GeminiNativeModel, CloudRuModel, OpenRouterModel, OllamaModel, LlamaCppModel
 # Import all attack classes and types
 from hivetracered.attacks.base_attack import BaseAttack
 
@@ -50,11 +50,11 @@ MODEL_CLASSES = {
     "gemini-1.5-flash": GeminiModel,
     "gemini-2.5-pro-preview-03-25": GeminiModel,
     # SberCloud models
-    "GigaChat/GigaChat-2-Max": SberCloudModel,
-    "openai/gpt-oss-120b": SberCloudModel,
-    "Qwen/Qwen3-Next-80B-A3B-Instruct": SberCloudModel,
-    "meta-llama/Llama-3.3-70B-Instruct": SberCloudModel,
-    "t-tech/T-pro-it-2.0": SberCloudModel,
+    "GigaChat/GigaChat-2-Max": CloudRuModel,
+    "openai/gpt-oss-120b": CloudRuModel,
+    "Qwen/Qwen3-Next-80B-A3B-Instruct": CloudRuModel,
+    "meta-llama/Llama-3.3-70B-Instruct": CloudRuModel,
+    "t-tech/T-pro-it-2.0": CloudRuModel,
     # OpenRouter models
     "x-ai/grok-4-fast:free": OpenRouterModel,
     "nvidia/nemotron-nano-9b-v2:free": OpenRouterModel,
@@ -69,7 +69,7 @@ MODEL_CLASSES = {
     "YandexGPTModel": YandexGPTModel,
     "GeminiNativeModel": GeminiNativeModel,
     "GeminiModel": GeminiModel,
-    "SberCloudModel": SberCloudModel,
+    "CloudRuModel": CloudRuModel,
     "OpenRouterModel": OpenRouterModel,
     "OllamaModel": OllamaModel,
     "LlamaCppModel": LlamaCppModel,

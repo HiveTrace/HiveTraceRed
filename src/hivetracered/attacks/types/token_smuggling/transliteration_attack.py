@@ -4,39 +4,57 @@ Transliteration attack that converts between different languages.
 
 from typing import Union, List, Dict, Optional
 from hivetracered.attacks.algo_attack import AlgoAttack
-from transliterate import translit
+import cyrtranslit
 
 ENGLISH_TO_RUSSIAN = {
     "english": ("английского", "английский"),
-    "armenian": ("армянского", "армянский"),
-    "georgian": ("грузинского", "грузинский"),
+    "bulgarian": ("болгарского", "болгарский"),
+    "belarusian": ("белорусского", "белорусский"),
     "greek": ("греческого", "греческий"),
+    "montenegrin": ("черногорского", "черногорский"),
+    "macedonian": ("македонского", "македонский"),
+    "mongolian": ("монгольского", "монгольский"),
+    "serbian": ("сербского", "сербский"),
     "russian": ("русского", "русский"),
+    "tajik": ("таджикского", "таджикский"),
+    "ukrainian": ("украинского", "украинский"),
 }
 
 class TransliterationAttack(AlgoAttack):
     """
     Attack that transliterates text between different alphabets,
     potentially bypassing content filters due to different character representations.
-    
-    Supported languages (accordingly to the transliterate library):
+
+    Supported languages (accordingly to the cyrtranslit library):
     - English ('en')
-    - Armenian ('hy')
-    - Georgian ('ka')
+    - Bulgarian ('bg')
+    - Belarusian ('by')
     - Greek ('el')
+    - Montenegrin ('me')
+    - Macedonian ('mk')
+    - Mongolian ('mn')
+    - Serbian ('rs')
     - Russian ('ru')
-    
+    - Tajik ('tj')
+    - Ukrainian ('ua')
+
     By default, transliterates from Russian to English, but can be configured to work
     with other supported language pairs.
     """
     
-    # Dictionary mapping language names to ISO codes used by the transliterate library
+    # Dictionary mapping language names to ISO codes used by the cyrtranslit library
     LANGUAGE_CODES = {
         'english': 'en',
-        'armenian': 'hy',
-        'georgian': 'ka',
+        'bulgarian': 'bg',
+        'belarusian': 'by',
         'greek': 'el',
+        'montenegrin': 'me',
+        'macedonian': 'mk',
+        'mongolian': 'mn',
+        'serbian': 'rs',
         'russian': 'ru',
+        'tajik': 'tj',
+        'ukrainian': 'ua',
     }
     
     def __init__(self, source_language: str = "russian", target_language: str = "english", raw: bool = True, template: Optional[str] = None):
@@ -100,11 +118,16 @@ class TransliterationAttack(AlgoAttack):
     def transform(self, text: str) -> str:
         """
         Apply the transliteration transformation to the input text.
-        
+
         Args:
             text: The input text to transform
-            
+
         Returns:
             The transliterated text
         """
-        return translit(text, language_code=self.language_code, reversed=self.reversed) 
+        if self.reversed:
+            # Cyrillic to Latin (e.g., Russian to English)
+            return cyrtranslit.to_latin(text, self.language_code)
+        else:
+            # Latin to Cyrillic (e.g., English to Russian)
+            return cyrtranslit.to_cyrillic(text, self.language_code) 

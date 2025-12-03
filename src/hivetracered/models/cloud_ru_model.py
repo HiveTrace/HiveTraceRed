@@ -7,7 +7,7 @@ import os
 from langchain_core.rate_limiters import InMemoryRateLimiter
 
 
-class SberCloudModel(LangchainModel):
+class CloudRuModel(LangchainModel):
     """
     Sber Cloud model implementation using LangChain's OpenAI-compatible integration.
     Routes requests to Cloud.ru Foundation Models OpenAI API.
@@ -54,6 +54,7 @@ class SberCloudModel(LangchainModel):
         rate_limiter = InMemoryRateLimiter(
             requests_per_second=max(1, rpm) / 60,
             check_every_n_seconds=0.1,
+            max_bucket_size=batch_size,
         )
 
         # LangChain ChatOpenAI supports OpenAI-compatible endpoints via base_url

@@ -16,7 +16,7 @@ HiveTraceRed provides the following model classes for various LLM providers:
 * **YandexGPTModel**: Yandex GPT models
 * **GeminiNativeModel**: Google Gemini models
 * **OpenRouterModel**: Access to multiple model providers
-* **SberCloudModel**: Sber Cloud ML models
+* **CloudRuModel**: Cloud.ru ML models
 * **OllamaModel**: Local models via Ollama server
 * **LlamaCppModel**: Local GGUF models via llama.cpp (direct inference)
 

@@ -97,7 +97,7 @@ Translation Attack Example
 .. code-block:: python
 
    from hivetracered.attacks import AlgoAttack
-   from transliterate import translit
+   import cyrtranslit
 
    class TransliterationAttack(AlgoAttack):
        def __init__(self, language='ru'):
@@ -111,7 +111,7 @@ Translation Attack Example
        def transform(self, text: str) -> str:
            """Transliterate text to target language."""
            try:
-               return translit(text, self.language)
+               return cyrtranslit.to_cyrillic(text, self.language)
            except:
                return text  # Return original if transliteration fails
 

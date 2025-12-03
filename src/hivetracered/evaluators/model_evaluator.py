@@ -91,6 +91,7 @@ class ModelEvaluator(BaseEvaluator):
         Stream a batch of evaluations.
         """
         evaluation_prompts = [self.create_evaluation_prompt(prompt, response) for prompt, response in zip(prompts, responses)]
+        
         async for evaluation_response in self.model.stream_abatch(evaluation_prompts):
             yield self._parse_evaluation_response(evaluation_response)
 

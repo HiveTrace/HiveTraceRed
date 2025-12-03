@@ -40,7 +40,7 @@ Setup and Imports
         stream_evaluated_responses,
         save_pipeline_results
     )
-    from hivetracered.models import SberCloudModel
+    from hivetracered.models import CloudRuModel
     from hivetracered.attacks import NoneAttack
     from hivetracered.evaluators import SystemPromptDetectionEvaluator
 
@@ -128,7 +128,7 @@ Test the model with attack prompts:
 
     responses = []
 
-    model = SberCloudModel("meta-llama/Llama-3.3-70B-Instruct", max_tokens=3000)
+    model = CloudRuModel("meta-llama/Llama-3.3-70B-Instruct", max_tokens=3000)
     async for response in stream_model_responses(model, attack_prompts):
         responses.append(response)
 
@@ -207,7 +207,7 @@ Create ``system_prompt_extraction_config.yaml``:
 
     # Model configuration
     response_model:
-      name: meta-llama/Llama-3.3-70B-Instruct  # SberCloud Llama model
+      name: meta-llama/Llama-3.3-70B-Instruct  # Cloud.ru Llama model
       params:
         max_tokens: 3000
 

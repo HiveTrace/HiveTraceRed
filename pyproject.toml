@@ -44,7 +44,7 @@ dependencies = [
     "google-generativeai>=0.3.0",
     "google-genai>=1.0.0",
     "yandex-cloud-ml-sdk>=0.1.0",
-    "transliterate>=1.10.0",
+    "cyrtranslit>=1.2.0",
     "plotly>=5.0.0",
     "numpy>=1.24.0",
 ]

@@ -6,6 +6,7 @@ import os
 from typing import AsyncGenerator
 import asyncio
 from tqdm import tqdm
+import warnings
 from langchain_core.rate_limiters import InMemoryRateLimiter
 
 class GeminiModel(LangchainModel):
@@ -15,13 +16,14 @@ class GeminiModel(LangchainModel):
     and support for both synchronous and asynchronous operations.
     """
     
-    def __init__(self, model: str = "gemini-2.5-flash-preview-04-17", batch_size: int = 0, rpm: int = 10, max_retries: int = 3, **kwargs):
+    def __init__(self, model: str = "gemini-2.5-flash-preview-04-17", max_concurrency: Optional[int] = None, batch_size: Optional[int] = None, rpm: int = 10, max_retries: int = 3, **kwargs):
         """
         Initialize the Gemini model client with the specified configuration.
 
         Args:
             model: Gemini model identifier (e.g., "gemini-1.5-pro", "gemini-2.5-flash")
-            batch_size: Maximum number of concurrent requests (0 for unlimited)
+            max_concurrency: Maximum number of concurrent requests (0 for unlimited, replaces batch_size)
+            batch_size: (Deprecated) Use max_concurrency instead. Will be removed in v2.0.0
             rpm: Rate limit in requests per minute
             max_retries: Maximum number of retry attempts on transient errors (default: 3)
             **kwargs: Additional parameters for model configuration:
@@ -34,6 +36,25 @@ class GeminiModel(LangchainModel):
         self.model_name = model
         self.max_retries = max_retries
 
+        # Handle deprecation
+        if batch_size is not None:
+            warnings.warn(
+                "The 'batch_size' parameter is deprecated and will be removed in v2.0.0. "
+                "Use 'max_concurrency' instead.",
+                DeprecationWarning,
+                stacklevel=2
+            )
+            if max_concurrency is None:
+                max_concurrency = batch_size
+
+        # Set default if neither provided
+        if max_concurrency is None:
+            max_concurrency = 0
+
+        self.max_concurrency = max_concurrency
+        # Keep for backward compatibility in get_params()
+        self.batch_size = self.max_concurrency
+
         self.kwargs = kwargs or {}
 
         if not "temperature" in self.kwargs:
@@ -43,7 +64,5 @@ class GeminiModel(LangchainModel):
             requests_per_second=rpm / 60,
             check_every_n_seconds=0.1,
         )
-
-        self.batch_size = batch_size
         self.client = ChatGoogleGenerativeAI(model=model, rate_limiter=rate_limiter, **self.kwargs)
         self.client = self._add_retry_policy(self.client) 

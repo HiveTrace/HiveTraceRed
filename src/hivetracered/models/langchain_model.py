@@ -25,20 +25,21 @@ class LangchainModel(Model):
     """
     
     @abstractmethod
-    def __init__(self, model_name: str, batch_size: int = 0, max_retries: int = 3, **kwargs):
+    def __init__(self, model_name: str, max_concurrency: int = 0, max_retries: int = 3, **kwargs):
         """
         Initialize the LangChain model wrapper.
 
         Args:
             model_name: Name/identifier of the model
-            batch_size: Maximum number of concurrent requests (0 for unlimited)
+            max_concurrency: Maximum number of concurrent requests (0 for unlimited)
             max_retries: Maximum number of retry attempts on transient errors (default: 3)
             **kwargs: Additional keyword arguments for the model
 
         Note:
             Child classes must implement this method to initialize:
             - self.model_name = model_name
-            - self.batch_size = batch_size
+            - self.max_concurrency = max_concurrency
+            - self.batch_size = self.max_concurrency  # For backward compatibility
             - self.max_retries = max_retries
             - self.kwargs = kwargs
             - self.client = <the actual LangChain model instance>
@@ -105,34 +106,34 @@ class LangchainModel(Model):
     def batch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> List[dict]:
         """
         Send multiple requests to the model synchronously.
-        
+
         Args:
             prompts: A list of prompts to send to the model
-            
+
         Returns:
             A list of model responses
         """
-        if self.batch_size == 0:
+        if self.max_concurrency == 0:
             return [dict(response) for response in self.client.batch(prompts)]
         else:
-            return [dict(response) for response in self.client.batch(prompts, config={"max_concurrency": self.batch_size})]
+            return [dict(response) for response in self.client.batch(prompts, config={"max_concurrency": self.max_concurrency})]
     
     async def abatch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> List[dict]:
         """
         Send multiple requests to the model asynchronously.
-        
+
         Args:
             prompts: A list of prompts to send to the model
-            
+
         Returns:
             A list of model responses
         """
-        if self.batch_size == 0:
+        if self.max_concurrency == 0:
             with BatchCallback(len(prompts)) as cb:
                 return [dict(response) for response in await self.client.abatch(prompts, config={"callbacks": [cb]})]
         else:
             with BatchCallback(len(prompts)) as cb:
-                return [dict(response) for response in await self.client.abatch(prompts, config={"max_concurrency": self.batch_size, "callbacks": [cb]})]
+                return [dict(response) for response in await self.client.abatch(prompts, config={"max_concurrency": self.max_concurrency, "callbacks": [cb]})]
 
     def is_answer_blocked(self, answer: dict) -> bool:
         """
@@ -155,6 +156,7 @@ class LangchainModel(Model):
         """
         return {
             **self.client.dict(),
+            "max_concurrency": self.max_concurrency,
             "batch_size": self.batch_size
         }
     
@@ -168,7 +170,7 @@ class LangchainModel(Model):
         Returns:
             An async generator of model responses in order of completion
         """
-        semaphore = asyncio.Semaphore(self.batch_size)
+        semaphore = asyncio.Semaphore(self.max_concurrency)
         async def sem_task(idx, prompt):
             async with semaphore:
                 try:

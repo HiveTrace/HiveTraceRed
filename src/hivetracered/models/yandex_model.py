@@ -10,6 +10,7 @@ import requests
 from yandex_cloud_ml_sdk import YCloudML
 from yandexcloud import SDK
 from yandex_cloud_ml_sdk._retry import RetryPolicy
+import warnings
 
 import time
 import threading
@@ -25,13 +26,14 @@ class YandexGPTModel(Model):
     and asynchronous operations, batched requests, and error handling.
     """
     
-    def __init__(self, model="yandexgpt", batch_size: int = 10, max_retries: int = 3, **kwargs):
+    def __init__(self, model="yandexgpt", max_concurrency: Optional[int] = None, batch_size: Optional[int] = None, max_retries: int = 3, **kwargs):
         """
         Initialize the Yandex GPT model client with the specified configuration.
 
         Args:
             model: Yandex model identifier (e.g., "yandexgpt", "yandexgpt-lite")
-            batch_size: Maximum number of concurrent requests in batch operations
+            max_concurrency: Maximum number of concurrent requests in batch operations (replaces batch_size)
+            batch_size: (Deprecated) Use max_concurrency instead. Will be removed in v2.0.0
             max_retries: Maximum number of retry attempts on transient errors (default: 3)
             **kwargs: Additional parameters for model configuration:
                      - temperature: Sampling temperature (lower = more deterministic)
@@ -40,8 +42,27 @@ class YandexGPTModel(Model):
         """
         load_dotenv(override=True)
         self.model_name = model
-        self.batch_size = batch_size
         self.max_retries = max_retries
+
+        # Handle deprecation
+        if batch_size is not None:
+            warnings.warn(
+                "The 'batch_size' parameter is deprecated and will be removed in v2.0.0. "
+                "Use 'max_concurrency' instead.",
+                DeprecationWarning,
+                stacklevel=2
+            )
+            if max_concurrency is None:
+                max_concurrency = batch_size
+
+        # Set default if neither provided
+        if max_concurrency is None:
+            max_concurrency = 10
+
+        self.max_concurrency = max_concurrency
+        # Keep for backward compatibility in get_params()
+        self.batch_size = self.max_concurrency
+
         self.kwargs = kwargs or {}
 
         if not "temperature" in self.kwargs:
@@ -171,13 +192,13 @@ class YandexGPTModel(Model):
             Uses ThreadPoolExecutor for concurrent processing when batch_size > 0
         """
 
-        if self.batch_size == 0:
+        if self.max_concurrency == 0:
             results = []
             for prompt in tqdm(prompts, desc=f"Processing requests with {self.model_name}", unit="request"):
                 results.append(self.invoke(prompt))
             return results
         else:
-            with ThreadPoolExecutor(max_workers=self.batch_size) as executor:
+            with ThreadPoolExecutor(max_workers=self.max_concurrency) as executor:
                 futures = [executor.submit(self.invoke, prompt) for prompt in prompts]
                 results = [future.result() for future in tqdm(futures, desc=f"Processing requests with {self.model_name}", unit="request")]
             return results
@@ -200,10 +221,10 @@ class YandexGPTModel(Model):
         last_operation = None
         
         # Yandex GPT API has a limit of 10 async requests per second
-        for i in tqdm(range(0, len(formatted_prompts), self.batch_size), 
-                     desc=f"Submitting batches with {self.model_name}", 
+        for i in tqdm(range(0, len(formatted_prompts), self.max_concurrency),
+                     desc=f"Submitting batches with {self.model_name}",
                      unit="batch"):
-            for prompt in formatted_prompts[i:i + self.batch_size]:
+            for prompt in formatted_prompts[i:i + self.max_concurrency]:
                 try:
                     operation = self.client.run_deferred(prompt)
                     last_operation = operation
@@ -274,7 +295,7 @@ class YandexGPTModel(Model):
         
         formatted_prompts = [self._format_prompt(prompt) for prompt in prompts]
         # Yandex GPT API has a limit of 10 async requests per second
-        batch_size = self.batch_size or len(formatted_prompts)
+        batch_size = self.max_concurrency or len(formatted_prompts)
         for i in tqdm(range(0, len(formatted_prompts), batch_size),
                      desc=f"Submitting batches with {self.model_name}",
                      unit="batch"):

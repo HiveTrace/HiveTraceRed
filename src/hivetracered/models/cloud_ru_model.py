@@ -1,8 +1,9 @@
-from typing import Any
+from typing import Any, Optional
 from langchain_openai import ChatOpenAI
 from hivetracered.models.langchain_model import LangchainModel
 from dotenv import load_dotenv
 import os
+import warnings
 
 from langchain_core.rate_limiters import InMemoryRateLimiter
 
@@ -16,7 +17,8 @@ class CloudRuModel(LangchainModel):
     def __init__(
         self,
         model: str = "GigaChat/GigaChat-2-Max",
-        batch_size: int = 1,
+        max_concurrency: Optional[int] = None,
+        batch_size: Optional[int] = None,
         rpm: int = 60,
         api_key: str = None,
         base_url: str = "https://foundation-models.api.cloud.ru/v1",
@@ -28,7 +30,8 @@ class CloudRuModel(LangchainModel):
 
         Args:
             model: Model identifier, e.g. "GigaChat/GigaChat-2-Max".
-            batch_size: Max concurrent requests for batch/abatch helpers.
+            max_concurrency: Maximum number of concurrent requests (replaces batch_size)
+            batch_size: (Deprecated) Use max_concurrency instead. Will be removed in v2.0.0
             rpm: Requests-per-minute soft limit enforced client-side.
             api_key: API key; defaults to GIGACHAT_CLOUD_API_KEY env var.
             base_url: Override API base URL; defaults to Cloud.ru endpoint.
@@ -42,8 +45,26 @@ class CloudRuModel(LangchainModel):
             api_key = os.getenv("SBER_CLOUD_API_KEY")
 
         self.model_name = model
-        self.batch_size = batch_size
         self.max_retries = max_retries
+
+        # Handle deprecation
+        if batch_size is not None:
+            warnings.warn(
+                "The 'batch_size' parameter is deprecated and will be removed in v2.0.0. "
+                "Use 'max_concurrency' instead.",
+                DeprecationWarning,
+                stacklevel=2
+            )
+            if max_concurrency is None:
+                max_concurrency = batch_size
+
+        # Set default if neither provided
+        if max_concurrency is None:
+            max_concurrency = 1
+
+        self.max_concurrency = max_concurrency
+        # Keep for backward compatibility in get_params()
+        self.batch_size = self.max_concurrency
 
         # Defaults
         self.kwargs = kwargs or {}
@@ -54,7 +75,7 @@ class CloudRuModel(LangchainModel):
         rate_limiter = InMemoryRateLimiter(
             requests_per_second=max(1, rpm) / 60,
             check_every_n_seconds=0.1,
-            max_bucket_size=batch_size,
+            max_bucket_size=self.max_concurrency,
         )
 
         # LangChain ChatOpenAI supports OpenAI-compatible endpoints via base_url

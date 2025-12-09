@@ -7,6 +7,7 @@ from typing import AsyncGenerator
 import asyncio
 from tqdm import tqdm
 import multiprocessing
+import warnings
 
 class LlamaCppModel(LangchainModel):
     """
@@ -22,7 +23,8 @@ class LlamaCppModel(LangchainModel):
     def __init__(
         self,
         model_path: str,
-        batch_size: int = 5,
+        max_concurrency: Optional[int] = None,
+        batch_size: Optional[int] = None,
         n_ctx: int = 10000,
         n_gpu_layers: int = -1,
         n_batch: int = 512,
@@ -36,8 +38,9 @@ class LlamaCppModel(LangchainModel):
         Args:
             model_path: Path to the GGUF model file (e.g., "/path/to/model.gguf")
                        Required parameter - must point to a valid GGUF format model
-            batch_size: Number of requests to process in parallel (default: 5)
+            max_concurrency: Maximum number of concurrent requests (default: 1, replaces batch_size)
                        Local models can typically handle 1-10 depending on hardware
+            batch_size: (Deprecated) Use max_concurrency instead. Will be removed in v2.0.0
             n_ctx: Context window size in tokens (default: 10000)
                   Should match or be less than the model's trained context length
             n_gpu_layers: Number of layers to offload to GPU (default: -1 for auto-detection)
@@ -76,6 +79,25 @@ class LlamaCppModel(LangchainModel):
         self.model_name = f"llamacpp:{os.path.basename(model_path)}"
         self.max_retries = max_retries
 
+        # Handle deprecation
+        if batch_size is not None:
+            warnings.warn(
+                "The 'batch_size' parameter is deprecated and will be removed in v2.0.0. "
+                "Use 'max_concurrency' instead.",
+                DeprecationWarning,
+                stacklevel=2
+            )
+            if max_concurrency is None:
+                max_concurrency = batch_size
+
+        # Set default if neither provided
+        if max_concurrency is None:
+            max_concurrency = 1
+
+        self.max_concurrency = max_concurrency
+        # Keep for backward compatibility in get_params()
+        self.batch_size = self.max_concurrency
+
         # Validate model path
         if not os.path.exists(model_path):
             raise FileNotFoundError(
@@ -92,8 +114,6 @@ class LlamaCppModel(LangchainModel):
         # Auto-detect CPU threads if not specified
         if n_threads is None:
             n_threads = max(1, multiprocessing.cpu_count() - 1)
-
-        self.batch_size = batch_size
         self.client = ChatLlamaCpp(
             model_path=model_path,
             n_ctx=n_ctx,

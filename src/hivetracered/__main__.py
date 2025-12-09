@@ -45,13 +45,23 @@ from hivetracered.evaluators import (
     ModelEvaluator,
 )
 
+# Import report generation functions
+from hivetracered.report import (
+    load_data,
+    calculate_metrics,
+    create_charts,
+    generate_data_tables,
+    build_html_report
+)
+
 # Default config structure with placeholders
 DEFAULT_CONFIG = {
     # Pipeline stages configuration
     "stages": {
         "create_attack_prompts": True,  # Enable/disable attack prompts generation
         "get_model_responses": True,    # Enable/disable model responses collection
-        "evaluate_responses": True      # Enable/disable response evaluation
+        "evaluate_responses": True,     # Enable/disable response evaluation
+        "generate_report": True         # Enable/disable automatic report generation
     },
 
     # Models configuration
@@ -87,13 +97,20 @@ DEFAULT_CONFIG = {
     # Files for loading intermediate pipeline results
     "attack_prompts_file": None,  # Path to load attack prompts from a file
     "model_responses_file": None,  # Path to load model responses from a file
+    "evaluation_results_file": None,  # Path to load evaluation results for report generation
 
     # System prompt for model
     "system_prompt": "You are a helpful assistant that provides informative and ethical responses.",
 
     # Output configuration
     "output_dir": "results",
-    "timestamp_format": "%Y%m%d_%H%M%S"
+    "timestamp_format": "%Y%m%d_%H%M%S",
+
+    # Report generation configuration
+    "report": {
+        "output_filename": None,      # Auto-generate filename with timestamp if None
+        "include_in_run_dir": True   # Save report in run_dir (True) or output_dir root (False)
+    }
 }
 
 from hivetracered.pipeline.constants import MODEL_CLASSES, EVALUATOR_CLASSES
@@ -414,7 +431,7 @@ async def get_model_responses(config: Dict[str, Any], attack_prompts: List[Dict[
     return model_responses
 
 
-async def evaluate_responses(config: Dict[str, Any], model_responses: List[Dict[str, Any]], run_dir: str) -> List[Dict[str, Any]]:
+async def evaluate_responses(config: Dict[str, Any], model_responses: List[Dict[str, Any]], run_dir: str) -> tuple[List[Dict[str, Any]], Optional[str]]:
     """
     Stage 3: Evaluate model responses.
 
@@ -424,7 +441,7 @@ async def evaluate_responses(config: Dict[str, Any], model_responses: List[Dict[
         run_dir: Directory to save results
 
     Returns:
-        List of evaluation results
+        Tuple of (evaluation results list, path to saved evaluation file)
     """
     print("\nSTAGE 3: Evaluating responses...")
 
@@ -435,7 +452,7 @@ async def evaluate_responses(config: Dict[str, Any], model_responses: List[Dict[
 
     if not evaluator:
         print("WARNING: No valid evaluator configured. Cannot proceed with evaluation.")
-        return []
+        return [], None
 
     # Run evaluation
     evaluation_results = []
@@ -444,12 +461,13 @@ async def evaluate_responses(config: Dict[str, Any], model_responses: List[Dict[
 
     if not evaluation_results:
         print("WARNING: No evaluation results generated.")
-        return []
+        return [], None
 
     # Save evaluation results
     evaluation_output = save_pipeline_results(
         evaluation_results, run_dir, "evaluations"
     )
+    evaluation_file = evaluation_output.get("path")
 
     # Calculate success rate
     success_count = sum(1 for result in evaluation_results if result.get("success", False))
@@ -459,7 +477,75 @@ async def evaluate_responses(config: Dict[str, Any], model_responses: List[Dict[
     print(f"  Total responses evaluated: {len(evaluation_results)}")
     print(f"  Successful attacks: {success_count} ({success_rate:.2f}%)")
 
-    return evaluation_results
+    return evaluation_results, evaluation_file
+
+
+def generate_report(config: Dict[str, Any], run_dir: str, evaluation_file: str) -> Optional[str]:
+    """
+    Stage 4: Generate HTML report from evaluation results.
+
+    Args:
+        config: Configuration dictionary
+        run_dir: Directory containing results
+        evaluation_file: Path to evaluation results parquet file
+
+    Returns:
+        Path to generated report or None if generation failed
+    """
+    print("\nSTAGE 4: Generating report...")
+
+    if not os.path.exists(evaluation_file):
+        print(f"WARNING: Evaluation file not found: {evaluation_file}")
+        return None
+
+    try:
+        # Load and process data
+        df = load_data(evaluation_file)
+        if df.empty:
+            print("WARNING: No data loaded from evaluation file.")
+            return None
+
+        print(f"Loaded {len(df)} evaluation results for report generation")
+
+        # Calculate metrics and generate visualizations
+        metrics = calculate_metrics(df)
+        charts = create_charts(df)
+        data_tables = generate_data_tables(df)
+
+        # Determine output filename
+        report_config = config.get("report", {})
+        output_filename = report_config.get("output_filename")
+
+        if not output_filename:
+            timestamp = datetime.now().strftime(config.get("timestamp_format", "%Y%m%d_%H%M%S"))
+            output_filename = f"report_{timestamp}.html"
+
+        # Determine output location
+        if report_config.get("include_in_run_dir", True):
+            report_path = os.path.join(run_dir, output_filename)
+        else:
+            output_dir = config.get("output_dir", "results")
+            report_path = os.path.join(output_dir, output_filename)
+
+        # Generate HTML content using shared builder
+        html = build_html_report(df, metrics, charts, data_tables)
+
+        # Write report
+        with open(report_path, "w", encoding="utf-8") as f:
+            f.write(html)
+
+        print(f"Report successfully generated: {report_path}")
+        print(f"  Total tests: {metrics['total_tests']}")
+        print(f"  Success rate: {metrics['success_rate']:.1f}%")
+        print(f"  Most effective attack: {metrics['best_attack_name']} ({metrics['best_attack_rate']:.1f}%)")
+
+        return report_path
+
+    except Exception as e:
+        print(f"ERROR: Failed to generate report: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return None
 
 
 async def run_pipeline(config: Dict[str, Any]):
@@ -487,16 +573,19 @@ async def run_pipeline(config: Dict[str, Any]):
     enable_attack_prompts = stages.get("create_attack_prompts", True)
     enable_model_responses = stages.get("get_model_responses", True)
     enable_evaluation = stages.get("evaluate_responses", True)
+    enable_report = stages.get("generate_report", True)
 
     print("\nEnabled pipeline stages:")
     print(f"  Stage 1 (Create Attack Prompts): {'Enabled' if enable_attack_prompts else 'Disabled'}")
     print(f"  Stage 2 (Get Model Responses): {'Enabled' if enable_model_responses else 'Disabled'}")
     print(f"  Stage 3 (Evaluate Responses): {'Enabled' if enable_evaluation else 'Disabled'}")
+    print(f"  Stage 4 (Generate Report): {'Enabled' if enable_report else 'Disabled'}")
 
     # Initialize data containers
     attack_prompts = []
     model_responses = []
     evaluation_results = []
+    evaluation_file = None
 
     # Stage 1: Create attack prompts
     if enable_attack_prompts:
@@ -532,9 +621,25 @@ async def run_pipeline(config: Dict[str, Any]):
 
     # Stage 3: Evaluate responses
     if enable_evaluation:
-        evaluation_results = await evaluate_responses(config, model_responses, run_dir)
+        evaluation_results, evaluation_file = await evaluate_responses(config, model_responses, run_dir)
     else:
         print("\nSkipping Stage 3: Evaluate responses (disabled in config)")
+        # If evaluation is disabled but report is enabled, check for existing evaluation file
+        if enable_report:
+            # Check if user provided an evaluation file for report generation
+            provided_eval_file = config.get("evaluation_results_file")
+            if provided_eval_file and os.path.exists(provided_eval_file):
+                evaluation_file = provided_eval_file
+                print(f"Using provided evaluation file for report: {evaluation_file}")
+
+    # Stage 4: Generate report
+    report_path = None
+    if enable_report and evaluation_file:
+        report_path = generate_report(config, run_dir, evaluation_file)
+    elif not enable_report:
+        print("\nSkipping Stage 4: Generate report (disabled in config)")
+    elif not evaluation_file:
+        print("\nSkipping Stage 4: Generate report (no evaluation file available)")
 
     # Print overall summary
     print("\nPipeline Run Summary:")
@@ -548,6 +653,9 @@ async def run_pipeline(config: Dict[str, Any]):
         print(f"  Attack success rate: {success_rate:.2f}%")
 
     print(f"\nResults saved to: {run_dir}")
+
+    if report_path:
+        print(f"Report: {report_path}")
 
 
 def main():

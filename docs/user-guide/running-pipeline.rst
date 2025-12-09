@@ -282,12 +282,11 @@ The pipeline processes prompts in batches for efficiency:
    from hivetracered.models import OpenAIModel
 
    # Batch size controls concurrent requests
-   model = OpenAIModel(model="gpt-4")
+   model = OpenAIModel(model="gpt-4", max_concurrency=10)
 
    async for response in stream_model_responses(
        model,
-       attack_data,
-       batch_size=10  # Process 10 prompts concurrently
+       attack_data
    ):
        print(response)
 

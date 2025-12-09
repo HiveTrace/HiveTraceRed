@@ -8,6 +8,7 @@ import asyncio
 from tqdm import tqdm
 import time
 import json
+import warnings
 from tenacity import (
     retry,
     stop_after_attempt,
@@ -25,13 +26,14 @@ class GeminiNativeModel(Model):
     thinking budget, and rate limiting with both synchronous and asynchronous interfaces.
     """
     
-    def __init__(self, model: str = "gemini-2.5-flash-preview-04-17", batch_size: int = 0, thinking_budget: int = 0, rpm: int = 10, max_retries: int = 3, **kwargs):
+    def __init__(self, model: str = "gemini-2.5-flash-preview-04-17", max_concurrency: Optional[int] = None, batch_size: Optional[int] = None, thinking_budget: int = 0, rpm: int = 10, max_retries: int = 3, **kwargs):
         """
         Initialize the Gemini model with the specified configuration.
 
         Args:
             model: Gemini model identifier (e.g., "gemini-2.5-flash", "gemini-1.5-pro")
-            batch_size: Maximum number of concurrent requests (0 for unlimited)
+            max_concurrency: Maximum number of concurrent requests (0 for unlimited, replaces batch_size)
+            batch_size: (Deprecated) Use max_concurrency instead. Will be removed in v2.0.0
             thinking_budget: Number of tokens allocated for model thinking/reasoning steps
             rpm: Rate limit in requests per minute (0 for unlimited)
             max_retries: Maximum number of retry attempts on transient errors (default: 3)
@@ -42,10 +44,29 @@ class GeminiNativeModel(Model):
         """
         load_dotenv(override=True)
         self.model_name = model
-        self.batch_size = batch_size
         self.thinking_budget = thinking_budget
         self.rpm = rpm
         self.max_retries = max_retries
+
+        # Handle deprecation
+        if batch_size is not None:
+            warnings.warn(
+                "The 'batch_size' parameter is deprecated and will be removed in v2.0.0. "
+                "Use 'max_concurrency' instead.",
+                DeprecationWarning,
+                stacklevel=2
+            )
+            if max_concurrency is None:
+                max_concurrency = batch_size
+
+        # Set default if neither provided
+        if max_concurrency is None:
+            max_concurrency = 0
+
+        self.max_concurrency = max_concurrency
+        # Keep for backward compatibility in get_params()
+        self.batch_size = self.max_concurrency
+
         self.kwargs = kwargs or {}
         self.config = types.GenerateContentConfig(
             temperature=self.kwargs.get("temperature", 0.000001),
@@ -283,8 +304,8 @@ class GeminiNativeModel(Model):
         """
         results = []
 
-        batch_size = self.batch_size or len(prompts)
-        
+        batch_size = self.max_concurrency or len(prompts)
+
         for i in tqdm(range(0, len(prompts), batch_size), desc=f"Processing with {self.model_name}"):
             batch_prompts = prompts[i:i+batch_size]
             batch_results = []
@@ -308,8 +329,8 @@ class GeminiNativeModel(Model):
             A list of model responses
         """
         results = []
-        
-        batch_size = self.batch_size or len(prompts)
+
+        batch_size = self.max_concurrency or len(prompts)
 
         for i in range(0, len(prompts), batch_size):
             batch_prompts = prompts[i:i+batch_size]
@@ -330,7 +351,7 @@ class GeminiNativeModel(Model):
             An async generator of model responses in order of completion
         """
 
-        batch_size = self.batch_size or len(prompts)
+        batch_size = self.max_concurrency or len(prompts)
 
         async def safe_ainvoke(prompt):
             """Wrapper that catches exceptions and returns error response."""

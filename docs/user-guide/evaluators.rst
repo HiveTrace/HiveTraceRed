@@ -438,9 +438,9 @@ Best Practices
 
       async def stream_abatch(self, prompts, responses):
           # Process in batches for efficiency
-          batch_size = 10
-          for i in range(0, len(prompts), batch_size):
-              batch = prompts[i:i + batch_size]
+          max_concurrency = 10
+          for i in range(0, len(prompts), max_concurrency):
+              batch = prompts[i:i + max_concurrency]
               # Process batch concurrently
               tasks = [self.evaluate(p['attack_prompt'],
                       {'content': p['model_response']})

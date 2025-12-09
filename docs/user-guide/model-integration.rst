@@ -132,7 +132,7 @@ Llama.cpp Models (Local GGUF)
    model = LlamaCppModel(
        model_path="/path/to/model.gguf",
        n_ctx=8192,
-       batch_size=5
+       max_concurrency=5
    )
 
    # GPU-accelerated inference
@@ -175,8 +175,8 @@ Synchronous Methods
    # Single request
    response = model.invoke(prompt)
 
-   # Batch requests
-   responses = model.batch(prompts, batch_size=10)
+   # Batch requests (max_concurrency is set when initializing the model)
+   responses = model.batch(prompts)
 
 Asynchronous Methods
 ~~~~~~~~~~~~~~~~~~~~
@@ -186,11 +186,11 @@ Asynchronous Methods
    # Single request
    response = await model.ainvoke(prompt)
 
-   # Batch requests (batch_size is set in base model, typically 10)
+   # Batch requests (max_concurrency is set when initializing the model)
    responses = await model.abatch(prompts)
 
-   # Streaming batch
-   async for response in model.stream_abatch(prompts, batch_size=5):
+   # Streaming batch (uses model's max_concurrency setting)
+   async for response in model.stream_abatch(prompts):
        print(response)
 
 Message Formats
@@ -245,9 +245,10 @@ Basic Custom Model
    import asyncio
 
    class MyCustomModel(Model):
-       def __init__(self, model: str, api_key: str, **kwargs):
+       def __init__(self, model: str, api_key: str, max_concurrency: int = 10, **kwargs):
            self.model_name = model
            self.api_key = api_key
+           self.max_concurrency = max_concurrency
            self.params = kwargs
 
        def invoke(self, prompt: Union[str, List[Dict]]) -> dict:
@@ -268,20 +269,25 @@ Basic Custom Model
                "model": self.model_name
            }
 
-       def batch(self, prompts: List, batch_size: int = 10) -> List[dict]:
+       def batch(self, prompts: List) -> List[dict]:
            """Synchronous batch processing"""
            return [self.invoke(p) for p in prompts]
 
-       async def abatch(self, prompts: List, batch_size: int = 10) -> List[dict]:
+       async def abatch(self, prompts: List) -> List[dict]:
            """Asynchronous batch processing"""
-           tasks = [self.ainvoke(p) for p in prompts]
-           return await asyncio.gather(*tasks)
+           # Process in chunks based on max_concurrency
+           results = []
+           for i in range(0, len(prompts), self.max_concurrency):
+               batch = prompts[i:i + self.max_concurrency]
+               tasks = [self.ainvoke(p) for p in batch]
+               results.extend(await asyncio.gather(*tasks))
+           return results
 
-       async def stream_abatch(self, prompts: List, batch_size: int = 1):
+       async def stream_abatch(self, prompts: List):
            """Stream results as they complete"""
-           for i in range(0, len(prompts), batch_size):
-               batch = prompts[i:i + batch_size]
-               responses = await self.abatch(batch, batch_size)
+           for i in range(0, len(prompts), self.max_concurrency):
+               batch = prompts[i:i + self.max_concurrency]
+               responses = await self.abatch(batch)
                for response in responses:
                    yield response
 

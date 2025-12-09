@@ -352,24 +352,19 @@ def generate_data_tables(df):
         "display_columns": display_columns
     }
 
-def main():
-    parser = argparse.ArgumentParser(description="Generate static HTML report for framework results")
-    parser.add_argument("--data-file", type=str, default="df.parquet", help="Path to data file (default: df.parquet)")
-    parser.add_argument("--output", "-o", type=str, default="Static_report.html", help="Output HTML file path (default: Static_report.html)")
-    args = parser.parse_args()
+def build_html_report(df, metrics, charts, data_tables):
+    """
+    Build complete HTML report from processed data.
 
-    try:
-        df = load_data(args.data_file)
-        if df.empty:
-            print("Warning: No data loaded. Generating empty report.")
+    Args:
+        df: DataFrame with evaluation results
+        metrics: Dictionary of calculated metrics
+        charts: Dictionary of chart HTML strings
+        data_tables: Dictionary of data table HTML strings
 
-        metrics = calculate_metrics(df)
-        charts = create_charts(df)
-        data_tables = generate_data_tables(df)
-    except Exception as e:
-        print(f"Error processing data: {e}")
-        return
-
+    Returns:
+        Complete HTML string for the report
+    """
     generated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
     styles = """
@@ -542,8 +537,6 @@ def main():
     </div>
     """
 
-    generated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
     # Build OWASP categories HTML
     owasp_badges_html = ""
     if metrics.get('owasp_categories'):
@@ -636,7 +629,7 @@ def main():
       <!-- Attack Analysis -->
       <div id="tab2" class="section" style="display:none;">
         <h2>⚔️ Attack Analysis</h2>
-        
+
         <h3>Success Rate by Attack Type</h3>
         <div style="color:var(--muted); font-size:13px; margin-bottom:8px;">Based on unique prompts that succeeded in at least one attack of this type</div>
         <div class="plot-container">
@@ -655,7 +648,7 @@ def main():
       <!-- Content Analysis -->
       <div id="tab3" class="section" style="display:none;">
         <h2>📝 Content Analysis</h2>
-        
+
         <h3>Response Length Distribution by Attack Success</h3>
         <div class="plot-container">
           {charts['fig_length_html']}
@@ -695,10 +688,36 @@ def main():
     </html>
     """
 
-    with open(args.output, "w", encoding="utf-8") as f:
-        f.write(html)
+    return html
 
-    print(f"Report generated: {args.output}")
+def main():
+    parser = argparse.ArgumentParser(description="Generate static HTML report for framework results")
+    parser.add_argument("--data-file", type=str, default="df.parquet", help="Path to data file (default: df.parquet)")
+    parser.add_argument("--output", "-o", type=str, default="Static_report.html", help="Output HTML file path (default: Static_report.html)")
+    args = parser.parse_args()
+
+    try:
+        df = load_data(args.data_file)
+        if df.empty:
+            print("Warning: No data loaded. Generating empty report.")
+
+        metrics = calculate_metrics(df)
+        charts = create_charts(df)
+        data_tables = generate_data_tables(df)
+
+        # Use the shared HTML builder
+        html = build_html_report(df, metrics, charts, data_tables)
+
+        with open(args.output, "w", encoding="utf-8") as f:
+            f.write(html)
+
+        print(f"Report generated: {args.output}")
+
+    except Exception as e:
+        print(f"Error processing data: {e}")
+        import traceback
+        traceback.print_exc()
+        return
 
 
 if __name__ == "__main__":

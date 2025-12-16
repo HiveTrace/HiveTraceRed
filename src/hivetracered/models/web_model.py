@@ -111,7 +111,22 @@ class WebModel(Model):
         context = await self.browser.new_context(**new_context_kwargs)
         page = await context.new_page()
         await page.goto(self.target_url, wait_until='networkidle')
+
+        # Handle any initial dialogs (consent, popups, etc.)
+        await self._handle_initial_dialogs(page)
+
         return context, page
+
+    async def _handle_initial_dialogs(self, page: Page) -> None:
+        """
+        Handle initial dialogs like consent popups, welcome screens, etc.
+
+        Override in subclasses to handle site-specific dialogs.
+
+        Args:
+            page: Playwright page object (currently unused in base implementation)
+        """
+        pass
 
     def _prompt_to_message(self, prompt: Union[str, List[Dict[str, str]]]) -> str:
         if isinstance(prompt, list):
@@ -236,11 +251,25 @@ class WebModel(Model):
         selector: str,
         timeout: Optional[int] = None,
         stable_time: Optional[float] = None,
+        fallback_to_last: bool = True,
     ) -> str:
         """
         Wait until the matched element(s) text content stops changing.
 
         Useful for streaming UIs where the assistant response is progressively rendered.
+
+        Args:
+            page: Playwright page object
+            selector: CSS selector for response element(s)
+            timeout: Maximum time to wait in seconds
+            stable_time: Time content must be stable to consider complete
+            fallback_to_last: If True, return last element's text on timeout/error
+
+        Returns:
+            Response text content
+
+        Raises:
+            RuntimeError: If no response found and fallback_to_last is False
         """
         timeout = self.response_wait_time if timeout is None else timeout
         stable_time = self.stability_check_time if stable_time is None else stable_time
@@ -252,7 +281,19 @@ class WebModel(Model):
         while True:
             now = asyncio.get_event_loop().time()
             if now - start_time > timeout:
-                return last_content or ""
+                if fallback_to_last and last_content:
+                    return last_content
+                # Try fallback to last element if available
+                if fallback_to_last:
+                    try:
+                        elements = await page.query_selector_all(selector)
+                        if elements:
+                            return await elements[-1].inner_text()
+                    except Exception:
+                        pass
+                if last_content:
+                    return last_content
+                raise RuntimeError(f"No response received: timeout waiting for {selector}")
 
             try:
                 elements = await page.locator(selector).all()
@@ -271,6 +312,17 @@ class WebModel(Model):
     async def _find_element_with_fallbacks(
         self, page: Page, selectors: List[str], timeout: int = 3000
     ) -> Optional[object]:
+        """
+        Try multiple selectors in order until one is found.
+
+        Args:
+            page: Playwright page object
+            selectors: List of CSS selectors to try in order
+            timeout: Timeout per selector in milliseconds
+
+        Returns:
+            First matching element or None if none found
+        """
         for selector in selectors:
             try:
                 element = await page.wait_for_selector(selector, timeout=timeout)

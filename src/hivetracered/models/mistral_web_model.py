@@ -7,10 +7,7 @@ interface at chat.mistral.ai when no official API is available.
 
 from __future__ import annotations
 
-from typing import Tuple
-
 from playwright.async_api import (
-    BrowserContext,
     Page,
     TimeoutError as PlaywrightTimeoutError,
 )
@@ -78,29 +75,9 @@ class MistralWebModel(WebModel):
         # Set the target URL for Mistral Le Chat
         self.target_url = "https://chat.mistral.ai/chat"
 
-    async def _setup_context_and_page(self) -> Tuple[BrowserContext, Page]:
+    async def _handle_initial_dialogs(self, page: Page) -> None:
         """
-        Set up browser context and page with Mistral-specific initialization.
-
-        This method:
-        1. Creates a new browser context with proper locale/viewport
-        2. Navigates to chat.mistral.ai
-        3. Handles consent dialogs if present
-
-        Returns:
-            Tuple of (BrowserContext, Page) ready for interaction
-        """
-        # Call parent to create context and navigate to target_url
-        context, page = await super()._setup_context_and_page()
-
-        # Handle consent dialog if present
-        await self._accept_consent_if_present(page)
-
-        return context, page
-
-    async def _accept_consent_if_present(self, page: Page) -> None:
-        """
-        Check for and accept GDPR consent dialog if present.
+        Handle GDPR consent dialog if present.
 
         Args:
             page: Playwright page object
@@ -123,9 +100,9 @@ class MistralWebModel(WebModel):
         Find the input element using multiple fallback strategies.
 
         Tries in order:
-        1. Textarea with data-testid attribute (most stable)
-        2. ProseMirror contenteditable div
-        3. Generic contenteditable with placeholder
+        1. ProseMirror contenteditable div (most common)
+        2. Generic contenteditable with placeholder
+        3. Textarea with data-testid attribute
 
         Args:
             page: Playwright page object
@@ -136,17 +113,17 @@ class MistralWebModel(WebModel):
         Raises:
             RuntimeError: If no input element can be found
         """
-        try:
-            contenteditable = await page.wait_for_selector(
-                'div.ProseMirror[contenteditable="true"]',
-                timeout=3000
-            )
-            if contenteditable:
-                return contenteditable
-        except PlaywrightTimeoutError:
-            pass
+        selectors = [
+            'div.ProseMirror[contenteditable="true"]',
+            'div[contenteditable="true"][placeholder]',
+            'textarea[data-testid]',
+        ]
 
-        raise RuntimeError("Could not find input element with any strategy")
+        element = await self._find_element_with_fallbacks(page, selectors, timeout=3000)
+        if not element:
+            raise RuntimeError("Could not find input element with any strategy")
+
+        return element
 
     async def _send_input_text(self, element: object, text: str) -> None:
         """
@@ -195,21 +172,13 @@ class MistralWebModel(WebModel):
         )
 
         # Use stability detection to wait for complete response
-        try:
-            response_text = await self._wait_for_stable_response(
-                page,
-                'div[data-testid="text-message-part"][data-message-part-type="answer"]',
-                timeout=self.response_wait_time,
-                stable_time=self.stability_check_time
-            )
-        except Exception:
-            # Fallback: get the last answer directly if stability detection fails
-            answer_parts = await page.query_selector_all(
-                'div[data-testid="text-message-part"][data-message-part-type="answer"]'
-            )
-            if answer_parts:
-                response_text = await answer_parts[-1].inner_text()
-            else:
-                raise RuntimeError("No response received from Mistral")
+        # The parent's _wait_for_stable_response now handles fallback automatically
+        response_text = await self._wait_for_stable_response(
+            page,
+            'div[data-testid="text-message-part"][data-message-part-type="answer"]',
+            timeout=self.response_wait_time,
+            stable_time=self.stability_check_time,
+            fallback_to_last=True
+        )
 
         return response_text.strip() if response_text else ""

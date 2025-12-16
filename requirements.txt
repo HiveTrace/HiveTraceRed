@@ -127,3 +127,5 @@ yarl==1.18.3
 zstandard==0.23.0
 jinja2>=3.1.0
 plotly>=5.17.0
+playwright>=1.57.0
+nest_asyncio>=1.6.0

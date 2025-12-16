@@ -43,6 +43,7 @@ Table of Contents
    user-guide/running-pipeline
    user-guide/custom-attacks
    user-guide/model-integration
+   user-guide/web-models
    user-guide/evaluators
 
 .. toctree::

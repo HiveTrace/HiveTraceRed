@@ -75,6 +75,7 @@ Issues = "https://github.com/HiveTrace/HiveTraceRed/issues"
 [project.scripts]
 hivetracered = "hivetracered.__main__:main"
 hivetracered-report = "hivetracered.report:main"
+hivetracered-recorder = "hivetracered.utils.web_action_recorder:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

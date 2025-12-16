@@ -683,17 +683,14 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 Examples:
-  # Record session starting at Google
-  python web_action_recorder.py
-
   # Record session at a specific URL
-  python web_action_recorder.py --url https://example.com
+  hivetracered-recorder --url https://example.com
 
   # Save to a specific file
-  python web_action_recorder.py --output my_session.json
+  hivetracered-recorder --output my_session.json
 
-  # Run in headless mode (no visible browser)
-  python web_action_recorder.py --headless
+  # Run in headless mode
+  hivetracered-recorder --url https://example.com --headless
         """
     )
 

@@ -78,7 +78,43 @@ OpenRouter Models
    :show-inheritance:
    :special-members: __init__
 
+Web-Based Models (Browser Automation)
+--------------------------------------
+
+Web Model Base Class
+~~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: hivetracered.models.web_model.WebModel
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :special-members: __init__
+
+Mistral Web Model
+~~~~~~~~~~~~~~~~~
+
+.. autoclass:: hivetracered.models.mistral_web_model.MistralWebModel
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :special-members: __init__
+
+Utilities
+---------
+
+Web Action Recorder
+~~~~~~~~~~~~~~~~~~~
+
+.. autoclass:: hivetracered.utils.web_action_recorder.WebActionRecorder
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :special-members: __init__
+
+.. autofunction:: hivetracered.utils.web_action_recorder.record_browser_session
+
 See Also
 --------
 
 * :doc:`../user-guide/model-integration` - Usage guide and examples
+* :doc:`../user-guide/web-models` - Web-based models and action recorder guide

@@ -430,6 +430,75 @@ Then use in configuration:
        api_key: YOUR_KEY
        custom_param: value
 
+Web-Based Models (Browser Automation)
+-------------------------------------
+
+For AI models without an official API, you can use the WebModel framework to automate browser interactions using Playwright.
+
+Overview
+~~~~~~~~
+
+WebModel enables testing of web-based chat interfaces:
+
+* Chat interfaces without public APIs
+* Custom AI deployments
+* On-premise models with web UIs only
+
+Quick Example
+~~~~~~~~~~~~~
+
+.. code-block:: python
+
+   from hivetracered.models import MistralWebModel
+
+   # Mistral Le Chat example (built-in)
+   model = MistralWebModel(
+       model="mistral-large",
+       headless=False,  # Show browser for debugging
+       max_concurrency=2
+   )
+
+   response = model.invoke("Explain quantum computing")
+   print(response["content"])
+
+   model.close()  # Always close browser
+
+Creating Custom Web Models
+~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Use the Web Action Recorder to identify UI elements, then create your model:
+
+.. code-block:: python
+
+   from hivetracered.models.web_model import WebModel
+   from playwright.async_api import Page
+
+   class MyWebModel(WebModel):
+       def __init__(self, **kwargs):
+           super().__init__(model="my-chat", **kwargs)
+           self.target_url = "https://your-chat.com"
+
+       async def _send_message_and_get_response(
+           self, page: Page, message: str
+       ) -> str:
+           # Find input, send message, wait for response
+           input_elem = await page.wait_for_selector('textarea#chat-input')
+           await input_elem.type(message)
+           await page.keyboard.press('Enter')
+
+           # Wait for stable response
+           return await self._wait_for_stable_response(
+               page,
+               'div.response-message'
+           )
+
+See the :doc:`web-models` guide for detailed instructions on:
+
+* Using the Web Action Recorder to capture UI interactions
+* Creating custom web model implementations
+* Handling consent dialogs, login flows, and streaming responses
+* Best practices for browser automation
+
 Best Practices
 --------------
 
@@ -444,3 +513,4 @@ See Also
 
 * :doc:`../api/models` - API documentation
 * :doc:`running-pipeline` - Pipeline usage
+* :doc:`web-models` - Web-based models and action recorder guide

@@ -13,6 +13,8 @@ from hivetracered.models.cloud_ru_model import CloudRuModel
 from hivetracered.models.openrouter_model import OpenRouterModel
 from hivetracered.models.ollama_model import OllamaModel
 from hivetracered.models.llamacpp_model import LlamaCppModel
+from hivetracered.models.web_model import WebModel
+from hivetracered.models.mistral_web_model import MistralWebModel
 
 __all__ = [
     "Model",
@@ -24,5 +26,7 @@ __all__ = [
     "CloudRuModel",
     "OpenRouterModel",
     "OllamaModel",
-    "LlamaCppModel"
+    "LlamaCppModel",
+    "WebModel",
+    "MistralWebModel"
 ]

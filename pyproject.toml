@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hivetracered"
-version = "1.0.4"
+version = "1.0.5"
 description = "LLM Red Teaming Framework for defensive security research"
 readme = "README.md"
 license = {text = "Apache-2.0"}
@@ -60,7 +60,11 @@ docs = [
     "furo>=2023.3.27",
     "roman>=5.0"
 ]
-all = ["hivetracered[dev,docs]"]
+web = [
+    "playwright>=1.57.0",
+    "nest_asyncio>=1.6.0",
+]
+all = ["hivetracered[dev,docs,web]"]
 
 [project.urls]
 Homepage = "https://github.com/HiveTrace/HiveTraceRed"
@@ -71,6 +75,7 @@ Issues = "https://github.com/HiveTrace/HiveTraceRed/issues"
 [project.scripts]
 hivetracered = "hivetracered.__main__:main"
 hivetracered-report = "hivetracered.report:main"
+hivetracered-recorder = "hivetracered.utils.web_action_recorder:main"
 
 [tool.setuptools]
 package-dir = {"" = "src"}

@@ -13,9 +13,10 @@ import signal
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, TYPE_CHECKING
 
-from playwright.sync_api import sync_playwright, Page, Browser
+if TYPE_CHECKING:
+    from playwright.sync_api import sync_playwright, Page, Browser
 
 
 # JavaScript tracking scripts
@@ -478,8 +479,8 @@ class WebActionRecorder:
             verbose: If True, print events to console as they're captured
         """
         self.events: List[Dict[str, Any]] = []
-        self.browser: Optional[Browser] = None
-        self.page: Optional[Page] = None
+        self.browser: Optional["Browser"] = None
+        self.page: Optional["Page"] = None
         self.verbose = verbose
         self._playwright = None
         self._cleanup_called = False
@@ -530,7 +531,18 @@ class WebActionRecorder:
         Args:
             url: Initial URL to navigate to
             headless: Whether to run browser in headless mode
+
+        Raises:
+            ImportError: If playwright is not installed
         """
+        try:
+            from playwright.sync_api import sync_playwright
+        except ImportError:
+            raise ImportError(
+                "The web action recorder requires playwright. "
+                "Install it with: pip install 'hivetracered[web]'"
+            )
+
         self._playwright = sync_playwright().start()
         self.browser = self._playwright.chromium.launch(headless=headless)
         self.page = self.browser.new_page()
@@ -676,6 +688,14 @@ def record_browser_session(
 
 def main():
     """CLI entry point for the web action recorder."""
+    # Check for playwright availability early
+    try:
+        from playwright.sync_api import sync_playwright
+    except ImportError:
+        print("Error: The web action recorder requires the 'web' extras.", file=sys.stderr)
+        print("Install with: pip install 'hivetracered[web]'", file=sys.stderr)
+        sys.exit(1)
+
     import argparse
 
     parser = argparse.ArgumentParser(

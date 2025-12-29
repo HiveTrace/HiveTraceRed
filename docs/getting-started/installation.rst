@@ -24,23 +24,32 @@ The recommended way to install HiveTraceRed is via pip:
 
    pip install hivetracered
 
-This will install the package and make the ``hivetracered`` and ``hivetracered-report`` CLI commands available.
+This will install the package and make the following CLI commands available:
+
+* ``hivetracered`` - Main CLI for running attack pipelines
+* ``hivetracered-report`` - Generate HTML reports from results
+
+.. note::
+   The ``hivetracered-recorder`` command for recording browser interactions requires the ``web`` extras: ``pip install 'hivetracered[web]'``
 
 Optional Dependencies
 ~~~~~~~~~~~~~~~~~~~~~
 
-Install with optional dependencies for development or documentation:
+Install with optional dependencies for development, documentation, or web-based model testing:
 
 .. code-block:: bash
 
+   # For web-based model testing (browser automation, required for hivetracered-recorder)
+   pip install 'hivetracered[web]'
+
    # For development (includes build tools)
-   pip install hivetracered[dev]
+   pip install 'hivetracered[dev]'
 
    # For building documentation
-   pip install hivetracered[docs]
+   pip install 'hivetracered[docs]'
 
    # Install everything
-   pip install hivetracered[all]
+   pip install 'hivetracered[all]'
 
 Development Installation
 ------------------------

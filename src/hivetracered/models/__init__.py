@@ -13,8 +13,16 @@ from hivetracered.models.cloud_ru_model import CloudRuModel
 from hivetracered.models.openrouter_model import OpenRouterModel
 from hivetracered.models.ollama_model import OllamaModel
 from hivetracered.models.llamacpp_model import LlamaCppModel
-from hivetracered.models.web_model import WebModel
-from hivetracered.models.mistral_web_model import MistralWebModel
+
+# Optional web models that require playwright
+try:
+    from hivetracered.models.web_model import WebModel
+    from hivetracered.models.mistral_web_model import MistralWebModel
+    _WEB_MODELS_AVAILABLE = True
+except ImportError:
+    WebModel = None
+    MistralWebModel = None
+    _WEB_MODELS_AVAILABLE = False
 
 __all__ = [
     "Model",
@@ -27,6 +35,7 @@ __all__ = [
     "OpenRouterModel",
     "OllamaModel",
     "LlamaCppModel",
-    "WebModel",
-    "MistralWebModel"
 ]
+
+if _WEB_MODELS_AVAILABLE:
+    __all__.extend(["WebModel", "MistralWebModel"])

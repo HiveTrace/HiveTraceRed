@@ -67,20 +67,37 @@ class WebModel(Model):
 
         self._initialized = False
         self._closing = False
+        self._init_lock = asyncio.Lock()
 
         self.playwright = None
         self.browser: Optional[Browser] = None
         self._semaphore: Optional[asyncio.Semaphore] = None
 
     async def _initialize_browser(self) -> None:
+        # Fast path: if already initialized, return immediately
         if self._initialized:
             return
 
-        self.playwright = await async_playwright().start()
-        self.browser = await self._create_browser()
-        self._semaphore = asyncio.Semaphore(self.max_concurrency)
+        # Acquire lock to prevent concurrent initialization
+        async with self._init_lock:
+            # Double-check pattern: verify still not initialized after acquiring lock
+            if self._initialized:
+                return
 
-        self._initialized = True
+            # Check if closing was requested
+            if self._closing:
+                raise RuntimeError("Cannot initialize browser: model is closing")
+
+            # Initialize browser resources
+            try:
+                self.playwright = await async_playwright().start()
+                self.browser = await self._create_browser()
+                self._semaphore = asyncio.Semaphore(self.max_concurrency)
+                self._initialized = True
+            except Exception:
+                # Ensure _initialized remains False on failure so retry can work
+                self._initialized = False
+                raise
 
     async def _create_browser(self) -> Browser:
         if self.playwright is None:
@@ -333,31 +350,40 @@ class WebModel(Model):
         return None
 
     async def aclose(self) -> None:
+        # Fast path: if already closing or closed, return immediately
         if self._closing:
             return
-        self._closing = True
 
-        if not self._initialized:
+        # Acquire lock to prevent concurrent cleanup
+        async with self._init_lock:
+            # Double-check pattern: verify still not closing after acquiring lock
+            if self._closing:
+                return
+            self._closing = True
+
+            # If never initialized, nothing to clean up
+            if not self._initialized:
+                self._closing = False
+                return
+
+            # Clean up browser resources
+            if self.browser is not None:
+                try:
+                    await self.browser.close()
+                except Exception:
+                    pass
+
+            if self.playwright is not None:
+                try:
+                    await self.playwright.stop()
+                except Exception:
+                    pass
+
+            self.browser = None
+            self.playwright = None
+            self._semaphore = None
+            self._initialized = False
             self._closing = False
-            return
-
-        if self.browser is not None:
-            try:
-                await self.browser.close()
-            except Exception:
-                pass
-
-        if self.playwright is not None:
-            try:
-                await self.playwright.stop()
-            except Exception:
-                pass
-
-        self.browser = None
-        self.playwright = None
-        self._semaphore = None
-        self._initialized = False
-        self._closing = False
 
     def close(self) -> None:
         try:

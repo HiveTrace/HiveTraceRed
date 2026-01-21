@@ -15,7 +15,7 @@ import warnings
 import time
 import threading
 from concurrent.futures import ThreadPoolExecutor
-from yandex_cloud_ml_sdk._client import AioRpcError
+from grpc.aio import AioRpcError
 from tqdm import tqdm
 from typing import AsyncGenerator
 
@@ -110,10 +110,10 @@ class YandexGPTModel(Model):
     def _format_response(self, response: Any) -> Dict:
         """
         Format the API response to match the expected output format.
-        
+
         Args:
             response: Raw response from Yandex API
-            
+
         Returns:
             Standardized response dictionary with content and metadata
         """
@@ -121,21 +121,18 @@ class YandexGPTModel(Model):
         text = alternative.text
         role = alternative.role
         status = alternative.status
-        tool_calls = alternative.tool_calls
-        
+
         usage = {
             "input_text_tokens": response.usage.input_text_tokens,
             "completion_tokens": response.usage.completion_tokens,
             "total_tokens": response.usage.total_tokens,
-            "reasoning_tokens": response.usage.reasoning_tokens
         }
         model_version = response.model_version
-        
+
         return {
             "content": text,
             "role": role,
             "status": status,
-            "tool_calls": tool_calls,
             "usage": usage,
             "model_version": model_version
         }

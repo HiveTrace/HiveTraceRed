@@ -7,9 +7,9 @@ import asyncio
 from hivetracered.models.base_model import Model
 from dotenv import load_dotenv
 import requests
-from yandex_cloud_ml_sdk import YCloudML
+from yandex_ai_studio_sdk import AIStudio
 from yandexcloud import SDK
-from yandex_cloud_ml_sdk._retry import RetryPolicy
+from yandex_ai_studio_sdk.retry import RetryPolicy
 import warnings
 
 import time
@@ -73,7 +73,7 @@ class YandexGPTModel(Model):
             max_attempts=self.max_retries,
         )
 
-        sdk = YCloudML(
+        sdk = AIStudio(
             folder_id=os.getenv("YANDEX_FOLDER_ID"),
             auth=os.getenv("YANDEX_GPT_API_KEY"),
             retry_policy=retry_policy,  # Pass retry policy to SDK

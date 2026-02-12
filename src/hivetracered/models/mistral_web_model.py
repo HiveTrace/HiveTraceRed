@@ -7,7 +7,10 @@ interface at chat.mistral.ai when no official API is available.
 
 from __future__ import annotations
 
+from typing import Tuple
+
 from playwright.async_api import (
+    BrowserContext,
     Page,
     TimeoutError as PlaywrightTimeoutError,
 )
@@ -74,6 +77,57 @@ class MistralWebModel(WebModel):
 
         # Set the target URL for Mistral Le Chat
         self.target_url = "https://chat.mistral.ai/chat"
+
+    async def _setup_context_and_page(self) -> Tuple[BrowserContext, Page]:
+        """
+        Create and configure a (context, page) pair with domcontentloaded navigation.
+
+        Mistral's SPA maintains persistent WebSocket connections, so 'networkidle'
+        never resolves. This override uses 'domcontentloaded' instead.
+        """
+        if self.browser is None:
+            raise RuntimeError("Browser is not initialized.")
+
+        new_context_kwargs: dict = {
+            "storage_state": None,
+            "ignore_https_errors": False,
+            "accept_downloads": False,
+            "locale": "en-US",
+            "timezone_id": "America/New_York",
+        }
+
+        user_agent = getattr(self, "user_agent", None)
+        if user_agent:
+            new_context_kwargs["user_agent"] = user_agent
+        elif self.headless:
+            new_context_kwargs["user_agent"] = (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/120.0.0.0 Safari/537.36"
+            )
+
+        context = await self.browser.new_context(**new_context_kwargs)
+
+        if self.headless:
+            await context.add_init_script(
+                """
+                Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+                Object.defineProperty(navigator, 'plugins', {
+                    get: () => [1, 2, 3, 4, 5],
+                });
+                Object.defineProperty(navigator, 'languages', {
+                    get: () => ['en-US', 'en'],
+                });
+                window.chrome = {runtime: {}};
+                """
+            )
+
+        page = await context.new_page()
+        await page.goto(self.target_url, wait_until='domcontentloaded')
+
+        await self._handle_initial_dialogs(page)
+
+        return context, page
 
     async def _handle_initial_dialogs(self, page: Page) -> None:
         """

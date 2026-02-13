@@ -15,6 +15,7 @@ from hivetracered.attacks.template_attack import TemplateAttack
 from hivetracered.attacks.model_attack import ModelAttack
 from hivetracered.attacks.algo_attack import AlgoAttack
 from hivetracered.attacks.composed_attack import ComposedAttack
+from hivetracered.attacks.iterative_attack import IterativeAttack, IterationResult, IterativeAttackResult
 # Import all attack types
 from hivetracered.attacks.types import *
 
@@ -24,9 +25,12 @@ __all__ = [
     "TemplateAttack",
     "ModelAttack",
     "AlgoAttack",
-    "ComposedAttack"
+    "ComposedAttack",
+    "IterativeAttack",
+    "IterationResult",
+    "IterativeAttackResult",
 ]
 
-# Import and extend __all__ with all attack types 
+# Import and extend __all__ with all attack types
 from hivetracered.attacks.types import __all__ as types_all
 __all__.extend(types_all) 

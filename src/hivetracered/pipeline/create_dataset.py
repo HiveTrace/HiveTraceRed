@@ -11,22 +11,26 @@ from tqdm import tqdm
 from hivetracered.attacks.base_attack import BaseAttack
 from hivetracered.models.base_model import Model
 from hivetracered.attacks import ModelAttack
+from hivetracered.attacks.iterative_attack import IterativeAttack
+from hivetracered.evaluators.base_evaluator import BaseEvaluator
 
 from hivetracered.pipeline.constants import ATTACK_CLASSES
 
-def build_attack_from_config(attack_config, attacker_model=None):
+def build_attack_from_config(attack_config, attacker_model=None, target_model=None, evaluator=None):
     """
     Construct an attack instance from configuration.
-    
+
     Args:
         attack_config: String attack name or dict with attack configuration
         attacker_model: Model instance for model-based attacks
-        
+        target_model: Model instance for iterative attacks (target to jailbreak)
+        evaluator: Evaluator instance for iterative attacks
+
     Returns:
         Configured attack instance
-        
+
     Raises:
-        ValueError: If attack name is unknown or model is missing
+        ValueError: If attack name is unknown or required models/evaluator are missing
     """
     if isinstance(attack_config, str):
         attack_name, params = attack_config, {}
@@ -39,32 +43,54 @@ def build_attack_from_config(attack_config, attacker_model=None):
     if attack_name not in ATTACK_CLASSES:
         raise ValueError(f"Unknown attack '{attack_name}'")
     attack_class = ATTACK_CLASSES[attack_name]["attack_class"]
-    if issubclass(attack_class, ModelAttack):
+
+    # Handle iterative attacks (TAP, PAIR)
+    if issubclass(attack_class, IterativeAttack):
+        if not attacker_model:
+            raise ValueError(f"Attacker model is required for iterative attack '{attack_name}'")
+        if not target_model:
+            raise ValueError(f"Target model is required for iterative attack '{attack_name}'")
+        if not evaluator:
+            raise ValueError(f"Evaluator is required for iterative attack '{attack_name}'")
+        attack = attack_class(
+            attacker_model=attacker_model,
+            target_model=target_model,
+            evaluator=evaluator,
+            **params
+        )
+    elif issubclass(attack_class, ModelAttack):
         if not attacker_model:
             raise ValueError(f"Attacker model is required for '{attack_name}'")
         attack = attack_class(model=attacker_model, **params)
     else:
         attack = attack_class(**params)
     if inner_attack_cfg:
-        inner_attack = build_attack_from_config(inner_attack_cfg, attacker_model)
+        inner_attack = build_attack_from_config(inner_attack_cfg, attacker_model, target_model, evaluator)
         attack = inner_attack | attack
     return attack
 
-def setup_attacks(attack_configs: List[dict], attacker_model: Optional[Model] = None) -> Dict[str, BaseAttack]:
+def setup_attacks(
+    attack_configs: List[dict],
+    attacker_model: Optional[Model] = None,
+    target_model: Optional[Model] = None,
+    evaluator: Optional[BaseEvaluator] = None
+) -> Dict[str, BaseAttack]:
     """
     Initialize attack instances from configuration list.
-    
+
     Args:
         attack_configs: List of attack configurations
-        attacker_model: Optional model for model-based attacks
-        
+        attacker_model: Optional model for model-based and iterative attacks
+        target_model: Optional target model for iterative attacks
+        evaluator: Optional evaluator for iterative attacks
+
     Returns:
         Dictionary of attack name to attack instance mappings
     """
     attacks = {}
-    for attack_config in attack_configs:        
+    for attack_config in attack_configs:
         try:
-            attack = build_attack_from_config(attack_config, attacker_model)
+            attack = build_attack_from_config(attack_config, attacker_model, target_model, evaluator)
             attacks[attack.__class__.__name__] = attack
         except Exception as e:
             print(f"Warning: Failed to initialize attack from config {attack_config}: {str(e)}")

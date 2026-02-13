@@ -14,6 +14,7 @@ from hivetracered.attacks.types.text_structure_modification import *
 from hivetracered.attacks.types.task_deflection import *
 from hivetracered.attacks.types.irrelevant_information import *
 from hivetracered.attacks.types.in_context_learning import *
+from hivetracered.attacks.types.iterative import *
 
 # Import __all__ from each module
 from hivetracered.attacks.types.simple_instructions import __all__ as simple_instructions_all
@@ -26,6 +27,7 @@ from hivetracered.attacks.types.text_structure_modification import __all__ as te
 from hivetracered.attacks.types.task_deflection import __all__ as task_deflection_all
 from hivetracered.attacks.types.irrelevant_information import __all__ as irrelevant_information_all
 from hivetracered.attacks.types.in_context_learning import __all__ as in_context_learning_all
+from hivetracered.attacks.types.iterative import __all__ as iterative_all
 
 # Extend __all__ with all attack types
 __all__ = []
@@ -38,4 +40,5 @@ __all__.extend(token_smuggling_all)
 __all__.extend(text_structure_modification_all)
 __all__.extend(task_deflection_all)
 __all__.extend(irrelevant_information_all)
-__all__.extend(in_context_learning_all) 
+__all__.extend(in_context_learning_all)
+__all__.extend(iterative_all) 

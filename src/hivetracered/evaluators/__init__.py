@@ -11,6 +11,8 @@ from hivetracered.evaluators.wild_guard_evaluator import WildGuardGPTEvaluator
 from hivetracered.evaluators.wild_guard_ru_evaluator import WildGuardGPTRuEvaluator
 from hivetracered.evaluators.wild_guard_ru_hal_evaluator import WildGuardGPTRuHalEvaluator
 from hivetracered.evaluators.system_prompt_detection_evaluator import SystemPromptDetectionEvaluator
+from hivetracered.evaluators.scoring_judge_evaluator import ScoringJudgeEvaluator
+from hivetracered.evaluators.goal_completion_evaluator import GoalCompletionEvaluator
 
 from hivetracered.evaluators.data.utils import (
     load_keywords,
@@ -25,4 +27,6 @@ __all__ = [
     "WildGuardGPTRuHalEvaluator",
     "load_keywords",
     "SystemPromptDetectionEvaluator",
+    "ScoringJudgeEvaluator",
+    "GoalCompletionEvaluator",
 ] 

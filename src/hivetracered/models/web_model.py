@@ -124,8 +124,29 @@ class WebModel(Model):
         user_agent = getattr(self, "user_agent", None)
         if user_agent:
             new_context_kwargs["user_agent"] = user_agent
+        elif self.headless:
+            new_context_kwargs["user_agent"] = (
+                "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) "
+                "AppleWebKit/537.36 (KHTML, like Gecko) "
+                "Chrome/120.0.0.0 Safari/537.36"
+            )
 
         context = await self.browser.new_context(**new_context_kwargs)
+
+        if self.headless:
+            await context.add_init_script(
+                """
+                Object.defineProperty(navigator, 'webdriver', {get: () => undefined});
+                Object.defineProperty(navigator, 'plugins', {
+                    get: () => [1, 2, 3, 4, 5],
+                });
+                Object.defineProperty(navigator, 'languages', {
+                    get: () => ['en-US', 'en'],
+                });
+                window.chrome = {runtime: {}};
+                """
+            )
+
         page = await context.new_page()
         await page.goto(self.target_url, wait_until='networkidle')
 

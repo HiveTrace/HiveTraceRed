@@ -22,14 +22,19 @@ from hivetracered.attacks.types.text_structure_modification import __all__ as te
 from hivetracered.attacks.types.task_deflection import __all__ as task_deflection_all
 from hivetracered.attacks.types.irrelevant_information import __all__ as irrelevant_information_all
 from hivetracered.attacks.types.in_context_learning import __all__ as in_context_learning_all
+from hivetracered.attacks.types.iterative import __all__ as iterative_all
 from hivetracered.models.base_model import Model
 from hivetracered.attacks import ModelAttack
+from hivetracered.attacks.iterative_attack import IterativeAttack
 
 # Import each attack class directly
 from hivetracered.attacks.types import *
 
+# Import iterative attack classes
+from hivetracered.attacks.types.iterative import PAIRAttack, TAPAttack
+
 # Import evaluators
-from hivetracered.evaluators import KeywordEvaluator, WildGuardGPTEvaluator, WildGuardGPTRuEvaluator, WildGuardGPTRuHalEvaluator, SystemPromptDetectionEvaluator
+from hivetracered.evaluators import KeywordEvaluator, WildGuardGPTEvaluator, WildGuardGPTRuEvaluator, WildGuardGPTRuHalEvaluator, SystemPromptDetectionEvaluator, ScoringJudgeEvaluator, GoalCompletionEvaluator
 
 MODEL_CLASSES = {
     "gigachat": GigaChatModel,
@@ -87,7 +92,8 @@ ATTACK_TYPES = {
     "text_structure_modification": text_structure_modification_all,
     "task_deflection": task_deflection_all,
     "irrelevant_information": irrelevant_information_all,
-    "in_context_learning": in_context_learning_all
+    "in_context_learning": in_context_learning_all,
+    "iterative": iterative_all
 }
 """Categorization of attack types and their corresponding attack classes.
 Used for organizing attacks by their strategy/approach."""
@@ -105,6 +111,8 @@ EVALUATOR_CLASSES: Dict[str, Any] = {
     "WildGuardGPTRuEvaluator": WildGuardGPTRuEvaluator,
     "WildGuardGPTRuHalEvaluator": WildGuardGPTRuHalEvaluator,
     "SystemPromptDetectionEvaluator": SystemPromptDetectionEvaluator,
+    "ScoringJudgeEvaluator": ScoringJudgeEvaluator,
+    "GoalCompletionEvaluator": GoalCompletionEvaluator,
 }
 """Registry of available evaluator classes for assessing model responses.
 Allows dynamic instantiation of evaluators based on configuration strings."""

@@ -13,24 +13,31 @@ from langchain_core.runnables import RunnableLambda
 
 class OpenAIModel(LangchainModel):
     """
-    OpenAI language model implementation using the LangChain integration.
-    Provides a standardized interface to OpenAI's API with rate limiting support and 
-    both synchronous and asynchronous processing capabilities.
+    OpenAI-compatible language model implementation using the LangChain integration.
+    Provides a standardized interface to OpenAI's API (or any OpenAI-compatible endpoint)
+    with rate limiting support and both synchronous and asynchronous processing capabilities.
     """
-    
-    def __init__(self, model: str = "gpt-4.1-nano", max_concurrency: Optional[int] = None, batch_size: Optional[int] = None, rpm: int = 300, max_retries: int = 3, **kwargs):
+
+    def __init__(self, model: str = "gpt-4.1-nano", base_url: str = "https://api.openai.com/v1", max_concurrency: Optional[int] = None, batch_size: Optional[int] = None, rpm: int = 300, api_key: str = None, max_retries: int = 3, **kwargs):
         """
         Initialize the OpenAI model client with the specified configuration.
 
         Args:
-            model: OpenAI model identifier (e.g., "gpt-4", "gpt-3.5-turbo")
+            model: Model identifier (e.g., "gpt-4", "gpt-3.5-turbo", or any model name for compatible APIs)
+            base_url: API base URL (default: "https://api.openai.com/v1"). Override for OpenAI-compatible endpoints.
             max_concurrency: Maximum number of concurrent requests (replaces batch_size)
             batch_size: (Deprecated) Use max_concurrency instead. Will be removed in v2.0.0
             rpm: Rate limit in requests per minute
+            api_key: API key; defaults to OPENAI_API_KEY env var
             max_retries: Maximum number of retry attempts on transient errors (default: 3)
             **kwargs: Additional parameters to pass to the ChatOpenAI constructor
         """
         load_dotenv(override=True)
+
+        if api_key is None:
+            api_key = os.getenv("OPENAI_API_KEY")
+
+        self.base_url = base_url
         self.model_name = model
         self.max_retries = max_retries
 
@@ -55,12 +62,12 @@ class OpenAIModel(LangchainModel):
 
         self.kwargs = kwargs or {}
 
-        if not "temperature" in self.kwargs:
+        if "temperature" not in self.kwargs:
             self.kwargs["temperature"] = 0.000001
         rate_limiter = InMemoryRateLimiter(
             requests_per_second=rpm / 60,
             check_every_n_seconds=0.1,
         )
-        self.client = ChatOpenAI(model=model, rate_limiter=rate_limiter, **self.kwargs)
+        self.client = ChatOpenAI(model=model, rate_limiter=rate_limiter, base_url=base_url, api_key=api_key, **self.kwargs)
         self.client = self._add_retry_policy(self.client)
     

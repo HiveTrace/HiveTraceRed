@@ -18,7 +18,7 @@ except ImportError:
 project = 'HiveTraceRed'
 copyright = '2025, HiveTrace'
 author = 'HiveTrace'
-release = '1.0.8'
+release = '1.0.10'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -81,7 +81,7 @@ autodoc_mock_imports = [
     'dotenv',
     'tqdm',
     'langchain_core',
-    'yandex_cloud_ml_sdk',
+    'yandex_ai_studio_sdk',
     'yandexcloud',
     'aiohttp',
     'requests',

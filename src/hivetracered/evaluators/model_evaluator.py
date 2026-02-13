@@ -27,14 +27,22 @@ class ModelEvaluator(BaseEvaluator):
         self._name = name
         self._description = description
     
+    def _get_extra_format_kwargs(self) -> Dict[str, Any]:
+        """
+        Return extra keyword arguments for the evaluation prompt template.
+
+        Override in subclasses to inject additional placeholders (e.g. {goal}).
+        """
+        return {}
+
     def create_evaluation_prompt(self, prompt: Union[str, List[Dict[str, str]]], response: str) -> str:
         """
         Create the evaluation prompt to send to the model.
-        
+
         Args:
             prompt: The original prompt as a string or list of messages
             response: The model's response to evaluate
-            
+
         Returns:
             The formatted evaluation prompt
         """
@@ -46,7 +54,7 @@ class ModelEvaluator(BaseEvaluator):
             prompt_text = "\n".join([f"{msg.get('role', 'unknown')}: {msg.get('content', '')}" for msg in prompt if "content" in msg])
         else:
             prompt_text = str(prompt)
-        
+
         # Extract the response text
         if hasattr(response, 'content'):
             response_text = response.content
@@ -56,11 +64,12 @@ class ModelEvaluator(BaseEvaluator):
             response_text = response["content"]
         else:
             response_text = str(response)
-        
+
         # Format the evaluation prompt
         return self.evaluation_prompt_template.format(
             prompt=prompt_text,
-            response=response_text
+            response=response_text,
+            **self._get_extra_format_kwargs(),
         )
     
     def evaluate(self, prompt: Union[str, List[Dict[str, str]]], response: str) -> Dict[str, Any]:

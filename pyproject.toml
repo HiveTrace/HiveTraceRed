@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hivetracered"
-version = "1.0.8"
+version = "1.0.10"
 description = "LLM Red Teaming Framework for defensive security research"
 readme = "README.md"
 license = {text = "Apache-2.0"}
@@ -46,7 +46,7 @@ dependencies = [
     # Google AI
     "google-genai>=1.0.0,<2.0.0",
     # Other dependencies
-    "yandex-cloud-ml-sdk>=0.1.0,<1.0.0",
+    "yandex-ai-studio-sdk>=0.19.0,<1.0.0",
     "cyrtranslit>=1.2.0,<2.0.0",
     "plotly>=5.0.0,<6.0.0",
     "numpy>=1.24.0,<3.0.0",

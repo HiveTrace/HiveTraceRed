@@ -6,7 +6,7 @@ import os
 import pandas as pd
 import numpy as np
 import pyarrow as pa
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any
 from datetime import datetime
 from hivetracered.models.base_model import Model
 from hivetracered.attacks.base_attack import BaseAttack
@@ -67,6 +67,80 @@ def make_parquet_compatible(value):
                     res_args[k] = converted
         return {name: res_args} if res_args else str(value)
     
+def save_to_csv(data: Dict[str, Any], output_dir: str, filename: str) -> str:
+    """
+    Save data to a CSV file using pandas.
+
+    Args:
+        data: Dictionary data to save
+        output_dir: Directory to save the file
+        filename: Base filename (without extension)
+
+    Returns:
+        Path to the saved file
+    """
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Ensure filename has timestamp
+    if not any(c.isdigit() for c in filename):
+        timestamp = get_filename_timestamp()
+        filename = f"{filename}_{timestamp}"
+
+    # Remove .csv if present
+    if filename.endswith('.csv'):
+        filename = filename[:-4]
+
+    file_path = os.path.join(output_dir, f"{filename}.csv")
+
+    # Convert data to compatible format
+    data_compatible = make_parquet_compatible(data)
+
+    try:
+        # Convert to DataFrame if it's a list of dictionaries
+        if isinstance(data_compatible, list) and all(isinstance(item, dict) for item in data_compatible):
+            df = pd.DataFrame(data_compatible)
+        elif isinstance(data_compatible, dict):
+            if all(not isinstance(v, (dict, list)) for v in data_compatible.values()):
+                df = pd.DataFrame([data_compatible])
+            else:
+                df = pd.Series(data_compatible).to_frame('data')
+        else:
+            df = pd.DataFrame({'data': [data_compatible]})
+
+        df.to_csv(file_path, index=False)
+        print(f"Data saved to CSV: {file_path}")
+        return file_path
+    except Exception as e:
+        print(f"Error saving to CSV: {str(e)}")
+        return ""
+
+def load_from_csv(file_path: str) -> Dict[str, Any]:
+    """
+    Load data from a CSV file.
+
+    Args:
+        file_path: Path to the CSV file
+
+    Returns:
+        Dictionary with loaded data
+    """
+    try:
+        df = pd.read_csv(file_path)
+
+        # Convert DataFrame to dictionary or list depending on structure
+        if len(df.columns) == 1 and 'data' in df.columns:
+            data = df['data'].iloc[0]
+        elif len(df) == 1:
+            data = df.iloc[0].to_dict()
+        else:
+            data = df.to_dict(orient='records')
+
+        print(f"Data loaded from CSV: {file_path}")
+        return data
+    except Exception as e:
+        print(f"Error loading from CSV: {str(e)}")
+        return {}
+
 def save_to_parquet(data: Dict[str, Any], output_dir: str, filename: str) -> str:
     """
     Save data to a parquet file using pandas.
@@ -217,26 +291,29 @@ def load_from_json(file_path: str) -> Dict[str, Any]:
         print(f"Error loading from JSON: {str(e)}")
         return {}
 
-def save_pipeline_results(data: Dict[str, Any], output_dir: str, stage: str) -> Dict[str, str]:
+def save_pipeline_results(data: Dict[str, Any], output_dir: str, stage: str, format: str = "csv") -> Dict[str, str]:
     """
-    Save pipeline results to both parquet and JSON formats.
-    
+    Save pipeline results in the specified format (csv or parquet), with JSON fallback.
+
     Args:
         data: Pipeline data to save
         output_dir: Directory to save the files
         stage: Pipeline stage name
-        
+        format: Output format - "csv" (default) or "parquet"
+
     Returns:
         Dictionary with saved file paths
     """
     timestamp = get_filename_timestamp()
     filename = f"{stage}_results_{timestamp}"
-    
-    # Save to both formats
+
     try:
-        path = save_to_parquet(data, output_dir, filename)
+        if format == "parquet":
+            path = save_to_parquet(data, output_dir, filename)
+        else:
+            path = save_to_csv(data, output_dir, filename)
     except Exception as e:
-        print(f"Error saving to parquet: {str(e)}")
+        print(f"Error saving to {format}: {str(e)}")
         path = save_to_json(data, output_dir, filename)
     
     return {

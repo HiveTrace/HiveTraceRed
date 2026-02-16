@@ -31,8 +31,11 @@ base_prompts:
 
 # Alternatively, load prompts from a file
 base_prompts_file: prompts/malicious_prompts.txt
-attack_prompts_file: results/attacks/attack_prompts.parquet
-model_responses_file: results/responses/model_responses.parquet
+attack_prompts_file: results/attacks/attack_prompts.csv
+model_responses_file: results/responses/model_responses.csv
+
+# Output format: "csv" (default) or "parquet"
+output_format: csv
 
 stages:
   create_attack_prompts: true

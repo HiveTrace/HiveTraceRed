@@ -17,9 +17,13 @@ def get_chart_style():
         "yaxis": dict(gridcolor="#2a2f3a", color="#e8e8e8")
     }
 
-def load_data(file_path="df.parquet"):
+def load_data(file_path="df.csv"):
     try:
-        df = pd.read_parquet(file_path)
+        ext = os.path.splitext(file_path)[1].lower()
+        if ext == '.parquet':
+            df = pd.read_parquet(file_path)
+        else:
+            df = pd.read_csv(file_path)
     except Exception as e:
         print(f"Error loading data: {e}")
         return pd.DataFrame()
@@ -692,7 +696,7 @@ def build_html_report(df, metrics, charts, data_tables):
 
 def main():
     parser = argparse.ArgumentParser(description="Generate static HTML report for framework results")
-    parser.add_argument("--data-file", type=str, default="df.parquet", help="Path to data file (default: df.parquet)")
+    parser.add_argument("--data-file", type=str, default="df.csv", help="Path to data file (default: df.csv)")
     parser.add_argument("--output", "-o", type=str, default="Static_report.html", help="Output HTML file path (default: Static_report.html)")
     args = parser.parse_args()
 

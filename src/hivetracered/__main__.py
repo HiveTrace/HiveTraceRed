@@ -106,6 +106,9 @@ DEFAULT_CONFIG = {
     "output_dir": "results",
     "timestamp_format": "%Y%m%d_%H%M%S",
 
+    # Output format: "csv" (default) or "parquet"
+    "output_format": "csv",
+
     # Report generation configuration
     "report": {
         "output_filename": None,      # Auto-generate filename with timestamp if None
@@ -335,7 +338,7 @@ def load_model_responses(file_path: str) -> List[Dict[str, Any]]:
         return []
 
 
-async def create_attack_prompts(config: Dict[str, Any], run_dir: str) -> List[Dict[str, Any]]:
+async def create_attack_prompts(config: Dict[str, Any], run_dir: str, output_format: str = "csv") -> List[Dict[str, Any]]:
     """
     Stage 1: Create attack prompts using configured attacks.
 
@@ -393,13 +396,13 @@ async def create_attack_prompts(config: Dict[str, Any], run_dir: str) -> List[Di
 
     # Save attack prompts
     attack_prompts_output = save_pipeline_results(
-        attack_prompts, run_dir, "attack_prompts"
+        attack_prompts, run_dir, "attack_prompts", format=output_format
     )
 
     return attack_prompts
 
 
-async def get_model_responses(config: Dict[str, Any], attack_prompts: List[Dict[str, Any]], run_dir: str) -> List[Dict[str, Any]]:
+async def get_model_responses(config: Dict[str, Any], attack_prompts: List[Dict[str, Any]], run_dir: str, output_format: str = "csv") -> List[Dict[str, Any]]:
     """
     Stage 2: Get model responses for the attack prompts.
 
@@ -430,13 +433,13 @@ async def get_model_responses(config: Dict[str, Any], attack_prompts: List[Dict[
 
     # Save model responses
     model_responses_output = save_pipeline_results(
-        model_responses, run_dir, "model_responses"
+        model_responses, run_dir, "model_responses", format=output_format
     )
 
     return model_responses
 
 
-async def evaluate_responses(config: Dict[str, Any], model_responses: List[Dict[str, Any]], run_dir: str) -> tuple[List[Dict[str, Any]], Optional[str]]:
+async def evaluate_responses(config: Dict[str, Any], model_responses: List[Dict[str, Any]], run_dir: str, output_format: str = "csv") -> tuple[List[Dict[str, Any]], Optional[str]]:
     """
     Stage 3: Evaluate model responses.
 
@@ -470,7 +473,7 @@ async def evaluate_responses(config: Dict[str, Any], model_responses: List[Dict[
 
     # Save evaluation results
     evaluation_output = save_pipeline_results(
-        evaluation_results, run_dir, "evaluations"
+        evaluation_results, run_dir, "evaluations", format=output_format
     )
     evaluation_file = evaluation_output.get("path")
 
@@ -573,6 +576,9 @@ async def run_pipeline(config: Dict[str, Any]):
 
     print(f"Configuration saved to {config_path}")
 
+    # Get output format from config
+    output_format = config.get("output_format", "csv")
+
     # Get enabled stages from config
     stages = config.get("stages", {})
     enable_attack_prompts = stages.get("create_attack_prompts", True)
@@ -594,7 +600,7 @@ async def run_pipeline(config: Dict[str, Any]):
 
     # Stage 1: Create attack prompts
     if enable_attack_prompts:
-        attack_prompts = await create_attack_prompts(config, run_dir)
+        attack_prompts = await create_attack_prompts(config, run_dir, output_format)
         if not attack_prompts and enable_model_responses:
             print("WARNING: No attack prompts generated. Skipping model responses stage.")
             enable_model_responses = False
@@ -610,7 +616,7 @@ async def run_pipeline(config: Dict[str, Any]):
 
     # Stage 2: Get model responses
     if enable_model_responses:
-        model_responses = await get_model_responses(config, attack_prompts, run_dir)
+        model_responses = await get_model_responses(config, attack_prompts, run_dir, output_format)
         if not model_responses and enable_evaluation:
             print("WARNING: No model responses generated. Skipping evaluation stage.")
             enable_evaluation = False
@@ -626,7 +632,7 @@ async def run_pipeline(config: Dict[str, Any]):
 
     # Stage 3: Evaluate responses
     if enable_evaluation:
-        evaluation_results, evaluation_file = await evaluate_responses(config, model_responses, run_dir)
+        evaluation_results, evaluation_file = await evaluate_responses(config, model_responses, run_dir, output_format)
     else:
         print("\nSkipping Stage 3: Evaluate responses (disabled in config)")
         # If evaluation is disabled but report is enabled, check for existing evaluation file

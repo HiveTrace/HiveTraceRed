@@ -100,7 +100,7 @@ DEFAULT_CONFIG = {
     "evaluation_results_file": None,  # Path to load evaluation results for report generation
 
     # System prompt for model
-    "system_prompt": "You are a helpful assistant that provides informative and ethical responses.",
+    "system_prompt": None,
 
     # Output configuration
     "output_dir": "results",
@@ -362,10 +362,15 @@ async def create_attack_prompts(config: Dict[str, Any], run_dir: str) -> List[Di
 
     print(f"Loaded {len(base_prompts)} base prompts")
 
+    # Setup response model and evaluator for iterative attacks (PAIR/TAP)
+    response_model = setup_model(config.get("response_model", {}))
+    evaluation_model = setup_model(config.get("evaluation_model", {}))
+    evaluator = setup_evaluator(config.get("evaluator", {}), evaluation_model)
+
     # Setup attacks
     attack_configs = config.get("attacks", [])
-    attacks = setup_attacks(attack_configs, attacker_model)
-
+    attacks = setup_attacks(attack_configs, attacker_model, target_model=response_model, evaluator=evaluator,
+                            evaluation_model=evaluation_model, setup_evaluator_fn=setup_evaluator)
     if not attacks:
         print("WARNING: No valid attacks configured. Cannot proceed with attack prompts generation.")
         return []

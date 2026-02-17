@@ -7,7 +7,7 @@ and configuration based on string identifiers in configuration files.
 from typing import Dict, Any, Callable
 
 # Import model classes
-from hivetracered.models import GigaChatModel, OpenAIModel, YandexGPTModel, GeminiModel, GeminiNativeModel, CloudRuModel, OpenRouterModel, OllamaModel, LlamaCppModel
+from hivetracered.models import GigaChatModel, OpenAIModel, YandexGPTModel, GeminiModel, GeminiNativeModel, CloudRuModel, OpenRouterModel, OllamaModel, LlamaCppModel, VLLMModel
 # Import all attack classes and types
 from hivetracered.attacks.base_attack import BaseAttack
 
@@ -67,6 +67,7 @@ MODEL_CLASSES = {
     "deepseek/deepseek-chat-v3.1:free": OpenRouterModel,
     "openai/gpt-oss-20b:free": OpenRouterModel,
     "qwen3:0.6b": OllamaModel,
+    "vllm": VLLMModel,
 
     #Model classes
     "GigaChatModel": GigaChatModel,
@@ -78,6 +79,7 @@ MODEL_CLASSES = {
     "OpenRouterModel": OpenRouterModel,
     "OllamaModel": OllamaModel,
     "LlamaCppModel": LlamaCppModel,
+    "VLLMModel": VLLMModel,
 }
 """Registry mapping model names to their implementation classes.
 Allows dynamic instantiation of models based on configuration strings."""

@@ -67,6 +67,7 @@ MODEL_CLASSES = {
     "deepseek/deepseek-chat-v3.1:free": OpenRouterModel,
     "openai/gpt-oss-20b:free": OpenRouterModel,
     "qwen3:0.6b": OllamaModel,
+    # vLLM
     "vllm": VLLMModel,
 
     #Model classes

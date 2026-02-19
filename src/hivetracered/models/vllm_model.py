@@ -65,7 +65,7 @@ class VLLMModel(LangchainModel):
         if not base_url.endswith("/v1"):
             base_url = f"{base_url}/v1"
         base_url = os.getenv("VLLM_BASE_URL", base_url)
-        api_key = os.getenv("VLLM_API_KEY", api_key)
+        api_key = api_key or os.getenv("VLLM_API_KEY")
 
         self.kwargs = kwargs or {}
         if "temperature" not in self.kwargs:

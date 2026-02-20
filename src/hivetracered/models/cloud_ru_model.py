@@ -20,7 +20,7 @@ class CloudRuModel(LangchainModel):
         max_concurrency: Optional[int] = None,
         batch_size: Optional[int] = None,
         rpm: int = 60,
-        api_key: str = None,
+        api_key: Optional[str] = None,
         base_url: str = "https://foundation-models.api.cloud.ru/v1",
         max_retries: int = 3,
         **kwargs: Any,

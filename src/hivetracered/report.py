@@ -22,6 +22,8 @@ def load_data(file_path="df.csv"):
         ext = os.path.splitext(file_path)[1].lower()
         if ext == '.parquet':
             df = pd.read_parquet(file_path)
+        elif ext in ('.xlsx', '.xls'):
+            df = pd.read_excel(file_path)
         else:
             df = pd.read_csv(file_path)
     except Exception as e:

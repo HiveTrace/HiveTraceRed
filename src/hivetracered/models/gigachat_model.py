@@ -12,7 +12,7 @@ class GigaChatModel(LangchainModel):
     both synchronous and asynchronous request processing.
     """
     
-    def __init__(self, model: str = "GigaChat", max_concurrency: Optional[int] = None, batch_size: Optional[int] = None, scope: str = None, credentials: str = None, verify_ssl_certs: bool = False, max_retries: int = 3, **kwargs):
+    def __init__(self, model: str = "GigaChat", max_concurrency: Optional[int] = None, batch_size: Optional[int] = None, scope: Optional[str] = None, credentials: Optional[str] = None, verify_ssl_certs: bool = False, max_retries: int = 3, **kwargs):
         """
         Initialize the GigaChat model client with the specified configuration.
 

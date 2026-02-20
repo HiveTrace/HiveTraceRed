@@ -106,7 +106,7 @@ DEFAULT_CONFIG = {
     "output_dir": "results",
     "timestamp_format": "%Y%m%d_%H%M%S",
 
-    # Output format: "csv" (default) or "parquet"
+    # Output format: "csv" (default), "xlsx", or "parquet"
     "output_format": "csv",
 
     # Report generation configuration
@@ -247,6 +247,8 @@ def load_base_prompts(config: Dict[str, Any]) -> List[Union[str, Dict[str, Any]]
                 df = pd.read_csv(file_path)
             elif ext == '.parquet':
                 df = pd.read_parquet(file_path)
+            elif ext in ('.xlsx', '.xls'):
+                df = pd.read_excel(file_path)
             else:
                 raise ValueError(f"Unsupported file extension: {ext}")
 
@@ -296,6 +298,8 @@ def load_attack_prompts(file_path: str) -> List[Dict[str, Any]]:
             attack_prompts = pd.read_parquet(file_path).to_dict('records')
         elif ext == '.csv':
             attack_prompts = pd.read_csv(file_path).to_dict('records')
+        elif ext in ('.xlsx', '.xls'):
+            attack_prompts = pd.read_excel(file_path).to_dict('records')
         else:
             raise ValueError(f"Unsupported file extension for attack prompts: {ext}")
 
@@ -328,6 +332,8 @@ def load_model_responses(file_path: str) -> List[Dict[str, Any]]:
             model_responses = pd.read_parquet(file_path).to_dict('records')
         elif ext == '.csv':
             model_responses = pd.read_csv(file_path).to_dict('records')
+        elif ext in ('.xlsx', '.xls'):
+            model_responses = pd.read_excel(file_path).to_dict('records')
         else:
             raise ValueError(f"Unsupported file extension for model responses: {ext}")
 

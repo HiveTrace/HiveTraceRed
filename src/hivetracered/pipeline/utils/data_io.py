@@ -291,15 +291,89 @@ def load_from_json(file_path: str) -> Dict[str, Any]:
         print(f"Error loading from JSON: {str(e)}")
         return {}
 
+def save_to_xlsx(data: Dict[str, Any], output_dir: str, filename: str) -> str:
+    """
+    Save data to an XLSX (Excel) file using pandas.
+
+    Args:
+        data: Dictionary data to save
+        output_dir: Directory to save the file
+        filename: Base filename (without extension)
+
+    Returns:
+        Path to the saved file
+    """
+    os.makedirs(output_dir, exist_ok=True)
+
+    # Ensure filename has timestamp
+    if not any(c.isdigit() for c in filename):
+        timestamp = get_filename_timestamp()
+        filename = f"{filename}_{timestamp}"
+
+    # Remove .xlsx if present
+    if filename.endswith('.xlsx'):
+        filename = filename[:-5]
+
+    file_path = os.path.join(output_dir, f"{filename}.xlsx")
+
+    # Convert data to compatible format
+    data_compatible = make_parquet_compatible(data)
+
+    try:
+        # Convert to DataFrame if it's a list of dictionaries
+        if isinstance(data_compatible, list) and all(isinstance(item, dict) for item in data_compatible):
+            df = pd.DataFrame(data_compatible)
+        elif isinstance(data_compatible, dict):
+            if all(not isinstance(v, (dict, list)) for v in data_compatible.values()):
+                df = pd.DataFrame([data_compatible])
+            else:
+                df = pd.Series(data_compatible).to_frame('data')
+        else:
+            df = pd.DataFrame({'data': [data_compatible]})
+
+        df.to_excel(file_path, index=False, engine='openpyxl')
+        print(f"Data saved to XLSX: {file_path}")
+        return file_path
+    except Exception as e:
+        print(f"Error saving to XLSX: {str(e)}")
+        return ""
+
+def load_from_xlsx(file_path: str) -> Dict[str, Any]:
+    """
+    Load data from an XLSX (Excel) file.
+
+    Args:
+        file_path: Path to the XLSX file
+
+    Returns:
+        Dictionary with loaded data
+    """
+    try:
+        df = pd.read_excel(file_path, engine='openpyxl')
+
+        # Convert DataFrame to dictionary or list depending on structure
+        if len(df.columns) == 1 and 'data' in df.columns:
+            data = df['data'].iloc[0]
+        elif len(df) == 1:
+            data = df.iloc[0].to_dict()
+        else:
+            data = df.to_dict(orient='records')
+
+        print(f"Data loaded from XLSX: {file_path}")
+        return data
+    except Exception as e:
+        print(f"Error loading from XLSX: {str(e)}")
+        return {}
+
 def save_pipeline_results(data: Dict[str, Any], output_dir: str, stage: str, format: str = "csv") -> Dict[str, str]:
     """
-    Save pipeline results in the specified format (csv or parquet), with JSON fallback.
+    Save pipeline results in the specified format (csv, xlsx, or parquet), with JSON fallback.
 
     Args:
         data: Pipeline data to save
         output_dir: Directory to save the files
         stage: Pipeline stage name
-        format: Output format - "csv" (default) or "parquet"
+        format: Output format - "csv" (default), "xlsx", or "parquet"
 
     Returns:
         Dictionary with saved file paths
@@ -310,6 +384,8 @@ def save_pipeline_results(data: Dict[str, Any], output_dir: str, stage: str, for
     try:
         if format == "parquet":
             path = save_to_parquet(data, output_dir, filename)
+        elif format == "xlsx":
+            path = save_to_xlsx(data, output_dir, filename)
         else:
             path = save_to_csv(data, output_dir, filename)
     except Exception as e:

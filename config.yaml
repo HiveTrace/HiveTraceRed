@@ -34,7 +34,7 @@ base_prompts_file: prompts/malicious_prompts.txt
 attack_prompts_file: results/attacks/attack_prompts.csv
 model_responses_file: results/responses/model_responses.csv
 
-# Output format: "csv" (default) or "parquet"
+# Output format: "csv" (default), "xlsx", or "parquet"
 output_format: csv
 
 stages:

@@ -61,10 +61,7 @@ class VLLMModel(LangchainModel):
         self.max_concurrency = max_concurrency
         self.batch_size = self.max_concurrency
 
-        base_url = base_url.rstrip("/")
-        if not base_url.endswith("/v1"):
-            base_url = f"{base_url}/v1"
-        base_url = os.getenv("VLLM_BASE_URL", base_url)
+        base_url = base_url or os.getenv("VLLM_BASE_URL")
         api_key = api_key or os.getenv("VLLM_API_KEY")
 
         self.kwargs = kwargs or {}

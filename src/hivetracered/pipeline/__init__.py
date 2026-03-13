@@ -16,6 +16,13 @@ from hivetracered.pipeline.create_dataset import setup_attacks, stream_attack_pr
 from hivetracered.pipeline.model_responses import stream_model_responses
 from hivetracered.pipeline.evaluation import stream_evaluated_responses
 from hivetracered.pipeline.utils import save_pipeline_results
+from hivetracered.pipeline.framework_mapping import (
+    FRAMEWORKS,
+    get_framework_mappings,
+    get_framework_coverage,
+    get_all_frameworks,
+    get_dataset_categories_for_framework_category,
+)
 
 __all__ = [
     "MODEL_CLASSES",
@@ -26,5 +33,10 @@ __all__ = [
     "stream_attack_prompts",
     "stream_model_responses",
     "stream_evaluated_responses",
-    "save_pipeline_results"
+    "save_pipeline_results",
+    "FRAMEWORKS",
+    "get_framework_mappings",
+    "get_framework_coverage",
+    "get_all_frameworks",
+    "get_dataset_categories_for_framework_category",
 ] 

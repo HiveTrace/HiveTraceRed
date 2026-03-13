@@ -10,6 +10,7 @@ from hivetracered.pipeline.framework_mapping import (
     FRAMEWORKS,
     get_framework_mappings,
 )
+from hivetracered.pipeline.mitigations import get_prioritized_mitigations
 
 def get_chart_style():
     return {
@@ -134,6 +135,13 @@ def calculate_metrics(df):
                 asr_max_attack = float(attack_stats.max() * 100)
                 best_attack_name_detailed = str(attack_stats.idxmax())
 
+    # Vulnerable attack types (types with ASR > 0) and prioritized mitigations
+    vulnerable_attack_types = []
+    if "attack_type" in df.columns and "success" in df.columns and len(df):
+        type_asr = df.groupby("attack_type")["success"].mean()
+        vulnerable_attack_types = sorted(type_asr[type_asr > 0].index.tolist())
+    prioritized_mitigations = get_prioritized_mitigations(vulnerable_attack_types)
+
     return {
         "total_tests": total_tests, "success_rate": success_rate, "blocked_rate": blocked_rate,
         "error_rate": error_rate, "model_name": model_name, "n_attack_types": n_attack_types,
@@ -144,7 +152,9 @@ def calculate_metrics(df):
         "framework_categories": framework_categories,
         "framework_mappings": {k: sorted(v) for k, v in merged_mappings.items()},
         "asr_none_attack": asr_none_attack, "asr_max_attack": asr_max_attack,
-        "best_attack_name_detailed": best_attack_name_detailed
+        "best_attack_name_detailed": best_attack_name_detailed,
+        "vulnerable_attack_types": vulnerable_attack_types,
+        "prioritized_mitigations": prioritized_mitigations,
     }
 
 def create_charts(df):
@@ -471,6 +481,21 @@ def build_html_report(df, metrics, charts, data_tables):
 
     .plot-container{ width: 100%; display: flex; justify-content: center; margin: 16px 0; }
     .plot-container > div{ width: 100%; max-width: 100%; }
+
+    .mitigation-item{
+      background: #0f1420; border: 1px solid var(--border); padding: 14px 16px;
+      border-radius: 12px; margin-bottom: 10px; display: flex; align-items: center; gap: 16px;
+    }
+    .mitigation-item .mit-name{ flex: 1; font-weight: 500; }
+    .mitigation-item .mit-coverage{ color: var(--muted); font-size: 13px; white-space: nowrap; }
+    .progress-bar{
+      width: 120px; height: 8px; background: #1a1f2e; border-radius: 4px; overflow: hidden; flex-shrink: 0;
+    }
+    .progress-bar .fill{ height: 100%; border-radius: 4px; background: var(--good); transition: width 0.3s; }
+    .mitigation-badge{
+      display: inline-block; padding: 4px 10px; margin: 3px 4px 3px 0; font-size: 12px;
+      background: #102116; border: 1px solid #1b3a26; color: #9be3b4; border-radius: 8px;
+    }
     </style>
     """
 
@@ -607,6 +632,22 @@ def build_html_report(df, metrics, charts, data_tables):
           </div>
 """
 
+    # Build mitigations tab HTML
+    mitigations_html = ""
+    prioritized = metrics.get("prioritized_mitigations", [])
+    if prioritized:
+        items = []
+        for m in prioritized:
+            pct = int(m["covers"] / m["total"] * 100) if m["total"] else 0
+            items.append(
+                f'<div class="mitigation-item">'
+                f'<div class="mit-name">{m["mitigation"]}</div>'
+                f'</div>'
+            )
+        mitigations_html += "<h3>Prioritized Mitigations</h3>\n" + "\n".join(items)
+    else:
+        mitigations_html += '<p style="color:var(--muted);padding:20px;">No vulnerable attack types detected — no mitigations to recommend.</p>'
+
     html = f"""
     <!DOCTYPE html>
     <html lang="en">
@@ -626,6 +667,7 @@ def build_html_report(df, metrics, charts, data_tables):
         <button class="tablink" data-target="tab2" onclick="showTab('tab2')">⚔️ Attack Analysis</button>
         <button class="tablink" data-target="tab3" onclick="showTab('tab3')">📝 Content Analysis</button>
         <button class="tablink" data-target="tab4" onclick="showTab('tab4')">🔍 Data Explorer</button>
+        <button class="tablink" data-target="tab5" onclick="showTab('tab5')">🛡️ Mitigations</button>
       </div>
 
       <!-- Executive Summary -->
@@ -733,6 +775,15 @@ def build_html_report(df, metrics, charts, data_tables):
 
         <h3 style="margin-top:16px;">Sample Prompts & Responses (up to 5)</h3>
         {data_tables['samples_html']}
+      </div>
+
+      <!-- Mitigations -->
+      <div id="tab5" class="section" style="display:none;">
+        <h2>🛡️ Mitigation Recommendations</h2>
+        <div style="background:#1a1a10; border:1px solid #3a351b; padding:14px 18px; border-radius:10px; margin-bottom:16px; color:#ffd29b; font-size:14px;">
+          The mitigations listed below are general recommendations based on detected attack categories. A professional security audit is needed to determine the concrete mitigations applicable to your specific use case and environment.
+        </div>
+        {mitigations_html}
       </div>
 
       <div class="footer">

@@ -14,6 +14,7 @@ from hivetracered.models.openrouter_model import OpenRouterModel
 from hivetracered.models.ollama_model import OllamaModel
 from hivetracered.models.llamacpp_model import LlamaCppModel
 from hivetracered.models.vllm_model import VLLMModel
+from hivetracered.models.rest_model import RestModel
 
 # Optional web models that require playwright
 try:
@@ -37,6 +38,7 @@ __all__ = [
     "OllamaModel",
     "LlamaCppModel",
     "VLLMModel",
+    "RestModel",
 ]
 
 if _WEB_MODELS_AVAILABLE:

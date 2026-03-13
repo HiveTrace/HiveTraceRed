@@ -6,7 +6,11 @@ import numpy as np
 import pandas as pd
 import plotly.express as px
 import plotly.io as pio
-from hivetracered.pipeline.owasp_mapping import map_to_owasp, get_owasp_description
+from hivetracered.pipeline.framework_mapping import (
+    FRAMEWORKS,
+    get_framework_mappings,
+)
+from hivetracered.pipeline.mitigations import get_prioritized_mitigations
 
 def get_chart_style():
     return {
@@ -82,11 +86,35 @@ def calculate_metrics(df):
         total_prompts = int(df["base_prompt"].nunique())
         vulnerable_prompts_rate = float(vulnerable_prompts / total_prompts * 100) if total_prompts > 0 else 0.0
 
-    # OWASP Top 10 for LLM
+    # Multi-framework mapping
     base_category = df["category"].iloc[0] if "category" in df.columns and len(df) else "Unknown"
-    attack_names = df["attack_name"].unique().tolist() if "attack_name" in df.columns else []
     subcategories = df["subcategory"].unique().tolist() if "subcategory" in df.columns else None
-    owasp_categories = sorted(map_to_owasp(base_category, attack_names, subcategories))
+
+    # Merge mappings across all unique (attack_type, attack_name) pairs
+    merged_mappings: dict = {}
+    if "attack_type" in df.columns and "attack_name" in df.columns and len(df):
+        pairs = df[["attack_type", "attack_name"]].drop_duplicates()
+        for _, row in pairs.iterrows():
+            m = get_framework_mappings(
+                attack_type=row["attack_type"],
+                attack_name=row["attack_name"],
+                base_category=base_category,
+                subcategories=subcategories,
+            )
+            for fw, cats in m.items():
+                merged_mappings.setdefault(fw, set()).update(cats)
+    else:
+        merged_mappings = get_framework_mappings(
+            base_category=base_category, subcategories=subcategories,
+        )
+
+    # Build framework_categories: {fw_key: [sorted "ID: Name" strings]}
+    framework_categories: dict = {}
+    for fw_key, cat_ids in merged_mappings.items():
+        fw_defs = FRAMEWORKS.get(fw_key, {}).get("categories", {})
+        framework_categories[fw_key] = sorted(
+            f"{cid}: {fw_defs[cid]['name']}" for cid in cat_ids if cid in fw_defs
+        )
 
     # Calculate average ASR for NoneAttack
     asr_none_attack = 0.0
@@ -107,15 +135,26 @@ def calculate_metrics(df):
                 asr_max_attack = float(attack_stats.max() * 100)
                 best_attack_name_detailed = str(attack_stats.idxmax())
 
+    # Vulnerable attack types (types with ASR > 0) and prioritized mitigations
+    vulnerable_attack_types = []
+    if "attack_type" in df.columns and "success" in df.columns and len(df):
+        type_asr = df.groupby("attack_type")["success"].mean()
+        vulnerable_attack_types = sorted(type_asr[type_asr > 0].index.tolist())
+    prioritized_mitigations = get_prioritized_mitigations(vulnerable_attack_types)
+
     return {
         "total_tests": total_tests, "success_rate": success_rate, "blocked_rate": blocked_rate,
         "error_rate": error_rate, "model_name": model_name, "n_attack_types": n_attack_types,
         "n_attacks": n_attacks, "best_attack_name": best_attack_name, "best_attack_rate": best_attack_rate,
         "vulnerable_prompts": vulnerable_prompts, "total_prompts": total_prompts,
         "vulnerable_prompts_rate": vulnerable_prompts_rate,
-        "base_category": base_category, "owasp_categories": owasp_categories,
+        "base_category": base_category,
+        "framework_categories": framework_categories,
+        "framework_mappings": {k: sorted(v) for k, v in merged_mappings.items()},
         "asr_none_attack": asr_none_attack, "asr_max_attack": asr_max_attack,
-        "best_attack_name_detailed": best_attack_name_detailed
+        "best_attack_name_detailed": best_attack_name_detailed,
+        "vulnerable_attack_types": vulnerable_attack_types,
+        "prioritized_mitigations": prioritized_mitigations,
     }
 
 def create_charts(df):
@@ -358,6 +397,7 @@ def generate_data_tables(df):
         "display_columns": display_columns
     }
 
+
 def build_html_report(df, metrics, charts, data_tables):
     """
     Build complete HTML report from processed data.
@@ -441,6 +481,21 @@ def build_html_report(df, metrics, charts, data_tables):
 
     .plot-container{ width: 100%; display: flex; justify-content: center; margin: 16px 0; }
     .plot-container > div{ width: 100%; max-width: 100%; }
+
+    .mitigation-item{
+      background: #0f1420; border: 1px solid var(--border); padding: 14px 16px;
+      border-radius: 12px; margin-bottom: 10px; display: flex; align-items: center; gap: 16px;
+    }
+    .mitigation-item .mit-name{ flex: 1; font-weight: 500; }
+    .mitigation-item .mit-coverage{ color: var(--muted); font-size: 13px; white-space: nowrap; }
+    .progress-bar{
+      width: 120px; height: 8px; background: #1a1f2e; border-radius: 4px; overflow: hidden; flex-shrink: 0;
+    }
+    .progress-bar .fill{ height: 100%; border-radius: 4px; background: var(--good); transition: width 0.3s; }
+    .mitigation-badge{
+      display: inline-block; padding: 4px 10px; margin: 3px 4px 3px 0; font-size: 12px;
+      background: #102116; border: 1px solid #1b3a26; color: #9be3b4; border-radius: 8px;
+    }
     </style>
     """
 
@@ -543,13 +598,55 @@ def build_html_report(df, metrics, charts, data_tables):
     </div>
     """
 
-    # Build OWASP categories HTML
-    owasp_badges_html = ""
-    if metrics.get('owasp_categories'):
-        owasp_badges = []
-        for cat in metrics['owasp_categories']:
-            owasp_badges.append(f'<div class="badge" style="background:#1a1e3a; border-color:#2a3a5a; color:#9bb4e3;" title="{get_owasp_description(cat)}">{cat}</div>')
-        owasp_badges_html = "\n          ".join(owasp_badges)
+    # Build per-framework category badges HTML
+    fw_short = {
+        "OWASP_LLM_TOP_10": "OWASP LLM Top 10",
+        "MITRE_ATLAS": "MITRE ATLAS",
+        "FSTEK_117": "ФСТЭК 117",
+    }
+    fw_badge_colors = {
+        "OWASP_LLM_TOP_10": ("#9bb4e3", "#1a1e3a", "#2a3a5a"),
+        "MITRE_ATLAS": ("#9be3b4", "#102116", "#1b3a26"),
+        "FSTEK_117": ("#ffd29b", "#211d10", "#3a2f1b"),
+    }
+    framework_categories = metrics.get("framework_categories", {})
+    framework_badges_html = ""
+    for fw_key in ["OWASP_LLM_TOP_10", "MITRE_ATLAS", "FSTEK_117"]:
+        cats = framework_categories.get(fw_key, [])
+        if not cats:
+            continue
+        fw_name = fw_short.get(fw_key, fw_key)
+        color, bg, border = fw_badge_colors.get(fw_key, ("#e8e8e8", "#1a1e3a", "#2a3a5a"))
+        fw_defs = FRAMEWORKS.get(fw_key, {}).get("categories", {})
+        badges = []
+        for cat in cats:
+            cat_id = cat.split(":")[0].strip()
+            desc = fw_defs.get(cat_id, {}).get("description", "")
+            badges.append(
+                f'<div class="badge" style="background:{bg}; border-color:{border}; color:{color};" title="{desc}">{cat}</div>'
+            )
+        framework_badges_html += f"""
+          <div style="margin-bottom:8px;"><strong>{fw_name}:</strong></div>
+          <div class="kf" style="margin-bottom:12px;">
+            {chr(10).join(badges)}
+          </div>
+"""
+
+    # Build mitigations tab HTML
+    mitigations_html = ""
+    prioritized = metrics.get("prioritized_mitigations", [])
+    if prioritized:
+        items = []
+        for m in prioritized:
+            pct = int(m["covers"] / m["total"] * 100) if m["total"] else 0
+            items.append(
+                f'<div class="mitigation-item">'
+                f'<div class="mit-name">{m["mitigation"]}</div>'
+                f'</div>'
+            )
+        mitigations_html += "<h3>Prioritized Mitigations</h3>\n" + "\n".join(items)
+    else:
+        mitigations_html += '<p style="color:var(--muted);padding:20px;">No vulnerable attack types detected — no mitigations to recommend.</p>'
 
     html = f"""
     <!DOCTYPE html>
@@ -570,6 +667,7 @@ def build_html_report(df, metrics, charts, data_tables):
         <button class="tablink" data-target="tab2" onclick="showTab('tab2')">⚔️ Attack Analysis</button>
         <button class="tablink" data-target="tab3" onclick="showTab('tab3')">📝 Content Analysis</button>
         <button class="tablink" data-target="tab4" onclick="showTab('tab4')">🔍 Data Explorer</button>
+        <button class="tablink" data-target="tab5" onclick="showTab('tab5')">🛡️ Mitigations</button>
       </div>
 
       <!-- Executive Summary -->
@@ -600,13 +698,10 @@ def build_html_report(df, metrics, charts, data_tables):
           <div class="badge warn">Vulnerable Prompts: <strong>{metrics['vulnerable_prompts']}/{metrics['total_prompts'] or 0}</strong> ({metrics['vulnerable_prompts_rate']:.1f}%)</div>
         </div>
 
-        <h3>📊 OWASP Top 10 for LLM</h3>
+        <h3>📊 Security Framework Coverage</h3>
         <div style="background:#0f1420; border:1px solid var(--border); padding:16px; border-radius:12px; margin-bottom:16px;">
           <div style="margin-bottom:12px;"><strong>Category:</strong> <span style="color:var(--accent2);">{metrics.get('base_category', 'Unknown')}</span></div>
-          <div style="margin-bottom:8px;"><strong>OWASP Categories:</strong></div>
-          <div class="kf">
-            {owasp_badges_html if owasp_badges_html else '<div style="color:var(--muted);">No OWASP categories mapped</div>'}
-          </div>
+          {framework_badges_html if framework_badges_html else '<div style="color:var(--muted);">No framework categories mapped</div>'}
         </div>
 
         <h3>🎯 Attack Success Rate (ASR) Analysis</h3>
@@ -680,6 +775,15 @@ def build_html_report(df, metrics, charts, data_tables):
 
         <h3 style="margin-top:16px;">Sample Prompts & Responses (up to 5)</h3>
         {data_tables['samples_html']}
+      </div>
+
+      <!-- Mitigations -->
+      <div id="tab5" class="section" style="display:none;">
+        <h2>🛡️ Mitigation Recommendations</h2>
+        <div style="background:#1a1a10; border:1px solid #3a351b; padding:14px 18px; border-radius:10px; margin-bottom:16px; color:#ffd29b; font-size:14px;">
+          The mitigations listed below are general recommendations based on detected attack categories. A professional security audit is needed to determine the concrete mitigations applicable to your specific use case and environment.
+        </div>
+        {mitigations_html}
       </div>
 
       <div class="footer">

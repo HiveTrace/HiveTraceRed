@@ -7,7 +7,7 @@ and configuration based on string identifiers in configuration files.
 from typing import Dict, Any, Callable
 
 # Import model classes
-from hivetracered.models import GigaChatModel, OpenAIModel, YandexGPTModel, GeminiModel, GeminiNativeModel, CloudRuModel, OpenRouterModel, OllamaModel, LlamaCppModel, VLLMModel
+from hivetracered.models import GigaChatModel, OpenAIModel, YandexGPTModel, GeminiModel, GeminiNativeModel, CloudRuModel, OpenRouterModel, OllamaModel, LlamaCppModel, VLLMModel, RestModel
 # Import all attack classes and types
 from hivetracered.attacks.base_attack import BaseAttack
 
@@ -81,6 +81,8 @@ MODEL_CLASSES = {
     "OllamaModel": OllamaModel,
     "LlamaCppModel": LlamaCppModel,
     "VLLMModel": VLLMModel,
+    "rest": RestModel,
+    "RestModel": RestModel,
 }
 """Registry mapping model names to their implementation classes.
 Allows dynamic instantiation of models based on configuration strings."""

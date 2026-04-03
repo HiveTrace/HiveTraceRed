@@ -88,6 +88,9 @@ package-dir = {"" = "src"}
 where = ["src"]
 include = ["hivetracered*"]
 
+[tool.pytest.ini_options]
+markers = ["real_model: tests that make real API calls (uses tokens)"]
+
 [tool.setuptools.package-data]
 hivetracered = [
     "evaluators/data/*.csv",  # Changed from *.txt

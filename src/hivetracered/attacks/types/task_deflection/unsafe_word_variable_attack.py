@@ -126,8 +126,12 @@ class UnsafeWordVariableFullAttack(ModelAttack):
             The transformed prompt with the model attack applied
         """
 
-        unsafe_word = super().apply(prompt)
+        unsafe_word_result = super().apply(prompt)
 
+        if isinstance(unsafe_word_result, list):
+            unsafe_word = unsafe_word_result[-1]["content"]
+        else:
+            unsafe_word = unsafe_word_result
 
         if isinstance(prompt, str):
             if unsafe_word:

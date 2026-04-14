@@ -1,14 +1,8 @@
-"""
-Irrelevant information attacks that add noise, distractions, and unrelated content.
-"""
+"""Irrelevant information attacks. Each attack is declared in its own *.yaml in this directory."""
+from pathlib import Path
 
-from hivetracered.attacks.types.irrelevant_information.distractors_attack import DistractorsAttack
-from hivetracered.attacks.types.irrelevant_information.distractors_negated_attack import DistractorsNegatedAttack
-from hivetracered.attacks.types.irrelevant_information.irrelevant_information_attack import IrrelevantInformationAttack
+from hivetracered.attacks.yaml_loader import load_attacks_from_dir
 
-# For now, the Combination attacks are missing, but we are importing DistractorsAttack from task_deflection
-__all__ = [
-    "DistractorsAttack",
-    "DistractorsNegatedAttack",
-    "IrrelevantInformationAttack"
-] 
+_loaded = load_attacks_from_dir(Path(__file__).parent, category="irrelevant_information")
+globals().update(_loaded)
+__all__ = sorted(_loaded)

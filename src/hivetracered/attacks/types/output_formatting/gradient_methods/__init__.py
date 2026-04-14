@@ -1,11 +1,9 @@
-"""
-Gradient-based methods that use optimized adversarial token sequences.
-"""
+"""Gradient-based output formatting attacks. Each attack is declared in its own *.yaml
+in this directory. They are registered under the ``output_formatting`` category."""
+from pathlib import Path
 
-from .gcg_transfer_harmbench_attack import GCGTransferHarmbenchAttack
-from .gcg_transfer_universal_attack import GCGTransferUniversalAttack
+from hivetracered.attacks.yaml_loader import load_attacks_from_dir
 
-__all__ = [
-    "GCGTransferHarmbenchAttack",
-    "GCGTransferUniversalAttack"
-] 
+_loaded = load_attacks_from_dir(Path(__file__).parent, category="output_formatting")
+globals().update(_loaded)
+__all__ = sorted(_loaded)

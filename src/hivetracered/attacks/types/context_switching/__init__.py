@@ -1,18 +1,8 @@
-"""
-Context switching attacks that abruptly change the context mid-interaction.
+"""Context switching attacks. Each attack is declared in its own *.yaml in this directory."""
+from pathlib import Path
 
-Note: The DistractorsNegatedAttack is defined in the task_deflection directory
-but is also categorized as a context switching attack.
-"""
+from hivetracered.attacks.yaml_loader import load_attacks_from_dir
 
-from hivetracered.attacks.types.context_switching.ignore_previous_instructions_attack import IgnorePreviousInstructionsAttack
-from hivetracered.attacks.types.context_switching.forget_everything_before_attack import ForgetEverythingBeforeAttack
-from hivetracered.attacks.types.context_switching.symbol_divider_attack import SymbolDividerAttack
-from hivetracered.attacks.types.context_switching.dashed_divider_attack import DashedDividerAttack
-
-__all__ = [
-    "IgnorePreviousInstructionsAttack",
-    "ForgetEverythingBeforeAttack",
-    "SymbolDividerAttack",
-    "DashedDividerAttack"
-] 
+_loaded = load_attacks_from_dir(Path(__file__).parent, category="context_switching")
+globals().update(_loaded)
+__all__ = sorted(_loaded)

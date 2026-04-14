@@ -5,6 +5,7 @@ Transliteration attack that converts between different languages.
 from typing import Union, List, Dict, Optional
 from hivetracered.attacks.algo_attack import AlgoAttack
 import cyrtranslit
+from hivetracered.registry import Registry
 
 ENGLISH_TO_RUSSIAN = {
     "english": ("английского", "английский"),
@@ -20,6 +21,7 @@ ENGLISH_TO_RUSSIAN = {
     "ukrainian": ("украинского", "украинский"),
 }
 
+@Registry.attack(category="token_smuggling")
 class TransliterationAttack(AlgoAttack):
     """
     Attack that transliterates text between different alphabets,

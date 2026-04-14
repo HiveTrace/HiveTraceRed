@@ -11,9 +11,11 @@ import warnings
 
 from langchain_core.rate_limiters import InMemoryRateLimiter
 from langchain_core.runnables import RunnableLambda
+from hivetracered.registry import Registry
 
 load_dotenv(override=True)
 
+@Registry.model()
 class OpenRouterModel(LangchainModel):
     """
     OpenAI language model implementation using the LangChain integration.

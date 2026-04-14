@@ -5,7 +5,9 @@ Encoding attack that transforms text from UTF-8 to different encodings
 
 from typing import Union, List, Dict, Optional
 from hivetracered.attacks.algo_attack import AlgoAttack
+from hivetracered.registry import Registry
 
+@Registry.attack(category="token_smuggling")
 class EncodingAttack(AlgoAttack):
     """
     Attack that transforms text from one encoding to another (UTF-8 to KOI8-R by default),

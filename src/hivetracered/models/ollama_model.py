@@ -7,7 +7,9 @@ from typing import AsyncGenerator
 import asyncio
 from tqdm import tqdm
 import warnings
+from hivetracered.registry import Registry
 
+@Registry.model()
 class OllamaModel(LangchainModel):
     """
     Ollama local model implementation using the LangChain integration.

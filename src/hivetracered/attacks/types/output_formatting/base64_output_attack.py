@@ -1,6 +1,8 @@
 import base64
 from typing import Union, List, Dict
 from hivetracered.attacks.template_attack import TemplateAttack
+from hivetracered.registry import Registry
+@Registry.attack(category="output_formatting")
 class Base64OutputAttack(TemplateAttack):
     """
     Attack that asks for output to be in base64 encoding, potentially bypassing output filters.

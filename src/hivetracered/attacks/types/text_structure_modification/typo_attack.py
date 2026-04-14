@@ -5,7 +5,9 @@ Typo attack that introduces typographical errors into text to modify its structu
 import random
 from typing import Union, List, Dict, Optional, Set
 from hivetracered.attacks.algo_attack import AlgoAttack
+from hivetracered.registry import Registry
 
+@Registry.attack(category="text_structure_modification")
 class TypoAttack(AlgoAttack):
     """
     Attack that introduces typographical errors (typos) into text, potentially bypassing content filters 

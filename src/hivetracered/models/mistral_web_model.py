@@ -16,8 +16,10 @@ from playwright.async_api import (
 )
 
 from hivetracered.models.web_model import WebModel
+from hivetracered.registry import Registry
 
 
+@Registry.model()
 class MistralWebModel(WebModel):
     """
     WebModel implementation for Mistral Le Chat (chat.mistral.ai).

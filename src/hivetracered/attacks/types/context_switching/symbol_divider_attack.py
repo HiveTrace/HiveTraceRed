@@ -1,5 +1,7 @@
 from hivetracered.attacks.template_attack import TemplateAttack
+from hivetracered.registry import Registry
 
+@Registry.attack(category="context_switching")
 class SymbolDividerAttack(TemplateAttack):
     """
     Symbol Divider attack.

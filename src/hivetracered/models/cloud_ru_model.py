@@ -6,8 +6,10 @@ import os
 import warnings
 
 from langchain_core.rate_limiters import InMemoryRateLimiter
+from hivetracered.registry import Registry
 
 
+@Registry.model()
 class CloudRuModel(LangchainModel):
     """
     Sber Cloud model implementation using LangChain's OpenAI-compatible integration.

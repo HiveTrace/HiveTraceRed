@@ -4,7 +4,9 @@ from hivetracered.models.langchain_model import LangchainModel
 import os
 from dotenv import load_dotenv
 import warnings
+from hivetracered.registry import Registry
 
+@Registry.model()
 class GigaChatModel(LangchainModel):
     """
     GigaChat language model implementation using LangChain integration.

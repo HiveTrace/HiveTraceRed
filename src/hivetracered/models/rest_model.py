@@ -27,6 +27,7 @@ from hivetracered.models.base_model import Model
 
 import jsonpath_ng
 from jsonpath_ng.exceptions import JsonPathParserError
+from hivetracered.registry import Registry
 
 try:
     import nest_asyncio
@@ -38,6 +39,7 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 
+@Registry.model()
 class RestModel(Model):
     """
     Generic REST API model with configurable request/response templates.

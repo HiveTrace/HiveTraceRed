@@ -1,5 +1,7 @@
 from hivetracered.attacks.template_attack import TemplateAttack
+from hivetracered.registry import Registry
 
+@Registry.attack(category="roleplay")
 class EvilConfidantAttack(TemplateAttack):
     """
     Evil Confidant attack.

@@ -8,7 +8,9 @@ import asyncio
 from tqdm import tqdm
 import warnings
 from langchain_core.rate_limiters import InMemoryRateLimiter
+from hivetracered.registry import Registry
 
+@Registry.model()
 class GeminiModel(LangchainModel):
     """
     Google Gemini language model implementation using LangChain integration.

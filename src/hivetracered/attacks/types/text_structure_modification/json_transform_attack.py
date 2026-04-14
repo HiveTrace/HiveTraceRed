@@ -5,7 +5,9 @@ JSON transform attack that converts strings into JSON objects with alternating w
 from typing import Union, List, Dict, Optional
 import json
 from hivetracered.attacks.algo_attack import AlgoAttack
+from hivetracered.registry import Registry
 
+@Registry.attack(category="text_structure_modification")
 class JSONTransformAttack(AlgoAttack):
     """
     Attack that transforms a string into a JSON object where words are keys and values one-by-one.

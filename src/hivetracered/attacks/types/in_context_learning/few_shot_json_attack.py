@@ -1,5 +1,7 @@
 from hivetracered.attacks.template_attack import TemplateAttack
+from hivetracered.registry import Registry
 
+@Registry.attack(category="in_context_learning")
 class FewShotJSONAttack(TemplateAttack):
     """
     Few Shot JSON attack.

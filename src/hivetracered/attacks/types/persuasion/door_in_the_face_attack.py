@@ -1,7 +1,9 @@
 from typing import Optional, Dict, Any
 from hivetracered.attacks.model_attack import ModelAttack
 from hivetracered.models.base_model import Model
+from hivetracered.registry import Registry
 
+@Registry.attack(category="persuasion")
 class DoorInTheFaceAttack(ModelAttack):
     """
     Door-in-the-face - Beginning with a larger request followed by a smaller, more reasonable one.

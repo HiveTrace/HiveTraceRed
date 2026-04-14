@@ -3,6 +3,8 @@ from hivetracered.evaluators.model_evaluator import ModelEvaluator
 from hivetracered.models.base_model import Model
 import re
 from typing import Coroutine
+from hivetracered.registry import Registry
+@Registry.evaluator()
 class WildGuardGPTRuHalEvaluator(ModelEvaluator):
     """
     Evaluator that uses the translated to Russian WildGuard prompt for gpt4 to evaluate whether a

@@ -1,7 +1,9 @@
 from typing import Optional, Dict, Any
 from hivetracered.attacks.model_attack import ModelAttack
 from hivetracered.models.base_model import Model
+from hivetracered.registry import Registry
 
+@Registry.attack(category="persuasion")
 class ReciprocityAttack(ModelAttack):
     """
     Reciprocity - Creating a sense of obligation to return a favor or respond in kind.

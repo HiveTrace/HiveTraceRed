@@ -5,6 +5,7 @@ Unicode-based attacks that transform text into various unicode styles to bypass 
 from typing import Union, List, Dict, Optional
 from hivetracered.attacks.algo_attack import AlgoAttack
 import random
+from hivetracered.registry import Registry
 
 
 class UnicodeStyleAttack(AlgoAttack):
@@ -220,6 +221,7 @@ interpret and answer the question:
         return self._transform_to_unicode_style(text)
 
 
+@Registry.attack(category="token_smuggling")
 class UnicodeRussianStyleAttack(AlgoAttack):
     """
     Attack that transforms Cyrillic text by replacing characters with similar-looking

@@ -1,5 +1,7 @@
 from hivetracered.attacks.template_attack import TemplateAttack
+from hivetracered.registry import Registry
 
+@Registry.attack(category="simple_instructions")
 class NoneAttack(TemplateAttack):
     """
     Pass-through attack that makes no modifications to the prompt.

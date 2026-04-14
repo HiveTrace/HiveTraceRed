@@ -1,7 +1,9 @@
 from typing import Optional, Dict, Any
 from hivetracered.attacks.model_attack import ModelAttack
 from hivetracered.models.base_model import Model
+from hivetracered.registry import Registry
 
+@Registry.attack(category="persuasion")
 class SocialProofAttack(ModelAttack):
     """
     A persuasion attack that leverages social proof to make harmful requests seem more normal or acceptable.

@@ -1,6 +1,8 @@
 from typing import Union, List, Dict, Optional
 from hivetracered.attacks.algo_attack import AlgoAttack
+from hivetracered.registry import Registry
 
+@Registry.attack(category="token_smuggling")
 class RotCipherAttack(AlgoAttack):
     """
     Attack that encodes the input using a ROT cipher and asks the model to decode it,

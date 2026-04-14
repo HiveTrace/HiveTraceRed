@@ -78,6 +78,40 @@ def async_collect(async_gen: AsyncGenerator) -> list:
 # ── Fixtures ─────────────────────────────────────────────────────────
 
 
+def pytest_addoption(parser):
+    parser.addoption(
+        "--model",
+        action="store",
+        default=None,
+        help="Run real-API model tests only for this model class (e.g. --model CloudRuModel).",
+    )
+
+
+def pytest_collection_modifyitems(config, items):
+    """Gate model conformance tests on `--model`.
+
+    No --model: run all non-real-API tests, skip `real_model`.
+    --model X:  run only parametrized tests for class X (including real API).
+    """
+    selected = config.getoption("--model")
+    if selected is None:
+        for item in items:
+            if "real_model" in item.keywords:
+                item.add_marker(pytest.mark.skip(reason="real API call (pass --model CLASS to run)"))
+        return
+
+    kept, deselected = [], []
+    for item in items:
+        is_parametrized_by_class = "[" in item.nodeid and "]" in item.nodeid
+        if is_parametrized_by_class and f"[{selected}]" not in item.nodeid:
+            deselected.append(item)
+        else:
+            kept.append(item)
+    if deselected:
+        config.hook.pytest_deselected(items=deselected)
+        items[:] = kept
+
+
 @pytest.fixture
 def mock_model():
     """Fresh MockModel with default response."""

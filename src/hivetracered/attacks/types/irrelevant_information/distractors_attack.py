@@ -1,5 +1,7 @@
 from hivetracered.attacks.template_attack import TemplateAttack
+from hivetracered.registry import Registry
 
+@Registry.attack(category="irrelevant_information")
 class DistractorsAttack(TemplateAttack):
     """
     Distractors attack.

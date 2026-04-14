@@ -1,5 +1,7 @@
 from hivetracered.attacks.template_attack import TemplateAttack
+from hivetracered.registry import Registry
 
+@Registry.attack(category="roleplay")
 class DANAttack(TemplateAttack):
     """
     DAN (Do Anything Now) attack that instructs the model to adopt a role free from typical restrictions.

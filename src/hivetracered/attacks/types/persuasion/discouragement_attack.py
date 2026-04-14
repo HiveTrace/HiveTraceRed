@@ -2,8 +2,10 @@ from typing import Optional, Dict, Any
 
 from hivetracered.attacks.model_attack import ModelAttack
 from hivetracered.models.base_model import Model
+from hivetracered.registry import Registry
 
 
+@Registry.attack(category="persuasion")
 class DiscouragementAttack(ModelAttack):
     """
     A persuasion attack that undermines a person's confidence, self-efficacy, or motivation

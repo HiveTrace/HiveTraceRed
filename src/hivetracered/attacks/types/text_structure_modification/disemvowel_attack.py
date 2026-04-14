@@ -4,7 +4,9 @@ Disemvowel attack that removes vowels from text to modify its structure.
 
 from typing import Union, List, Dict, Optional
 from hivetracered.attacks.algo_attack import AlgoAttack
+from hivetracered.registry import Registry
 
+@Registry.attack(category="text_structure_modification")
 class DisemvowelAttack(AlgoAttack):
     """
     Attack that removes vowels from text, potentially bypassing content filters 

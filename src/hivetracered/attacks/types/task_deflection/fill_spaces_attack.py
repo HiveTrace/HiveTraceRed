@@ -1,7 +1,9 @@
 from typing import Union, List, Dict, Optional, Any
 from hivetracered.attacks.model_attack import ModelAttack
 from hivetracered.models.base_model import Model
+from hivetracered.registry import Registry
 
+@Registry.attack(category="task_deflection")
 class FillSpacesAttack(ModelAttack):
     """
     Fill Spaces attack.

@@ -5,7 +5,9 @@ Translation attack that translates prompts to different languages using an LLM.
 from typing import Union, List, Dict, Optional, Any
 from hivetracered.attacks.model_attack import ModelAttack
 from hivetracered.models.base_model import Model
+from hivetracered.registry import Registry
 
+@Registry.attack(category="text_structure_modification")
 class TranslationAttack(ModelAttack):
     """
     Attack that translates the original prompt to a different language using an LLM.

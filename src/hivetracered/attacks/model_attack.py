@@ -61,16 +61,7 @@ class ModelAttack(BaseAttack):
                 if prefix + pref in lower_response:
                     index = lower_response.index(prefix + pref)
                     response = response[index + len(prefix + pref):].lstrip()
-        
-        # Check for refusal patterns and attempt to extract usable content
-        refusal_indicators = [
-            "я не могу"
-        ]
-        
-        # If the entire response is a refusal, try to extract any useful content that follows
-        if any(indicator in response.lower() for indicator in refusal_indicators):
-            response = "Я не могу ответить на этот вопрос"
-        
+
         return response
     
     def apply(self, prompt: Union[str, List[Dict[str, str]]]) -> Union[str, List[Dict[str, str]]]:

@@ -16,9 +16,11 @@ from tenacity import (
     retry_if_exception_type,
     RetryError,
 )
+from hivetracered.registry import Registry
 
 
 
+@Registry.model()
 class GeminiNativeModel(Model):
     """
     Google Gemini language model implementation using Google's native Generative AI SDK.

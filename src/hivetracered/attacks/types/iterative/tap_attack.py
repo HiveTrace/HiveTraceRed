@@ -15,6 +15,7 @@ from dataclasses import dataclass, field
 from hivetracered.attacks.iterative_attack import IterativeAttack, IterationResult, IterativeAttackResult, LanguageConfig
 from hivetracered.models.base_model import Model
 from hivetracered.evaluators.base_evaluator import BaseEvaluator
+from hivetracered.registry import Registry
 
 
 # Default system prompt for the attacker model
@@ -61,6 +62,7 @@ class TreeNode:
     pruned: bool = False
 
 
+@Registry.attack(category="iterative")
 class TAPAttack(IterativeAttack):
     """
     TAP (Tree of Attacks with Pruning) attack.

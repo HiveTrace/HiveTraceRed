@@ -1,7 +1,9 @@
 from typing import Dict, Any, Union, List, Set, Optional, AsyncGenerator
 from hivetracered.evaluators.base_evaluator import BaseEvaluator
 from hivetracered.evaluators.data.utils import load_keywords
+from hivetracered.registry import Registry
 
+@Registry.evaluator()
 class KeywordEvaluator(BaseEvaluator):
     """
     Evaluator that detects presence of specified keywords in model responses.

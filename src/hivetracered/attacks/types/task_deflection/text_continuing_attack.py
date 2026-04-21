@@ -2,7 +2,9 @@ from typing import AsyncGenerator, Coroutine, Union, List, Dict, Optional, Any
 from hivetracered.attacks.model_attack import ModelAttack
 from hivetracered.attacks.base_attack import BaseAttack
 from hivetracered.models.base_model import Model
+from hivetracered.registry import Registry
 
+@Registry.attack(category="task_deflection")
 class TextContinuingAttack(ModelAttack):
     """
     Text Continuing attack.

@@ -10,7 +10,9 @@ import warnings
 
 from langchain_core.rate_limiters import InMemoryRateLimiter
 from langchain_core.runnables import RunnableLambda
+from hivetracered.registry import Registry
 
+@Registry.model()
 class OpenAIModel(LangchainModel):
     """
     OpenAI-compatible language model implementation using the LangChain integration.

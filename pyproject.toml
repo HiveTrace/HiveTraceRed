@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hivetracered"
-version = "1.0.14"
+version = "1.0.15"
 description = "LLM Red Teaming Framework for defensive security research"
 readme = "README.md"
 license = {text = "Apache-2.0"}
@@ -51,6 +51,7 @@ dependencies = [
     "plotly>=5.0.0,<6.0.0",
     "numpy>=1.24.0,<3.0.0",
     "openpyxl>=3.1.0,<4.0.0",
+    "jsonpath-ng>=1.6.0,<2.0.0",
 ]
 
 [project.optional-dependencies]
@@ -88,7 +89,11 @@ package-dir = {"" = "src"}
 where = ["src"]
 include = ["hivetracered*"]
 
+[tool.pytest.ini_options]
+markers = ["real_model: tests that make real API calls (uses tokens)"]
+
 [tool.setuptools.package-data]
 hivetracered = [
-    "evaluators/data/*.csv",  # Changed from *.txt
+    "evaluators/data/*.csv",
+    "attacks/types/**/*.yaml",
 ]

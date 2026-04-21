@@ -91,7 +91,9 @@ class Model(ABC):
             prompts: A list of prompts to send to the model
 
         Yields:
-            Response dictionaries as they become available, not necessarily in input order
+            Response dictionaries. Implementations MUST yield results in the same order
+            as the input prompts list, since downstream stages match responses to prompts
+            by sequential index.
         """
         pass
 

@@ -6,8 +6,10 @@ from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
 
 from hivetracered.models.langchain_model import LangchainModel
+from hivetracered.registry import Registry
 
 
+@Registry.model()
 class VLLMModel(LangchainModel):
     """
     vLLM model via LangChain.

@@ -1,0 +1,6 @@
+class_name: NoneAttack
+base: template
+name: None
+description: Passes the prompt through without any modifications.
+prompt: |
+  {prompt}

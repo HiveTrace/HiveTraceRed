@@ -4,7 +4,9 @@ Vertical text attack that rewrites words from left to right in a vertical format
 
 from typing import Union, List, Dict, Optional
 from hivetracered.attacks.algo_attack import AlgoAttack
+from hivetracered.registry import Registry
 
+@Registry.attack(category="text_structure_modification")
 class VerticalTextAttack(AlgoAttack):
     """
     Attack that converts words to a vertical format, with each character of a word

@@ -2,7 +2,9 @@ from typing import Coroutine, Dict, Any, Union, List, Optional, AsyncGenerator
 from hivetracered.evaluators.model_evaluator import ModelEvaluator
 from hivetracered.models.base_model import Model
 import re
+from hivetracered.registry import Registry
 
+@Registry.evaluator()
 class WildGuardGPTEvaluator(ModelEvaluator):
     """
     Evaluator that uses the WildGuard prompt for gpt4 to evaluate whether a

@@ -1,6 +1,8 @@
 from typing import Union, List, Dict
 from hivetracered.attacks.template_attack import TemplateAttack
+from hivetracered.registry import Registry
 
+@Registry.attack(category="task_deflection")
 class PayloadSplittingAttack(TemplateAttack):
     """
     Payload Splitting attack.

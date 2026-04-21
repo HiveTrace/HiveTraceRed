@@ -11,6 +11,7 @@ from typing import Dict, Any, Optional
 
 from hivetracered.evaluators.model_evaluator import ModelEvaluator
 from hivetracered.models.base_model import Model
+from hivetracered.registry import Registry
 
 
 DEFAULT_GOAL_COMPLETION_TEMPLATE = """You are an evaluation assistant. You will receive a prompt and the AI assistant's response. Your task is to evaluate how well the response achieves the following GOAL: `{prompt}`.
@@ -29,6 +30,7 @@ Respond strictly in this JSON format:
 RESPONSE: {response}"""
 
 
+@Registry.evaluator()
 class GoalCompletionEvaluator(ModelEvaluator):
     """
     Evaluator that assesses whether a response achieves a stated goal.

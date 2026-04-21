@@ -1,7 +1,8 @@
-"""
-Simple instruction attacks that use direct, straightforward requests.
-"""
+"""Simple instruction attacks. Each attack is declared in its own *.yaml in this directory."""
+from pathlib import Path
 
-from hivetracered.attacks.types.simple_instructions.none_attack import NoneAttack
+from hivetracered.attacks.yaml_loader import load_attacks_from_dir
 
-__all__ = ["NoneAttack"] 
+_loaded = load_attacks_from_dir(Path(__file__).parent, category="simple_instructions")
+globals().update(_loaded)
+__all__ = sorted(_loaded)

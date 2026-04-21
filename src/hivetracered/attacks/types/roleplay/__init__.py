@@ -1,13 +1,8 @@
-"""
-Roleplay attacks that instruct the model to assume a specific character, persona, or role.
-"""
+"""Roleplay attacks. Each attack is declared in its own *.yaml in this directory."""
+from pathlib import Path
 
-from hivetracered.attacks.types.roleplay.dan_attack import DANAttack
-from hivetracered.attacks.types.roleplay.evil_confidant_attack import EvilConfidantAttack
-from hivetracered.attacks.types.roleplay.aim_attack import AIMAttack
+from hivetracered.attacks.yaml_loader import load_attacks_from_dir
 
-__all__ = [
-    "DANAttack",
-    "EvilConfidantAttack",
-    "AIMAttack"
-] 
+_loaded = load_attacks_from_dir(Path(__file__).parent, category="roleplay")
+globals().update(_loaded)
+__all__ = sorted(_loaded)

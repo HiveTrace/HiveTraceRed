@@ -18,7 +18,9 @@ from concurrent.futures import ThreadPoolExecutor
 from grpc.aio import AioRpcError
 from tqdm import tqdm
 from typing import AsyncGenerator
+from hivetracered.registry import Registry
 
+@Registry.model()
 class YandexGPTModel(Model):
     """
     Yandex GPT language model implementation with direct API integration.

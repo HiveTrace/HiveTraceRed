@@ -4,7 +4,9 @@ Binary encoding attack that converts text to binary representation, including su
 
 from typing import Union, List, Dict, Optional
 from hivetracered.attacks.algo_attack import AlgoAttack
+from hivetracered.registry import Registry
 
+@Registry.attack(category="token_smuggling")
 class BinaryEncodingAttack(AlgoAttack):
     """
     Attack that encodes the input in binary format and asks the model to decode it,

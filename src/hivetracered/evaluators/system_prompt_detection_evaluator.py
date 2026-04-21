@@ -2,8 +2,10 @@ from typing import Dict, Any, Union, List, AsyncGenerator, Optional
 import re
 from difflib import SequenceMatcher
 from hivetracered.evaluators.base_evaluator import BaseEvaluator
+from hivetracered.registry import Registry
 
 
+@Registry.evaluator()
 class SystemPromptDetectionEvaluator(BaseEvaluator):
     """
     Evaluator that detects when a model response contains or exposes its system prompt.

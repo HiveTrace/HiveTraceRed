@@ -5,7 +5,9 @@ Word divider attack that inserts characters between letters in words to modify t
 from typing import Union, List, Dict, Optional
 from hivetracered.attacks.algo_attack import AlgoAttack
 import random
+from hivetracered.registry import Registry
 
+@Registry.attack(category="text_structure_modification")
 class WordDividerAttack(AlgoAttack):
     """
     Attack that inserts characters (dots by default) between letters in words, 

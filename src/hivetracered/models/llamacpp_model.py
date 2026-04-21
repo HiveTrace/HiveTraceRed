@@ -8,7 +8,9 @@ import asyncio
 from tqdm import tqdm
 import multiprocessing
 import warnings
+from hivetracered.registry import Registry
 
+@Registry.model()
 class LlamaCppModel(LangchainModel):
     """
     Llama.cpp local model implementation using the LangChain integration.

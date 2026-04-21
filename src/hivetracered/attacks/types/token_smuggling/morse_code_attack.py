@@ -4,7 +4,9 @@ Morse code attack that encodes text as dots and dashes.
 
 from typing import Union, List, Dict, Optional
 from hivetracered.attacks.algo_attack import AlgoAttack
+from hivetracered.registry import Registry
 
+@Registry.attack(category="token_smuggling")
 class MorseCodeAttack(AlgoAttack):
     """
     Attack that encodes text as Morse code with instructions to decode.

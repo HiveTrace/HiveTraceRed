@@ -5,7 +5,9 @@ Zero-width character attack that inserts invisible Unicode characters to obfusca
 import random
 from typing import Union, List, Dict, Optional
 from hivetracered.attacks.algo_attack import AlgoAttack
+from hivetracered.registry import Registry
 
+@Registry.attack(category="text_structure_modification")
 class ZeroWidthAttack(AlgoAttack):
     """
     Attack that inserts zero-width (invisible) Unicode characters between visible ones,

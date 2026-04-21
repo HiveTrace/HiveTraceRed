@@ -14,9 +14,9 @@ from hivetracered.pipeline.constants import EVALUATOR_CLASSES
 from tests.conftest import MockModel, async_collect
 
 
-# ── Import setup_evaluator from __main__ ────────────────────────────
+# ── Import setup_evaluator ──────────────────────────────────────────
 
-from hivetracered.__main__ import setup_evaluator
+from hivetracered.setup import setup_evaluator
 
 
 # ── Classification & instantiation helpers ──────────────────────────

@@ -129,10 +129,10 @@ class LangchainModel(Model):
             A list of model responses
         """
         if self.max_concurrency == 0:
-            with BatchCallback(len(prompts)) as cb:
+            async with BatchCallback(len(prompts)) as cb:
                 return [dict(response) for response in await self.client.abatch(prompts, config={"callbacks": [cb]})]
         else:
-            with BatchCallback(len(prompts)) as cb:
+            async with BatchCallback(len(prompts)) as cb:
                 return [dict(response) for response in await self.client.abatch(prompts, config={"max_concurrency": self.max_concurrency, "callbacks": [cb]})]
 
     def is_answer_blocked(self, answer: dict) -> bool:
@@ -218,9 +218,15 @@ class BatchCallback(BaseCallbackHandler):
     def __enter__(self):
         self.progress_bar.__enter__()
         return self
-        
+
     def __exit__(self, exc_type, exc_value, exc_traceback):
         self.progress_bar.__exit__(exc_type, exc_value, exc_traceback)
-        
+
+    async def __aenter__(self):
+        return self.__enter__()
+
+    async def __aexit__(self, exc_type, exc_value, exc_traceback):
+        return self.__exit__(exc_type, exc_value, exc_traceback)
+
     def __del__(self):
         self.progress_bar.__del__()

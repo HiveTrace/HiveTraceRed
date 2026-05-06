@@ -72,7 +72,7 @@ async def _async_collect(async_gen: AsyncGenerator) -> list:
 
 def async_collect(async_gen: AsyncGenerator) -> list:
     """Synchronous wrapper: collect all items from an async generator."""
-    return asyncio.get_event_loop().run_until_complete(_async_collect(async_gen))
+    return asyncio.new_event_loop().run_until_complete(_async_collect(async_gen))
 
 
 # ── Fixtures ─────────────────────────────────────────────────────────

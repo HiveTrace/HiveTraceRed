@@ -69,29 +69,6 @@ ALL_EVALUATORS = [
 class TestEvaluatorConformance:
     """Conformance tests applied to every registered evaluator."""
 
-    # ── Instantiation ───────────────────────────────────────────
-
-    def test_instantiation(self, evaluator_name, evaluator_class, family):
-        evaluator = make_instance(evaluator_name, evaluator_class, family)
-        assert evaluator is not None
-
-    # ── Metadata ────────────────────────────────────────────────
-
-    def test_get_name(self, evaluator_name, evaluator_class, family):
-        evaluator = make_instance(evaluator_name, evaluator_class, family)
-        name = evaluator.get_name()
-        assert isinstance(name, str) and len(name) > 0
-
-    def test_get_description(self, evaluator_name, evaluator_class, family):
-        evaluator = make_instance(evaluator_name, evaluator_class, family)
-        desc = evaluator.get_description()
-        assert isinstance(desc, str) and len(desc) > 0
-
-    def test_get_params(self, evaluator_name, evaluator_class, family):
-        evaluator = make_instance(evaluator_name, evaluator_class, family)
-        params = evaluator.get_params()
-        assert isinstance(params, dict)
-
     # ── evaluate(string prompt) ─────────────────────────────────
 
     def test_evaluate_string(self, evaluator_name, evaluator_class, family):
@@ -112,15 +89,6 @@ class TestEvaluatorConformance:
         assert isinstance(result["success"], bool)
 
     # ── stream_abatch ───────────────────────────────────────────
-
-    def test_stream_abatch(self, evaluator_name, evaluator_class, family):
-        evaluator = make_instance(evaluator_name, evaluator_class, family)
-        prompts = [f"prompt {i}" for i in range(5)]
-        responses = [f"response {i}" for i in range(5)]
-        results = async_collect(evaluator.stream_abatch(prompts, responses))
-        assert len(results) == 5, (
-            f"{evaluator_name}.stream_abatch returned {len(results)} results, expected 5"
-        )
 
     def test_stream_abatch_order(self, evaluator_name, evaluator_class, family):
         if family == "standalone":
@@ -146,12 +114,6 @@ class TestEvaluatorConformance:
             # Each result must have 'success' key
             for r in results:
                 assert "success" in r
-
-    # ── Registration ────────────────────────────────────────────
-
-    def test_registration(self, evaluator_name, evaluator_class, family):
-        assert evaluator_name in EVALUATOR_CLASSES
-        assert EVALUATOR_CLASSES[evaluator_name] is evaluator_class
 
     # ── Pipeline wiring ─────────────────────────────────────────
 

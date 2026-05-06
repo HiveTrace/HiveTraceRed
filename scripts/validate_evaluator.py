@@ -27,8 +27,6 @@ def main():
 
     if args.verbose:
         pytest_args.append("-v")
-    else:
-        pytest_args.append("-v")
 
     sys.exit(pytest.main(pytest_args))
 

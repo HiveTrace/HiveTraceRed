@@ -44,6 +44,10 @@ class WebModel(Model):
     - `_create_browser()`: custom browser launch settings (args, proxy, browser type).
     """
 
+    # Class-level set keeps fire-and-forget cleanup tasks (scheduled from
+    # __del__) alive until they finish, so the event loop does not GC them.
+    _pending_finalizer_tasks: set = set()
+
     def __init__(
         self,
         model: str,
@@ -283,6 +287,49 @@ class WebModel(Model):
                     yield results.pop(cur_idx)
                     cur_idx += 1
 
+    async def _handle_stable_response_timeout(
+        self,
+        page: Page,
+        selector: str,
+        last_content: Optional[str],
+        fallback_to_last: bool,
+    ) -> str:
+        if fallback_to_last and last_content:
+            return last_content
+        # Try fallback to last element if available
+        if fallback_to_last:
+            try:
+                elements = await page.query_selector_all(selector)
+                if elements:
+                    return await elements[-1].inner_text()
+            except Exception:
+                pass
+        if last_content:
+            return last_content
+        raise RuntimeError(f"No response received: timeout waiting for {selector}")
+
+    async def _check_response_stability(
+        self,
+        page: Page,
+        selector: str,
+        last_content: Optional[str],
+        last_change_time: float,
+        now: float,
+        stable_time: float,
+    ) -> Tuple[Optional[str], Optional[str], float]:
+        try:
+            elements = await page.locator(selector).all()
+            if not elements:
+                return None, last_content, last_change_time
+            current_content = await elements[-1].inner_text()
+            if current_content != last_content:
+                return None, current_content, now
+            if now - last_change_time >= stable_time:
+                return current_content, last_content, last_change_time
+        except Exception:
+            pass
+        return None, last_content, last_change_time
+
     async def _wait_for_stable_response(
         self,
         page: Page,
@@ -319,31 +366,15 @@ class WebModel(Model):
         while True:
             now = asyncio.get_event_loop().time()
             if now - start_time > timeout:
-                if fallback_to_last and last_content:
-                    return last_content
-                # Try fallback to last element if available
-                if fallback_to_last:
-                    try:
-                        elements = await page.query_selector_all(selector)
-                        if elements:
-                            return await elements[-1].inner_text()
-                    except Exception:
-                        pass
-                if last_content:
-                    return last_content
-                raise RuntimeError(f"No response received: timeout waiting for {selector}")
+                return await self._handle_stable_response_timeout(
+                    page, selector, last_content, fallback_to_last
+                )
 
-            try:
-                elements = await page.locator(selector).all()
-                if elements:
-                    current_content = await elements[-1].inner_text()
-                    if current_content != last_content:
-                        last_content = current_content
-                        last_change_time = now
-                    elif now - last_change_time >= stable_time:
-                        return current_content
-            except Exception:
-                pass
+            stable_result, last_content, last_change_time = await self._check_response_stability(
+                page, selector, last_content, last_change_time, now, stable_time
+            )
+            if stable_result is not None:
+                return stable_result
 
             await asyncio.sleep(0.5)
 
@@ -428,7 +459,9 @@ class WebModel(Model):
             try:
                 loop = asyncio.get_event_loop()
                 if loop.is_running():
-                    asyncio.create_task(self.aclose())
+                    task = asyncio.create_task(self.aclose())
+                    WebModel._pending_finalizer_tasks.add(task)
+                    task.add_done_callback(WebModel._pending_finalizer_tasks.discard)
                 else:
                     loop.run_until_complete(self.aclose())
             except Exception:

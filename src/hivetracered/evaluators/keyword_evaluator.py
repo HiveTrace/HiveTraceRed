@@ -61,7 +61,7 @@ class KeywordEvaluator(BaseEvaluator):
         else:
             try:
                 response_text = str(response)
-            except:
+            except Exception:
                 return {
                     'matched': False,
                     'matched_keywords': [],

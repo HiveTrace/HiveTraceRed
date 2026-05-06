@@ -1,74 +1,81 @@
 """Mitigation mapping and ranking logic for attack categories."""
 
+SYSTEM_PROMPT_HARDENING = "System prompt hardening"
+FINE_TUNING_REFUSAL = "Fine-tuning on refusal behavior"
+OUTPUT_GUARDRAIL_MODELS = "Output classification / guardrail models"
+INPUT_SANITIZATION_FILTERING = "Input sanitization and filtering"
+INPUT_LENGTH_TRUNCATION = "Input length truncation"
+PERPLEXITY_ANOMALY_SCORING = "Perplexity or anomaly scoring on inputs"
+
 # Master mapping: attack_type -> list of applicable mitigations
 ATTACK_MITIGATIONS: dict[str, list[str]] = {
     "simple_instructions": [
-        "System prompt hardening",
-        "Fine-tuning on refusal behavior",
-        "Output classification / guardrail models",
-        "Input sanitization and filtering",
+        SYSTEM_PROMPT_HARDENING,
+        FINE_TUNING_REFUSAL,
+        OUTPUT_GUARDRAIL_MODELS,
+        INPUT_SANITIZATION_FILTERING,
         "Blocklist-based input/output filtering",
         "PII detection and redaction on outputs",
     ],
     "roleplay": [
-        "System prompt hardening",
-        "Fine-tuning on refusal behavior",
-        "Output classification / guardrail models",
-        "Input sanitization and filtering",
+        SYSTEM_PROMPT_HARDENING,
+        FINE_TUNING_REFUSAL,
+        OUTPUT_GUARDRAIL_MODELS,
+        INPUT_SANITIZATION_FILTERING,
     ],
     "persuasion": [
-        "Input length truncation",
-        "System prompt hardening",
-        "Fine-tuning on refusal behavior",
-        "Output classification / guardrail models",
-        "Input sanitization and filtering",
+        INPUT_LENGTH_TRUNCATION,
+        SYSTEM_PROMPT_HARDENING,
+        FINE_TUNING_REFUSAL,
+        OUTPUT_GUARDRAIL_MODELS,
+        INPUT_SANITIZATION_FILTERING,
     ],
     "output_formatting": [
         "Structured output enforcement",
-        "Output classification / guardrail models",
+        OUTPUT_GUARDRAIL_MODELS,
     ],
     "context_switching": [
-        "Input length truncation",
+        INPUT_LENGTH_TRUNCATION,
         "Separate user input from system instructions",
-        "Input sanitization and filtering",
-        "System prompt hardening",
+        INPUT_SANITIZATION_FILTERING,
+        SYSTEM_PROMPT_HARDENING,
         "Canary tokens / honeypots",
-        "Fine-tuning on refusal behavior",
+        FINE_TUNING_REFUSAL,
     ],
     "token_smuggling": [
-        "Input sanitization and filtering",
+        INPUT_SANITIZATION_FILTERING,
         "Allowlist-based input validation",
-        "Perplexity or anomaly scoring on inputs",
-        "Output classification / guardrail models",
-        "Fine-tuning on refusal behavior",
+        PERPLEXITY_ANOMALY_SCORING,
+        OUTPUT_GUARDRAIL_MODELS,
+        FINE_TUNING_REFUSAL,
     ],
     "text_structure_modification": [
-        "Input sanitization and filtering",
-        "Perplexity or anomaly scoring on inputs",
-        "Output classification / guardrail models",
+        INPUT_SANITIZATION_FILTERING,
+        PERPLEXITY_ANOMALY_SCORING,
+        OUTPUT_GUARDRAIL_MODELS,
     ],
     "task_deflection": [
         "Separate user input from system instructions",
-        "Output classification / guardrail models",
-        "System prompt hardening",
+        OUTPUT_GUARDRAIL_MODELS,
+        SYSTEM_PROMPT_HARDENING,
     ],
     "irrelevant_information": [
-        "Input length truncation",
-        "Perplexity or anomaly scoring on inputs",
-        "Output classification / guardrail models",
-        "System prompt hardening",
+        INPUT_LENGTH_TRUNCATION,
+        PERPLEXITY_ANOMALY_SCORING,
+        OUTPUT_GUARDRAIL_MODELS,
+        SYSTEM_PROMPT_HARDENING,
     ],
     "in_context_learning": [
-        "Input length truncation",
-        "Input sanitization and filtering",
-        "Output classification / guardrail models",
-        "Fine-tuning on refusal behavior",
+        INPUT_LENGTH_TRUNCATION,
+        INPUT_SANITIZATION_FILTERING,
+        OUTPUT_GUARDRAIL_MODELS,
+        FINE_TUNING_REFUSAL,
     ],
     "iterative": [
-        "Perplexity or anomaly scoring on inputs",
-        "Output classification / guardrail models",
+        PERPLEXITY_ANOMALY_SCORING,
+        OUTPUT_GUARDRAIL_MODELS,
         "Canary tokens / honeypots",
-        "Fine-tuning on refusal behavior",
+        FINE_TUNING_REFUSAL,
     ],
 }
 

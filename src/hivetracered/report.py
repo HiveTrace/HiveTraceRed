@@ -12,6 +12,11 @@ from hivetracered.pipeline.framework_mapping import (
 )
 from hivetracered.pipeline.mitigations import get_prioritized_mitigations
 
+SUCCESS_RATE = "Success Rate"
+ATTACK_TYPE = "Attack Type"
+TOTAL_TESTS = "Total Tests"
+BLOCK_RATE = "Block Rate"
+
 def get_chart_style():
     return {
         "paper_bgcolor": "#161a23",
@@ -21,36 +26,43 @@ def get_chart_style():
         "yaxis": dict(gridcolor="#2a2f3a", color="#e8e8e8")
     }
 
+def _read_dataframe(file_path):
+    ext = os.path.splitext(file_path)[1].lower()
+    if ext == '.parquet':
+        return pd.read_parquet(file_path)
+    if ext in ('.xlsx', '.xls'):
+        return pd.read_excel(file_path)
+    return pd.read_csv(file_path)
+
+
+def _safe_get(d, key, default="unknown"):
+    if isinstance(d, dict):
+        return d.get(key, default)
+    try:
+        dd = json.loads(d)
+    except Exception:
+        return default
+    if isinstance(dd, dict):
+        return dd.get(key, default)
+    return default
+
+
+def _expand_evaluation(df):
+    for key in ("is_harmful", "did_answer", "should_block"):
+        df[key] = df["evaluation"].apply(lambda x, k=key: _safe_get(x, k))
+
+
 def load_data(file_path="df.csv"):
     try:
-        ext = os.path.splitext(file_path)[1].lower()
-        if ext == '.parquet':
-            df = pd.read_parquet(file_path)
-        elif ext in ('.xlsx', '.xls'):
-            df = pd.read_excel(file_path)
-        else:
-            df = pd.read_csv(file_path)
+        df = _read_dataframe(file_path)
     except Exception as e:
         print(f"Error loading data: {e}")
         return pd.DataFrame()
 
     if "evaluation" in df.columns:
-        def safe_get(d, key, default="unknown"):
-            if isinstance(d, dict):
-                return d.get(key, default)
-            try:
-                dd = json.loads(d)
-                if isinstance(dd, dict):
-                    return dd.get(key, default)
-            except Exception:
-                pass
-            return default
+        _expand_evaluation(df)
 
-        df["is_harmful"] = df["evaluation"].apply(lambda x: safe_get(x, "is_harmful"))
-        df["did_answer"] = df["evaluation"].apply(lambda x: safe_get(x, "did_answer"))
-        df["should_block"] = df["evaluation"].apply(lambda x: safe_get(x, "should_block"))
-
-    for col in ["success", "is_blocked"]:
+    for col in ("success", "is_blocked"):
         if col in df.columns:
             df[col] = df[col].astype(bool)
 
@@ -59,40 +71,41 @@ def load_data(file_path="df.csv"):
 
     return df
 
-def calculate_metrics(df):
-    total_tests = len(df) if len(df) else 0
-    success_rate = float(df["success"].mean()*100) if "success" in df.columns and len(df) else 0.0
-    blocked_rate = float(df["is_blocked"].mean()*100) if "is_blocked" in df.columns and len(df) else 0.0
-    error_count = int(((df["error"].notna()) & (df["error"] != "")).sum()) if "error" in df.columns and len(df) else 0
-    error_rate = float(error_count/len(df)*100) if len(df) else 0.0
+def _basic_rates(df):
+    has_rows = len(df) > 0
+    total_tests = len(df) if has_rows else 0
+    success_rate = float(df["success"].mean() * 100) if "success" in df.columns and has_rows else 0.0
+    blocked_rate = float(df["is_blocked"].mean() * 100) if "is_blocked" in df.columns and has_rows else 0.0
+    error_count = (
+        int(((df["error"].notna()) & (df["error"] != "")).sum())
+        if "error" in df.columns and has_rows else 0
+    )
+    error_rate = float(error_count / len(df) * 100) if has_rows else 0.0
+    return total_tests, success_rate, blocked_rate, error_rate
 
-    model_name = df["model"].iloc[0] if "model" in df.columns and len(df) else "Unknown"
-    n_attack_types = df["attack_type"].nunique() if "attack_type" in df.columns else 0
-    n_attacks = df["attack_name"].nunique() if "attack_name" in df.columns else 0
 
-    best_attack_name = "-"
-    best_attack_rate = 0.0
-    vulnerable_prompts = 0
-    total_prompts = 0
-    vulnerable_prompts_rate = 0.0
-    if "attack_name" in df.columns and "success" in df.columns and len(df):
-        g = df.groupby("attack_name")["success"].agg(["count", "sum", "mean"]).reset_index()
-        if len(g):
-            idx = g["mean"].idxmax()
-            best_attack_name = str(g.loc[idx, "attack_name"])
-            best_attack_rate = float(g.loc[idx, "mean"] * 100)
-    if "base_prompt" in df.columns and "success" in df.columns and len(df):
-        vulnerable_prompts = int(df.loc[df["success"] == True, "base_prompt"].nunique())
-        total_prompts = int(df["base_prompt"].nunique())
-        vulnerable_prompts_rate = float(vulnerable_prompts / total_prompts * 100) if total_prompts > 0 else 0.0
+def _best_attack(df):
+    if not ("attack_name" in df.columns and "success" in df.columns and len(df)):
+        return "-", 0.0
+    g = df.groupby("attack_name")["success"].agg(["count", "sum", "mean"]).reset_index()
+    if not len(g):
+        return "-", 0.0
+    idx = g["mean"].idxmax()
+    return str(g.loc[idx, "attack_name"]), float(g.loc[idx, "mean"] * 100)
 
-    # Multi-framework mapping
-    base_category = df["category"].iloc[0] if "category" in df.columns and len(df) else "Unknown"
-    subcategories = df["subcategory"].unique().tolist() if "subcategory" in df.columns else None
 
-    # Merge mappings across all unique (attack_type, attack_name) pairs
-    merged_mappings: dict = {}
+def _vulnerable_prompts(df):
+    if not ("base_prompt" in df.columns and "success" in df.columns and len(df)):
+        return 0, 0, 0.0
+    vulnerable = int(df.loc[df["success"] == True, "base_prompt"].nunique())
+    total = int(df["base_prompt"].nunique())
+    rate = float(vulnerable / total * 100) if total > 0 else 0.0
+    return vulnerable, total, rate
+
+
+def _merge_mappings(df, base_category, subcategories):
     if "attack_type" in df.columns and "attack_name" in df.columns and len(df):
+        merged: dict = {}
         pairs = df[["attack_type", "attack_name"]].drop_duplicates()
         for _, row in pairs.iterrows():
             m = get_framework_mappings(
@@ -102,44 +115,70 @@ def calculate_metrics(df):
                 subcategories=subcategories,
             )
             for fw, cats in m.items():
-                merged_mappings.setdefault(fw, set()).update(cats)
-    else:
-        merged_mappings = get_framework_mappings(
-            base_category=base_category, subcategories=subcategories,
-        )
+                merged.setdefault(fw, set()).update(cats)
+        return merged
+    return get_framework_mappings(base_category=base_category, subcategories=subcategories)
 
-    # Build framework_categories: {fw_key: [sorted "ID: Name" strings]}
+
+def _framework_categories(merged_mappings):
     framework_categories: dict = {}
     for fw_key, cat_ids in merged_mappings.items():
         fw_defs = FRAMEWORKS.get(fw_key, {}).get("categories", {})
         framework_categories[fw_key] = sorted(
             f"{cid}: {fw_defs[cid]['name']}" for cid in cat_ids if cid in fw_defs
         )
+    return framework_categories
 
-    # Calculate average ASR for NoneAttack
-    asr_none_attack = 0.0
-    if "attack_name" in df.columns and "success" in df.columns and len(df):
-        none_attack_df = df[df["attack_name"] == "NoneAttack"]
-        if len(none_attack_df) > 0:
-            asr_none_attack = float(none_attack_df["success"].mean() * 100)
 
-    # Calculate max of average ASR for each other attack (non-NoneAttack)
-    asr_max_attack = 0.0
-    best_attack_name_detailed = "-"
-    if "attack_name" in df.columns and "success" in df.columns and len(df):
-        injection_df = df[df["attack_name"] != "NoneAttack"]
-        if len(injection_df) > 0:
-            # Group by attack_name and get average ASR for each attack
-            attack_stats = injection_df.groupby("attack_name")["success"].mean()
-            if len(attack_stats) > 0:
-                asr_max_attack = float(attack_stats.max() * 100)
-                best_attack_name_detailed = str(attack_stats.idxmax())
+def _asr_none_attack(df):
+    if not ("attack_name" in df.columns and "success" in df.columns and len(df)):
+        return 0.0
+    none_attack_df = df[df["attack_name"] == "NoneAttack"]
+    if len(none_attack_df) == 0:
+        return 0.0
+    return float(none_attack_df["success"].mean() * 100)
 
-    # Vulnerable attack types (types with ASR > 0) and prioritized mitigations
-    vulnerable_attack_types = []
-    if "attack_type" in df.columns and "success" in df.columns and len(df):
-        type_asr = df.groupby("attack_type")["success"].mean()
-        vulnerable_attack_types = sorted(type_asr[type_asr > 0].index.tolist())
+
+def _asr_max_injection(df):
+    if not ("attack_name" in df.columns and "success" in df.columns and len(df)):
+        return 0.0, "-"
+    injection_df = df[df["attack_name"] != "NoneAttack"]
+    if len(injection_df) == 0:
+        return 0.0, "-"
+    attack_stats = injection_df.groupby("attack_name")["success"].mean()
+    if len(attack_stats) == 0:
+        return 0.0, "-"
+    return float(attack_stats.max() * 100), str(attack_stats.idxmax())
+
+
+def _vulnerable_attack_types(df):
+    if not ("attack_type" in df.columns and "success" in df.columns and len(df)):
+        return []
+    type_asr = df.groupby("attack_type")["success"].mean()
+    return sorted(type_asr[type_asr > 0].index.tolist())
+
+
+def calculate_metrics(df):
+    total_tests, success_rate, blocked_rate, error_rate = _basic_rates(df)
+
+    has_rows = len(df) > 0
+    model_name = df["model"].iloc[0] if "model" in df.columns and has_rows else "Unknown"
+    n_attack_types = df["attack_type"].nunique() if "attack_type" in df.columns else 0
+    n_attacks = df["attack_name"].nunique() if "attack_name" in df.columns else 0
+
+    best_attack_name, best_attack_rate = _best_attack(df)
+    vulnerable_prompts, total_prompts, vulnerable_prompts_rate = _vulnerable_prompts(df)
+
+    base_category = df["category"].iloc[0] if "category" in df.columns and has_rows else "Unknown"
+    subcategories = df["subcategory"].unique().tolist() if "subcategory" in df.columns else None
+
+    merged_mappings = _merge_mappings(df, base_category, subcategories)
+    framework_categories = _framework_categories(merged_mappings)
+
+    asr_none_attack = _asr_none_attack(df)
+    asr_max_attack, best_attack_name_detailed = _asr_max_injection(df)
+
+    vulnerable_attack_types = _vulnerable_attack_types(df)
     prioritized_mitigations = get_prioritized_mitigations(vulnerable_attack_types)
 
     return {
@@ -157,151 +196,141 @@ def calculate_metrics(df):
         "prioritized_mitigations": prioritized_mitigations,
     }
 
+def _per_type_stats(df, include_block_rate=False):
+    type_stats = []
+    for attack_type in df["attack_type"].unique():
+        type_df = df[df["attack_type"] == attack_type]
+        total_unique_prompts = type_df["base_prompt"].nunique()
+        successful_prompts = type_df[type_df["success"] == True]["base_prompt"].nunique()
+        success_rate = successful_prompts / total_unique_prompts if total_unique_prompts > 0 else 0.0
+        entry = {
+            "attack_type": attack_type,
+            SUCCESS_RATE: success_rate * 100 if include_block_rate else success_rate,
+            "Total Unique Prompts": total_unique_prompts,
+            "Successful Prompts": successful_prompts,
+        }
+        if include_block_rate:
+            entry[BLOCK_RATE] = type_df["is_blocked"].mean() * 100
+        type_stats.append(entry)
+    return type_stats
+
+
+def _build_top_types_html(df):
+    if not {"attack_type", "success", "attack_name", "base_prompt"}.issubset(df.columns):
+        return ""
+    top_types = pd.DataFrame(_per_type_stats(df))
+    top_types[SUCCESS_RATE] = top_types[SUCCESS_RATE] * 100
+    top_types = top_types.sort_values(SUCCESS_RATE, ascending=False).head(3).reset_index(drop=True)
+    fig_top_types = px.bar(
+        top_types, x=SUCCESS_RATE, y="attack_type", orientation="h",
+        text=SUCCESS_RATE
+    )
+    fig_top_types.update_traces(texttemplate="%{text:.1f}%", textposition="outside")
+    fig_top_types.update_layout(
+        xaxis_title="Success Rate (% of Unique Prompts)", yaxis_title=ATTACK_TYPE, height=350, margin={"l": 10, "r": 10, "t": 30, "b": 10},
+        **get_chart_style()
+    )
+    return pio.to_html(fig_top_types, include_plotlyjs=True, full_html=False)
+
+
+def _build_top_attacks_html(df, include_plotlyjs):
+    if not {"attack_name", "success"}.issubset(df.columns):
+        return ""
+    top_attacks = (
+        df.groupby("attack_name")["success"]
+          .agg(["count","sum","mean"]).rename(columns={"count":TOTAL_TESTS,"sum":"Successes","mean":SUCCESS_RATE})
+    )
+    top_attacks[SUCCESS_RATE] = top_attacks[SUCCESS_RATE] * 100
+    top_attacks = top_attacks.sort_values(SUCCESS_RATE, ascending=False).head(3).reset_index()
+    fig_top_attacks = px.bar(
+        top_attacks, x=SUCCESS_RATE, y="attack_name", orientation="h",
+        text=SUCCESS_RATE
+    )
+    fig_top_attacks.update_traces(texttemplate="%{text:.1f}%", textposition="outside")
+    fig_top_attacks.update_layout(
+        xaxis_title="Success Rate (%)", yaxis_title="Attack Name", height=350, margin=dict(l=10,r=10,t=30,b=10),
+        **get_chart_style()
+    )
+    return pio.to_html(fig_top_attacks, include_plotlyjs=include_plotlyjs, full_html=False)
+
+
+def _build_attack_type_html(df):
+    if not {"attack_type","success","is_blocked","attack_name","base_prompt"}.issubset(df.columns):
+        return ""
+    attack_type_stats = pd.DataFrame(_per_type_stats(df, include_block_rate=True))
+    attack_type_stats = attack_type_stats[attack_type_stats[SUCCESS_RATE] > 3]
+    if len(attack_type_stats) == 0:
+        return "<p style='color: var(--muted); text-align: center; padding: 40px;'>No attack types with success rate > 3%</p>"
+    fig_attack_type = px.bar(attack_type_stats, x="attack_type", y=SUCCESS_RATE)
+    fig_attack_type.update_layout(
+        xaxis_title=ATTACK_TYPE, yaxis_title="Success Rate (% of Unique Prompts)", height=400, margin={"l": 10, "r": 10, "t": 30, "b": 10},
+        **get_chart_style()
+    )
+    return pio.to_html(fig_attack_type, include_plotlyjs=False, full_html=False)
+
+
+def _build_attacks_html(df):
+    if not {"attack_name","success","is_blocked"}.issubset(df.columns):
+        return ""
+    attack_stats = (
+        df.groupby("attack_name")
+        .agg({"success":["count","sum","mean"], "is_blocked":"mean"})
+    )
+    attack_stats.columns = [TOTAL_TESTS,"Successes",SUCCESS_RATE,BLOCK_RATE]
+    attack_stats[SUCCESS_RATE] = attack_stats[SUCCESS_RATE] * 100
+    attack_stats[BLOCK_RATE] = attack_stats[BLOCK_RATE] * 100
+    attack_stats = attack_stats.reset_index()
+    attack_stats = attack_stats[attack_stats[SUCCESS_RATE] > 3]
+    if len(attack_stats) == 0:
+        return "<p style='color: var(--muted); text-align: center; padding: 40px;'>No individual attacks with success rate > 3%</p>"
+    fig_attacks = px.bar(attack_stats, x="attack_name", y=SUCCESS_RATE)
+    fig_attacks.update_layout(
+        xaxis_title="Attack Name", yaxis_title="Success Rate (%)", xaxis_tickangle=45, height=500, margin=dict(l=10,r=10,t=30,b=50),
+        **get_chart_style()
+    )
+    return pio.to_html(fig_attacks, include_plotlyjs=False, full_html=False)
+
+
+def _build_length_charts_html(df):
+    if not {"response_length","success","attack_type"}.issubset(df.columns):
+        return "", ""
+    fig_length = px.box(df, x="success", y="response_length", color="success")
+    fig_length.update_layout(
+        xaxis_title="Attack Success", yaxis_title="Response Length (chars)", height=400, margin=dict(l=10,r=10,t=30,b=10),
+        **get_chart_style()
+    )
+    length_html = pio.to_html(fig_length, include_plotlyjs=False, full_html=False)
+
+    avg_length = df.groupby("attack_type")["response_length"].mean().reset_index()
+    fig_avg_length = px.bar(avg_length, x="attack_type", y="response_length")
+    fig_avg_length.update_layout(
+        xaxis_title=ATTACK_TYPE, yaxis_title="Avg Response Length (chars)", xaxis_tickangle=45, height=400, margin={"l": 10, "r": 10, "t": 30, "b": 50},
+        **get_chart_style()
+    )
+    avg_length_html = pio.to_html(fig_avg_length, include_plotlyjs=False, full_html=False)
+    return length_html, avg_length_html
+
+
+def _build_answer_html(df):
+    if not ({"did_answer","success"}.issubset(df.columns) and len(df)):
+        return ""
+    answer_analysis = pd.crosstab(df["did_answer"], df["success"], normalize="index") * 100
+    answer_long = answer_analysis.reset_index().melt(id_vars="did_answer", var_name="success", value_name="pct")
+    fig_answer = px.bar(answer_long, x="did_answer", y="pct", color="success", barmode="stack")
+    fig_answer.update_layout(
+        xaxis_title="Did Answer", yaxis_title="Percentage", height=400, margin=dict(l=10,r=10,t=30,b=10),
+        **get_chart_style()
+    )
+    return pio.to_html(fig_answer, include_plotlyjs=False, full_html=False)
+
+
 def create_charts(df):
-    charts = {}
-
-    fig_top_types_html = ""
-    if {"attack_type","success","attack_name","base_prompt"}.issubset(df.columns):
-        # Calculate success rate based on unique prompts
-        # For each attack type, count unique prompts that succeeded in ANY attack of that type
-        type_stats = []
-        for attack_type in df["attack_type"].unique():
-            type_df = df[df["attack_type"] == attack_type]
-            # Get all unique prompts tested in this type
-            total_unique_prompts = type_df["base_prompt"].nunique()
-            # Get unique prompts that succeeded at least once in this type
-            successful_prompts = type_df[type_df["success"] == True]["base_prompt"].nunique()
-            # Calculate ASR
-            success_rate = successful_prompts / total_unique_prompts if total_unique_prompts > 0 else 0.0
-            type_stats.append({
-                "attack_type": attack_type,
-                "Success Rate": success_rate,
-                "Total Unique Prompts": total_unique_prompts,
-                "Successful Prompts": successful_prompts
-            })
-        top_types = pd.DataFrame(type_stats)
-        top_types["Success Rate"] = top_types["Success Rate"] * 100
-        top_types = top_types.sort_values("Success Rate", ascending=False).head(3).reset_index(drop=True)
-        fig_top_types = px.bar(
-            top_types, x="Success Rate", y="attack_type", orientation="h",
-            text="Success Rate"
-        )
-        fig_top_types.update_traces(texttemplate="%{text:.1f}%", textposition="outside")
-        fig_top_types.update_layout(
-            xaxis_title="Success Rate (% of Unique Prompts)", yaxis_title="Attack Type", height=350, margin=dict(l=10,r=10,t=30,b=10),
-            **get_chart_style()
-        )
-        fig_top_types_html = pio.to_html(fig_top_types, include_plotlyjs=True, full_html=False)
-
-    fig_top_attacks_html = ""
-    if {"attack_name","success"}.issubset(df.columns):
-        top_attacks = (
-            df.groupby("attack_name")["success"]
-              .agg(["count","sum","mean"]).rename(columns={"count":"Total Tests","sum":"Successes","mean":"Success Rate"})
-        )
-        top_attacks["Success Rate"] = top_attacks["Success Rate"] * 100
-        top_attacks = top_attacks.sort_values("Success Rate", ascending=False).head(3).reset_index()
-        fig_top_attacks = px.bar(
-            top_attacks, x="Success Rate", y="attack_name", orientation="h",
-            text="Success Rate"
-        )
-        fig_top_attacks.update_traces(texttemplate="%{text:.1f}%", textposition="outside")
-        fig_top_attacks.update_layout(
-            xaxis_title="Success Rate (%)", yaxis_title="Attack Name", height=350, margin=dict(l=10,r=10,t=30,b=10),
-            **get_chart_style()
-        )
-        if fig_top_types_html:
-            fig_top_attacks_html = pio.to_html(fig_top_attacks, include_plotlyjs=False, full_html=False)
-        else:
-            fig_top_attacks_html = pio.to_html(fig_top_attacks, include_plotlyjs=True, full_html=False)
-
-    fig_attack_type_html = ""
-    if {"attack_type","success","is_blocked","attack_name","base_prompt"}.issubset(df.columns):
-        # Calculate success rate based on unique prompts
-        # For each attack type, count unique prompts that succeeded in ANY attack of that type
-        type_stats = []
-        for attack_type in df["attack_type"].unique():
-            type_df = df[df["attack_type"] == attack_type]
-            # Get all unique prompts tested in this type
-            total_unique_prompts = type_df["base_prompt"].nunique()
-            # Get unique prompts that succeeded at least once in this type
-            successful_prompts = type_df[type_df["success"] == True]["base_prompt"].nunique()
-            # Calculate ASR
-            success_rate = successful_prompts / total_unique_prompts if total_unique_prompts > 0 else 0.0
-            # Get block rate
-            block_rate = type_df["is_blocked"].mean()
-            type_stats.append({
-                "attack_type": attack_type,
-                "Success Rate": success_rate * 100,
-                "Total Unique Prompts": total_unique_prompts,
-                "Successful Prompts": successful_prompts,
-                "Block Rate": block_rate * 100
-            })
-        attack_type_stats = pd.DataFrame(type_stats)
-
-        attack_type_stats = attack_type_stats[attack_type_stats["Success Rate"] > 3]
-
-        if len(attack_type_stats) > 0:
-            fig_attack_type = px.bar(attack_type_stats, x="attack_type", y="Success Rate")
-            fig_attack_type.update_layout(
-                xaxis_title="Attack Type", yaxis_title="Success Rate (% of Unique Prompts)", height=400, margin=dict(l=10,r=10,t=30,b=10),
-                **get_chart_style()
-            )
-            fig_attack_type_html = pio.to_html(fig_attack_type, include_plotlyjs=False, full_html=False)
-        else:
-            fig_attack_type_html = "<p style='color: var(--muted); text-align: center; padding: 40px;'>No attack types with success rate > 3%</p>"
-
-    fig_attacks_html = ""
-    if {"attack_name","success","is_blocked"}.issubset(df.columns):
-        attack_stats = (
-            df.groupby("attack_name")
-            .agg({"success":["count","sum","mean"], "is_blocked":"mean"})
-        )
-        attack_stats.columns = ["Total Tests","Successes","Success Rate","Block Rate"]
-        attack_stats["Success Rate"] = attack_stats["Success Rate"] * 100
-        attack_stats["Block Rate"] = attack_stats["Block Rate"] * 100
-        attack_stats = attack_stats.reset_index()
-
-        attack_stats = attack_stats[attack_stats["Success Rate"] > 3]
-
-        if len(attack_stats) > 0:
-            fig_attacks = px.bar(attack_stats, x="attack_name", y="Success Rate")
-            fig_attacks.update_layout(
-                xaxis_title="Attack Name", yaxis_title="Success Rate (%)", xaxis_tickangle=45, height=500, margin=dict(l=10,r=10,t=30,b=50),
-                **get_chart_style()
-            )
-            fig_attacks_html = pio.to_html(fig_attacks, include_plotlyjs=False, full_html=False)
-        else:
-            fig_attacks_html = "<p style='color: var(--muted); text-align: center; padding: 40px;'>No individual attacks with success rate > 3%</p>"
-
-    fig_length_html = ""
-    fig_avg_length_html = ""
-    if {"response_length","success","attack_type"}.issubset(df.columns):
-        fig_length = px.box(df, x="success", y="response_length", color="success")
-        fig_length.update_layout(
-            xaxis_title="Attack Success", yaxis_title="Response Length (chars)", height=400, margin=dict(l=10,r=10,t=30,b=10),
-            **get_chart_style()
-        )
-        fig_length_html = pio.to_html(fig_length, include_plotlyjs=False, full_html=False)
-
-        avg_length = df.groupby("attack_type")["response_length"].mean().reset_index()
-        fig_avg_length = px.bar(avg_length, x="attack_type", y="response_length")
-        fig_avg_length.update_layout(
-            xaxis_title="Attack Type", yaxis_title="Avg Response Length (chars)", xaxis_tickangle=45, height=400, margin=dict(l=10,r=10,t=30,b=50),
-            **get_chart_style()
-        )
-        fig_avg_length_html = pio.to_html(fig_avg_length, include_plotlyjs=False, full_html=False)
-
-    fig_answer_html = ""
-    if {"did_answer","success"}.issubset(df.columns) and len(df):
-        answer_analysis = pd.crosstab(df["did_answer"], df["success"], normalize="index") * 100
-        answer_long = answer_analysis.reset_index().melt(id_vars="did_answer", var_name="success", value_name="pct")
-        fig_answer = px.bar(answer_long, x="did_answer", y="pct", color="success", barmode="stack")
-        fig_answer.update_layout(
-            xaxis_title="Did Answer", yaxis_title="Percentage", height=400, margin=dict(l=10,r=10,t=30,b=10),
-            **get_chart_style()
-        )
-        fig_answer_html = pio.to_html(fig_answer, include_plotlyjs=False, full_html=False)
+    fig_top_types_html = _build_top_types_html(df)
+    fig_top_attacks_html = _build_top_attacks_html(df, include_plotlyjs=not fig_top_types_html)
+    fig_attack_type_html = _build_attack_type_html(df)
+    fig_attacks_html = _build_attacks_html(df)
+    fig_length_html, fig_avg_length_html = _build_length_charts_html(df)
+    fig_answer_html = _build_answer_html(df)
 
     return {
         "fig_top_types_html": fig_top_types_html,
@@ -313,42 +342,49 @@ def create_charts(df):
         "fig_answer_html": fig_answer_html
     }
 
-def generate_data_tables(df):
-    attack_detailed_html = ""
-    if {"attack_type","attack_name","success","is_blocked"}.issubset(df.columns):
-        attack_detailed = (
-            df.groupby(["attack_type","attack_name"])
-            .agg({
-                "success":["count","sum","mean"],
-                "is_blocked":"mean",
-                "error": lambda x: (x.notna() & (x != "")).sum() if "error" in df.columns else 0
-            })
-        )
-        attack_detailed.columns = ["Total Tests","Successes","Success Rate","Block Rate","Errors"]
-        attack_detailed["Success Rate"] = attack_detailed["Success Rate"] * 100
-        attack_detailed["Block Rate"] = attack_detailed["Block Rate"] * 100
-        attack_detailed = attack_detailed.reset_index()
-        attack_detailed["Success Rate"] = attack_detailed["Success Rate"].round(1).astype(str) + "%"
-        attack_detailed["Block Rate"] = attack_detailed["Block Rate"].round(1).astype(str) + "%"
-        attack_detailed_html = attack_detailed.to_html(index=False, classes="dataframe compact", border=0)
+def _attack_detailed_html(df):
+    if not {"attack_type","attack_name","success","is_blocked"}.issubset(df.columns):
+        return ""
+    attack_detailed = (
+        df.groupby(["attack_type","attack_name"])
+        .agg({
+            "success":["count","sum","mean"],
+            "is_blocked":"mean",
+            "error": lambda x: (x.notna() & (x != "")).sum() if "error" in df.columns else 0
+        })
+    )
+    attack_detailed.columns = [TOTAL_TESTS,"Successes",SUCCESS_RATE,BLOCK_RATE,"Errors"]
+    attack_detailed[SUCCESS_RATE] = attack_detailed[SUCCESS_RATE] * 100
+    attack_detailed[BLOCK_RATE] = attack_detailed[BLOCK_RATE] * 100
+    attack_detailed = attack_detailed.reset_index()
+    attack_detailed[SUCCESS_RATE] = attack_detailed[SUCCESS_RATE].round(1).astype(str) + "%"
+    attack_detailed[BLOCK_RATE] = attack_detailed[BLOCK_RATE].round(1).astype(str) + "%"
+    return attack_detailed.to_html(index=False, classes="dataframe compact", border=0)
 
-    display_columns = [c for c in ["attack_name","attack_type","success","is_blocked"] if c in df.columns]
+
+def _bfmt(x):
+    if isinstance(x, (bool, np.bool_)):
+        return "✅" if x else "❌"
+    return str(x)
+
+
+def _explorer_row_html(r, display_columns):
+    attrs = {
+        "data-attack-type": str(r.get("attack_type","")),
+        "data-success": str(r.get("success","")).lower(),
+        "data-blocked": str(r.get("is_blocked","")).lower()
+    }
+    attrs_str = " ".join([f'{k}="{v}"' for k, v in attrs.items()])
+    tds = "".join(f"<td>{_bfmt(r[c])}</td>" for c in display_columns)
+    return f"<tr {attrs_str}>{tds}</tr>"
+
+
+def _explorer_table_html(df, display_columns):
     explorer_table_rows = []
     if display_columns:
         for _, r in df[display_columns].fillna("").iterrows():
-            def bfmt(x):
-                if isinstance(x, (bool, np.bool_)):
-                    return "✅" if x else "❌"
-                return str(x)
-            attrs = {
-                "data-attack-type": str(r.get("attack_type","")),
-                "data-success": str(r.get("success","")).lower(),
-                "data-blocked": str(r.get("is_blocked","")).lower()
-            }
-            attrs_str = " ".join([f'{k}="{v}"' for k, v in attrs.items()])
-            tds = "".join(f"<td>{bfmt(r[c])}</td>" for c in display_columns)
-            explorer_table_rows.append(f"<tr {attrs_str}>{tds}</tr>")
-    explorer_table_html = f"""
+            explorer_table_rows.append(_explorer_row_html(r, display_columns))
+    return f"""
     <div class="table-container">
       <table id="explorer-table" class="dataframe compact">
         <thead>
@@ -361,21 +397,13 @@ def generate_data_tables(df):
     </div>
     """
 
-    samples_html = ""
-    if {"attack_name","success","base_prompt","prompt","response"}.issubset(df.columns) and len(df):
-        sample_pool = df[df["success"] == True]
-        if len(sample_pool) == 0:
-            sample_pool = df
-        sample_df = sample_pool.sample(min(5, len(sample_pool)), random_state=7)
-        blocks = []
-        for _, row in sample_df.iterrows():
-            title = f"{row.get('attack_name','Unknown')} - {'✅ Success' if bool(row.get('success', False)) else '❌ Failed'}"
-            bp = str(row.get("base_prompt","N/A"))
-            pr = str(row.get("prompt","N/A"))
-            rs = str(row.get("response","N/A"))
-            def trim(s, n=800):
-                return (s[:n] + "…") if len(s) > n else s
-            blocks.append(f"""
+
+def _sample_block_html(row):
+    title = f"{row.get('attack_name','Unknown')} - {'✅ Success' if bool(row.get('success', False)) else '❌ Failed'}"
+    bp = str(row.get("base_prompt","N/A"))
+    pr = str(row.get("prompt","N/A"))
+    rs = str(row.get("response","N/A"))
+    return f"""
     <details class="sample-block">
       <summary>{title}</summary>
       <div class="sample-inner">
@@ -387,8 +415,25 @@ def generate_data_tables(df):
         <pre>{rs}</pre>
       </div>
     </details>
-    """)
-        samples_html = "\n".join(blocks)
+    """
+
+
+def _samples_html(df):
+    if not ({"attack_name","success","base_prompt","prompt","response"}.issubset(df.columns) and len(df)):
+        return ""
+    sample_pool = df[df["success"] == True]
+    if len(sample_pool) == 0:
+        sample_pool = df
+    sample_df = sample_pool.sample(min(5, len(sample_pool)), random_state=7)
+    blocks = [_sample_block_html(row) for _, row in sample_df.iterrows()]
+    return "\n".join(blocks)
+
+
+def generate_data_tables(df):
+    attack_detailed_html = _attack_detailed_html(df)
+    display_columns = [c for c in ["attack_name","attack_type","success","is_blocked"] if c in df.columns]
+    explorer_table_html = _explorer_table_html(df, display_columns)
+    samples_html = _samples_html(df)
 
     return {
         "attack_detailed_html": attack_detailed_html,

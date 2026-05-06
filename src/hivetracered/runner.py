@@ -8,6 +8,7 @@ stage is disabled, the runner falls back to loading that stage's input
 from a file path specified in the config.
 """
 
+import asyncio
 import logging
 import os
 from datetime import datetime
@@ -255,18 +256,103 @@ def _preflight_config(
             )
 
 
-async def run_pipeline(config: Dict[str, Any]) -> None:
-    """Run the complete testing pipeline, controlling stages via config."""
+def _dump_config_to_yaml(config: Dict[str, Any], config_path: str) -> None:
+    with open(config_path, "w", encoding="utf-8") as f:
+        yaml.dump(config, f, default_flow_style=False)
+
+
+async def _prepare_run_dir(config: Dict[str, Any]) -> str:
     output_dir = config.get("output_dir", "results")
     timestamp = datetime.now().strftime(config.get("timestamp_format", "%Y%m%d_%H%M%S"))
     run_dir = os.path.join(output_dir, f"run_{timestamp}")
     os.makedirs(run_dir, exist_ok=True)
 
     config_path = os.path.join(run_dir, "config.yaml")
-    with open(config_path, "w", encoding="utf-8") as f:
-        yaml.dump(config, f, default_flow_style=False)
+    await asyncio.to_thread(_dump_config_to_yaml, config, config_path)
     logger.info("Configuration saved to %s", config_path)
+    return run_dir
 
+
+async def _run_stage_attacks(
+    config: Dict[str, Any], run_dir: str, output_format: str,
+    enable_attacks: bool, enable_responses: bool,
+) -> Tuple[List[Dict[str, Any]], bool]:
+    if enable_attacks:
+        attack_prompts = await create_attack_prompts(config, run_dir, output_format)
+        if not attack_prompts and enable_responses:
+            logger.warning("No attack prompts. Skipping model responses.")
+            enable_responses = False
+        return attack_prompts, enable_responses
+
+    if enable_responses:
+        attack_prompts = load_records(config.get("attack_prompts_file"), "attack prompts")
+        if not attack_prompts:
+            enable_responses = False
+        return attack_prompts, enable_responses
+
+    return [], enable_responses
+
+
+async def _run_stage_responses(
+    config: Dict[str, Any], attack_prompts: List[Dict[str, Any]],
+    run_dir: str, output_format: str,
+    enable_responses: bool, enable_eval: bool,
+) -> Tuple[List[Dict[str, Any]], bool]:
+    if enable_responses:
+        model_responses = await get_model_responses(config, attack_prompts, run_dir, output_format)
+        if not model_responses and enable_eval:
+            logger.warning("No model responses. Skipping evaluation.")
+            enable_eval = False
+        return model_responses, enable_eval
+
+    if enable_eval:
+        model_responses = load_records(config.get("model_responses_file"), "model responses")
+        if not model_responses:
+            enable_eval = False
+        return model_responses, enable_eval
+
+    return [], enable_eval
+
+
+async def _run_stage_eval(
+    config: Dict[str, Any], model_responses: List[Dict[str, Any]],
+    run_dir: str, output_format: str,
+    enable_eval: bool, enable_report: bool,
+) -> Tuple[List[Dict[str, Any]], Optional[str]]:
+    if enable_eval:
+        return await evaluate_responses(config, model_responses, run_dir, output_format)
+
+    if enable_report:
+        provided = config.get("evaluation_results_file")
+        if provided and os.path.exists(provided):
+            logger.info("Using provided evaluation file for report: %s", provided)
+            return [], provided
+
+    return [], None
+
+
+def _log_summary(
+    run_dir: str,
+    attack_prompts: List[Dict[str, Any]],
+    model_responses: List[Dict[str, Any]],
+    evaluation_results: List[Dict[str, Any]],
+    report_path: Optional[str],
+) -> None:
+    logger.info(
+        "Pipeline complete: %d attack prompts, %d responses, %d evaluations",
+        len(attack_prompts), len(model_responses), len(evaluation_results),
+    )
+    if evaluation_results:
+        success_count = sum(1 for r in evaluation_results if r.get("success", False))
+        logger.info("Attack success rate: %.2f%%", (success_count / len(evaluation_results)) * 100)
+    logger.info("Results saved to: %s", run_dir)
+    if report_path:
+        logger.info("Report: %s", report_path)
+
+
+async def run_pipeline(config: Dict[str, Any]) -> None:
+    """Run the complete testing pipeline, controlling stages via config."""
+    run_dir = await _prepare_run_dir(config)
     output_format = config.get("output_format", "csv")
 
     stages = config.get("stages", {})
@@ -284,59 +370,24 @@ async def run_pipeline(config: Dict[str, Any]) -> None:
     # burns time and API credits.
     _preflight_config(config, enable_attacks, enable_responses, enable_eval)
 
-    attack_prompts: List[Dict[str, Any]] = []
-    model_responses: List[Dict[str, Any]] = []
-    evaluation_results: List[Dict[str, Any]] = []
-    evaluation_file: Optional[str] = None
+    attack_prompts, enable_responses = await _run_stage_attacks(
+        config, run_dir, output_format, enable_attacks, enable_responses,
+    )
 
-    # Stage 1
-    if enable_attacks:
-        attack_prompts = await create_attack_prompts(config, run_dir, output_format)
-        if not attack_prompts and enable_responses:
-            logger.warning("No attack prompts. Skipping model responses.")
-            enable_responses = False
-    elif enable_responses:
-        attack_prompts = load_records(config.get("attack_prompts_file"), "attack prompts")
-        if not attack_prompts:
-            enable_responses = False
+    model_responses, enable_eval = await _run_stage_responses(
+        config, attack_prompts, run_dir, output_format,
+        enable_responses, enable_eval,
+    )
 
-    # Stage 2
-    if enable_responses:
-        model_responses = await get_model_responses(config, attack_prompts, run_dir, output_format)
-        if not model_responses and enable_eval:
-            logger.warning("No model responses. Skipping evaluation.")
-            enable_eval = False
-    elif enable_eval:
-        model_responses = load_records(config.get("model_responses_file"), "model responses")
-        if not model_responses:
-            enable_eval = False
+    evaluation_results, evaluation_file = await _run_stage_eval(
+        config, model_responses, run_dir, output_format,
+        enable_eval, enable_report,
+    )
 
-    # Stage 3
-    if enable_eval:
-        evaluation_results, evaluation_file = await evaluate_responses(
-            config, model_responses, run_dir, output_format
-        )
-    elif enable_report:
-        provided = config.get("evaluation_results_file")
-        if provided and os.path.exists(provided):
-            evaluation_file = provided
-            logger.info("Using provided evaluation file for report: %s", evaluation_file)
-
-    # Stage 4
     report_path = None
     if enable_report and evaluation_file:
         report_path = generate_report(config, run_dir, evaluation_file)
     elif enable_report:
         logger.info("Skipping report: no evaluation file available.")
 
-    # Summary
-    logger.info(
-        "Pipeline complete: %d attack prompts, %d responses, %d evaluations",
-        len(attack_prompts), len(model_responses), len(evaluation_results),
-    )
-    if evaluation_results:
-        success_count = sum(1 for r in evaluation_results if r.get("success", False))
-        logger.info("Attack success rate: %.2f%%", (success_count / len(evaluation_results)) * 100)
-    logger.info("Results saved to: %s", run_dir)
-    if report_path:
-        logger.info("Report: %s", report_path)
+    _log_summary(run_dir, attack_prompts, model_responses, evaluation_results, report_path)

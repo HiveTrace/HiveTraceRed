@@ -188,23 +188,7 @@ class TAPAttack(IterativeAttack):
             parent.children.append(node)
         return node
 
-    def run_attack(self, goal: str) -> IterativeAttackResult:
-        """
-        Run the TAP attack with tree exploration.
-
-        Args:
-            goal: The malicious goal/prompt to achieve
-
-        Returns:
-            IterativeAttackResult with all iterations and best attack
-        """
-        iterations: List[IterationResult] = []
-        best_attack = ""
-        best_score = 0.0
-        success = False
-        total_iterations = 0
-
-        # Initialize root node
+    def _initialize_root(self, goal: str) -> Tuple[TreeNode, IterationResult]:
         initial_prompt = self._create_initial_prompt(goal)
         attacker_response = self.attacker_model.invoke(initial_prompt)["content"]
         root_attack = self._extract_attack(attacker_response)
@@ -215,87 +199,133 @@ class TAPAttack(IterativeAttack):
         root_success = eval_result["success"]
 
         root = self._create_node(root_attack, target_response, root_score, 0, attacker_response)
-        iterations.append(IterationResult(
+        iteration = IterationResult(
             iteration=0,
             attack_prompt=root_attack,
             target_response=target_response,
             success=root_success,
             score=root_score,
             metadata={"depth": 0, "node": "root"},
-        ))
-        total_iterations += 1
+        )
+        return root, iteration
 
-        if root_score > best_score:
-            best_score = root_score
-            best_attack = root_attack
-        if root_success:
-            success = True
+    def _explore_branch_sync(
+        self,
+        goal: str,
+        parent: TreeNode,
+        branch_idx: int,
+        depth: int,
+    ) -> Tuple[TreeNode, IterationResult]:
+        branch_prompt = self._create_branch_prompt(
+            goal=goal,
+            parent_attack=parent.attack_prompt,
+            parent_response=parent.response,
+            parent_score=parent.score,
+            branch_index=branch_idx,
+        )
+
+        attacker_response = self.attacker_model.invoke(branch_prompt)["content"]
+        child_attack = self._extract_attack(attacker_response)
+        target_response = self.target_model.invoke(child_attack)["content"]
+        eval_result = self._evaluate_response(goal, target_response)
+        child_score = eval_result["score"]
+        child_success = eval_result["success"]
+
+        child = self._create_node(
+            child_attack, target_response, child_score,
+            depth, attacker_response, parent=parent,
+        )
+        iteration = IterationResult(
+            iteration=0,
+            attack_prompt=child_attack,
+            target_response=target_response,
+            success=child_success,
+            score=child_score,
+            metadata={"depth": depth, "branch": branch_idx},
+        )
+        return child, iteration
+
+    def _record_child(
+        self,
+        child: TreeNode,
+        iteration: IterationResult,
+        state: Dict[str, Any],
+        next_level: List[TreeNode],
+    ) -> bool:
+        iteration.iteration = state["total_iterations"]
+        state["iterations"].append(iteration)
+        state["total_iterations"] += 1
+
+        if child.score > state["best_score"]:
+            state["best_score"] = child.score
+            state["best_attack"] = child.attack_prompt
+        if iteration.success:
+            state["success"] = True
+            return True
+
+        if child.score >= self.prune_threshold:
+            next_level.append(child)
+        else:
+            child.pruned = True
+        return False
+
+    def _record_root(
+        self,
+        goal: str,
+        root: TreeNode,
+        root_iteration: IterationResult,
+        state: Dict[str, Any],
+    ) -> Optional[IterativeAttackResult]:
+        state["iterations"].append(root_iteration)
+        state["total_iterations"] += 1
+
+        if root.score > state["best_score"]:
+            state["best_score"] = root.score
+            state["best_attack"] = root.attack_prompt
+        if root_iteration.success:
+            state["success"] = True
             return self._build_result(
-                goal, success, best_attack, best_score,
-                iterations, total_iterations, max_depth_reached=0,
+                goal, state["success"], state["best_attack"], state["best_score"],
+                state["iterations"], state["total_iterations"], max_depth_reached=0,
             )
+        return None
 
-        # BFS exploration
+    def run_attack(self, goal: str) -> IterativeAttackResult:
+        """
+        Run the TAP attack with tree exploration.
+
+        Args:
+            goal: The malicious goal/prompt to achieve
+
+        Returns:
+            IterativeAttackResult with all iterations and best attack
+        """
+        state: Dict[str, Any] = {
+            "iterations": [],
+            "best_attack": "",
+            "best_score": 0.0,
+            "success": False,
+            "total_iterations": 0,
+        }
+
+        root, root_iteration = self._initialize_root(goal)
+        early_result = self._record_root(goal, root, root_iteration, state)
+        if early_result is not None:
+            return early_result
+
         current_level = [root]
         max_depth_reached = 0
 
         for depth in range(1, self.max_depth + 1):
-            if total_iterations >= self.max_iterations:
+            if state["total_iterations"] >= self.max_iterations:
                 break
 
-            next_level: List[TreeNode] = []
-
-            for parent in current_level:
-                if parent.pruned:
-                    continue
-
-                for branch_idx in range(self.branching_factor):
-                    if total_iterations >= self.max_iterations:
-                        break
-
-                    branch_prompt = self._create_branch_prompt(
-                        goal=goal,
-                        parent_attack=parent.attack_prompt,
-                        parent_response=parent.response,
-                        parent_score=parent.score,
-                        branch_index=branch_idx,
-                    )
-
-                    attacker_response = self.attacker_model.invoke(branch_prompt)["content"]
-                    child_attack = self._extract_attack(attacker_response)
-                    target_response = self.target_model.invoke(child_attack)["content"]
-                    eval_result = self._evaluate_response(goal, target_response)
-                    child_score = eval_result["score"]
-                    child_success = eval_result["success"]
-
-                    child = self._create_node(
-                        child_attack, target_response, child_score,
-                        depth, attacker_response, parent=parent,
-                    )
-                    iterations.append(IterationResult(
-                        iteration=total_iterations,
-                        attack_prompt=child_attack,
-                        target_response=target_response,
-                        success=child_success,
-                        score=child_score,
-                        metadata={"depth": depth, "branch": branch_idx},
-                    ))
-                    total_iterations += 1
-
-                    if child_score > best_score:
-                        best_score = child_score
-                        best_attack = child_attack
-                    if child_success:
-                        success = True
-                        return self._build_result(
-                            goal, success, best_attack, best_score,
-                            iterations, total_iterations, max_depth_reached=depth,
-                        )
-
-                    if child.score >= self.prune_threshold:
-                        next_level.append(child)
-                    else:
-                        child.pruned = True
+            next_level, found_success = self._run_depth_sync(goal, current_level, depth, state)
+            if found_success:
+                return self._build_result(
+                    goal, state["success"], state["best_attack"], state["best_score"],
+                    state["iterations"], state["total_iterations"], max_depth_reached=depth,
+                )
 
             current_level = next_level
             max_depth_reached = depth
@@ -304,9 +334,40 @@ class TAPAttack(IterativeAttack):
                 break
 
         return self._build_result(
-            goal, success, best_attack, best_score,
-            iterations, total_iterations, max_depth_reached,
+            goal, state["success"], state["best_attack"], state["best_score"],
+            state["iterations"], state["total_iterations"], max_depth_reached,
         )
+
+    def _run_depth_sync(
+        self,
+        goal: str,
+        current_level: List[TreeNode],
+        depth: int,
+        state: Dict[str, Any],
+    ) -> Tuple[List[TreeNode], bool]:
+        next_level: List[TreeNode] = []
+        for parent in current_level:
+            if parent.pruned:
+                continue
+            if self._expand_parent_sync(goal, parent, depth, state, next_level):
+                return next_level, True
+        return next_level, False
+
+    def _expand_parent_sync(
+        self,
+        goal: str,
+        parent: TreeNode,
+        depth: int,
+        state: Dict[str, Any],
+        next_level: List[TreeNode],
+    ) -> bool:
+        for branch_idx in range(self.branching_factor):
+            if state["total_iterations"] >= self.max_iterations:
+                break
+            child, iteration = self._explore_branch_sync(goal, parent, branch_idx, depth)
+            if self._record_child(child, iteration, state, next_level):
+                return True
+        return False
 
     async def _explore_branch_async(
         self,
@@ -346,6 +407,102 @@ class TAPAttack(IterativeAttack):
 
         return idx, child_attack, target_response, attacker_response, child_score, child_success, child, branch_idx
 
+    async def _initialize_root_async(self, goal: str) -> Tuple[TreeNode, IterationResult]:
+        initial_prompt = self._create_initial_prompt(goal)
+        attacker_response_raw = await self.attacker_model.ainvoke(initial_prompt)
+        attacker_response = attacker_response_raw["content"]
+        root_attack = self._extract_attack(attacker_response)
+
+        target_response_raw = await self.target_model.ainvoke(root_attack)
+        target_response = target_response_raw["content"]
+        eval_result = await self._evaluate_response_async(goal, target_response)
+        root_score = eval_result["score"]
+        root_success = eval_result["success"]
+
+        root = self._create_node(root_attack, target_response, root_score, 0, attacker_response)
+        iteration = IterationResult(
+            iteration=0,
+            attack_prompt=root_attack,
+            target_response=target_response,
+            success=root_success,
+            score=root_score,
+            metadata={"depth": 0, "node": "root"},
+        )
+        return root, iteration
+
+    def _launch_depth_tasks(
+        self,
+        goal: str,
+        current_level: List[TreeNode],
+        depth: int,
+        total_iterations: int,
+    ) -> List[asyncio.Task]:
+        tasks: List[asyncio.Task] = []
+        task_idx = 0
+        for parent in current_level:
+            if parent.pruned:
+                continue
+            for branch_idx in range(self.branching_factor):
+                if total_iterations + task_idx >= self.max_iterations:
+                    return tasks
+                tasks.append(asyncio.create_task(
+                    self._explore_branch_async(task_idx, goal, parent, branch_idx, depth)
+                ))
+                task_idx += 1
+        return tasks
+
+    def _record_async_result(
+        self,
+        result: Tuple,
+        depth: int,
+        state: Dict[str, Any],
+        next_level: List[TreeNode],
+    ) -> None:
+        child_attack, target_response, _attacker_response, child_score, child_success, child, branch_idx = result
+
+        state["iterations"].append(IterationResult(
+            iteration=state["total_iterations"],
+            attack_prompt=child_attack,
+            target_response=target_response,
+            success=child_success,
+            score=child_score,
+            metadata={"depth": depth, "branch": branch_idx},
+        ))
+        state["total_iterations"] += 1
+
+        if child_score > state["best_score"]:
+            state["best_score"] = child_score
+            state["best_attack"] = child_attack
+        if child_success:
+            state["success"] = True
+
+        if child.score >= self.prune_threshold:
+            next_level.append(child)
+        else:
+            child.pruned = True
+
+    async def _process_depth_async(
+        self,
+        tasks: List[asyncio.Task],
+        depth: int,
+        state: Dict[str, Any],
+    ) -> List[TreeNode]:
+        next_level: List[TreeNode] = []
+        branch_results: Dict[int, Tuple] = {}
+        cur_branch_idx = 0
+
+        for task in asyncio.as_completed(tasks):
+            task_result = await task
+            idx = task_result[0]
+            branch_results[idx] = task_result[1:]
+
+            while cur_branch_idx in branch_results:
+                result = branch_results.pop(cur_branch_idx)
+                cur_branch_idx += 1
+                self._record_async_result(result, depth, state, next_level)
+
+        return next_level
+
     async def run_attack_async(self, goal: str) -> IterativeAttackResult:
         """
         Run the TAP attack asynchronously with tree exploration.
@@ -360,109 +517,36 @@ class TAPAttack(IterativeAttack):
         Returns:
             IterativeAttackResult with all iterations and best attack
         """
-        iterations: List[IterationResult] = []
-        best_attack = ""
-        best_score = 0.0
-        success = False
-        total_iterations = 0
+        state: Dict[str, Any] = {
+            "iterations": [],
+            "best_attack": "",
+            "best_score": 0.0,
+            "success": False,
+            "total_iterations": 0,
+        }
 
-        # Initialize root node
-        initial_prompt = self._create_initial_prompt(goal)
-        attacker_response_raw = await self.attacker_model.ainvoke(initial_prompt)
-        attacker_response = attacker_response_raw["content"]
-        root_attack = self._extract_attack(attacker_response)
+        root, root_iteration = await self._initialize_root_async(goal)
+        early_result = self._record_root(goal, root, root_iteration, state)
+        if early_result is not None:
+            return early_result
 
-        target_response_raw = await self.target_model.ainvoke(root_attack)
-        target_response = target_response_raw["content"]
-        eval_result = await self._evaluate_response_async(goal, target_response)
-        root_score = eval_result["score"]
-        root_success = eval_result["success"]
-
-        root = self._create_node(root_attack, target_response, root_score, 0, attacker_response)
-        iterations.append(IterationResult(
-            iteration=0,
-            attack_prompt=root_attack,
-            target_response=target_response,
-            success=root_success,
-            score=root_score,
-            metadata={"depth": 0, "node": "root"},
-        ))
-        total_iterations += 1
-
-        if root_score > best_score:
-            best_score = root_score
-            best_attack = root_attack
-        if root_success:
-            success = True
-            return self._build_result(
-                goal, success, best_attack, best_score,
-                iterations, total_iterations, max_depth_reached=0,
-            )
-
-        # BFS exploration with concurrent branches
         current_level = [root]
         max_depth_reached = 0
 
         for depth in range(1, self.max_depth + 1):
-            if total_iterations >= self.max_iterations:
+            if state["total_iterations"] >= self.max_iterations:
                 break
 
-            # Launch all branch tasks for this depth level
-            tasks = []
-            task_idx = 0
-            for parent in current_level:
-                if parent.pruned:
-                    continue
-                for branch_idx in range(self.branching_factor):
-                    if total_iterations + task_idx >= self.max_iterations:
-                        break
-                    tasks.append(asyncio.create_task(
-                        self._explore_branch_async(task_idx, goal, parent, branch_idx, depth)
-                    ))
-                    task_idx += 1
-
+            tasks = self._launch_depth_tasks(goal, current_level, depth, state["total_iterations"])
             if not tasks:
                 break
 
-            # Process branches as they complete
-            next_level: List[TreeNode] = []
-            branch_results: Dict[int, Any] = {}
-            cur_branch_idx = 0
+            next_level = await self._process_depth_async(tasks, depth, state)
 
-            for task in asyncio.as_completed(tasks):
-                idx, child_attack, target_response, attacker_response, child_score, child_success, child, branch_idx = await task
-                branch_results[idx] = (child_attack, target_response, attacker_response, child_score, child_success, child, branch_idx)
-
-                # Process results in order
-                while cur_branch_idx in branch_results:
-                    child_attack, target_response, attacker_response, child_score, child_success, child, branch_idx = branch_results.pop(cur_branch_idx)
-                    cur_branch_idx += 1
-
-                    iterations.append(IterationResult(
-                        iteration=total_iterations,
-                        attack_prompt=child_attack,
-                        target_response=target_response,
-                        success=child_success,
-                        score=child_score,
-                        metadata={"depth": depth, "branch": branch_idx},
-                    ))
-                    total_iterations += 1
-
-                    if child_score > best_score:
-                        best_score = child_score
-                        best_attack = child_attack
-                    if child_success:
-                        success = True
-
-                    if child.score >= self.prune_threshold:
-                        next_level.append(child)
-                    else:
-                        child.pruned = True
-
-            if success:
+            if state["success"]:
                 return self._build_result(
-                    goal, success, best_attack, best_score,
-                    iterations, total_iterations, max_depth_reached=depth,
+                    goal, state["success"], state["best_attack"], state["best_score"],
+                    state["iterations"], state["total_iterations"], max_depth_reached=depth,
                 )
 
             current_level = next_level
@@ -472,8 +556,8 @@ class TAPAttack(IterativeAttack):
                 break
 
         return self._build_result(
-            goal, success, best_attack, best_score,
-            iterations, total_iterations, max_depth_reached,
+            goal, state["success"], state["best_attack"], state["best_score"],
+            state["iterations"], state["total_iterations"], max_depth_reached,
         )
 
     def _build_result(

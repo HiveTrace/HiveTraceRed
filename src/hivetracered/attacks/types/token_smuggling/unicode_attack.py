@@ -164,49 +164,41 @@ interpret and answer the question:
         
         super().__init__(raw=raw, template=template, name=name, description=description)
     
+    def _transform_lowercase(self, char: str) -> str:
+        offset = ord(char) - ord('a')
+        if self.style == "subscript" or self.style == "small_latin":
+            range_size = self.style_config["uppercase_range"][1] - self.style_config["uppercase_range"][0] + 1
+            if offset < range_size:
+                return chr(self.style_config["uppercase_range"][0] + offset)
+            return char
+        return chr(self.style_config["uppercase_range"][0] + offset + 26)
+
+    def _transform_uppercase(self, char: str) -> str:
+        offset = ord(char) - ord('A')
+        if self.style == "regional_indicator":
+            return chr(self.style_config["uppercase_range"][0] + offset) + " "
+        return chr(self.style_config["uppercase_range"][0] + offset)
+
+    def _transform_digit(self, char: str) -> str:
+        digit_index = int(char)
+        if digit_index < len(self.style_config["digits"]):
+            return self.style_config["digits"][digit_index]
+        return char
+
+    def _transform_char(self, char: str) -> str:
+        if 'a' <= char <= 'z':
+            return self._transform_lowercase(char)
+        if 'A' <= char <= 'Z':
+            return self._transform_uppercase(char)
+        if '0' <= char <= '9' and self.style_config["digits"]:
+            return self._transform_digit(char)
+        return char
+
     def _transform_to_unicode_style(self, text: str) -> str:
         """
         Transform text to the specified unicode style.
         """
-        result = ""
-        for char in text:
-            if 'a' <= char <= 'z':
-                # Calculate offset from 'a', then map to unicode range
-                offset = ord(char) - ord('a')
-                # For lowercase, add 26 to get to the lowercase part of the range
-                if self.style == "subscript" or self.style == "small_latin":
-                    # These have limited character support
-                    if offset < self.style_config["uppercase_range"][1] - self.style_config["uppercase_range"][0] + 1:
-                        result += chr(self.style_config["uppercase_range"][0] + offset)
-                    else:
-                        result += char  # Keep original if not supported
-                else:
-                    # Add 26 to get to lowercase range (after uppercase)
-                    result += chr(self.style_config["uppercase_range"][0] + offset + 26)
-            
-            elif 'A' <= char <= 'Z':
-                # Calculate offset from 'A', then map to unicode range
-                offset = ord(char) - ord('A')
-                
-                if self.style == "regional_indicator":
-                    # Regional indicators need a space between them
-                    result += chr(self.style_config["uppercase_range"][0] + offset) + " "
-                else:
-                    result += chr(self.style_config["uppercase_range"][0] + offset)
-            
-            elif '0' <= char <= '9' and self.style_config["digits"]:
-                # If digits are supported for this style
-                digit_index = int(char)
-                if digit_index < len(self.style_config["digits"]):
-                    result += self.style_config["digits"][digit_index]
-                else:
-                    result += char  # Keep original if not supported
-            
-            else:
-                # Keep non-alphabetic characters as is
-                result += char
-        
-        return result
+        return "".join(self._transform_char(char) for char in text)
     
     def transform(self, text: str) -> str:
         """

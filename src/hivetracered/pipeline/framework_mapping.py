@@ -14,6 +14,12 @@ techniques — they differ in HOW they inject, not WHAT they target. Therefore:
 from typing import Dict, Set, Optional, List
 
 
+AML_TA0002 = "AML.TA0002"
+AML_TA0010 = "AML.TA0010"
+P_61A = "п.61а"
+P_61B = "п.61б"
+
+
 # ---------------------------------------------------------------------------
 # 1a. FRAMEWORKS — source of truth for all framework definitions
 # ---------------------------------------------------------------------------
@@ -67,7 +73,7 @@ FRAMEWORKS: Dict[str, Dict] = {
     "MITRE_ATLAS": {
         "name": "MITRE ATLAS",
         "categories": {
-            "AML.TA0002": {
+            AML_TA0002: {
                 "name": "Reconnaissance",
                 "description": "The adversary is trying to gather information about the AI system they can use to plan future operations",
             },
@@ -123,7 +129,7 @@ FRAMEWORKS: Dict[str, Dict] = {
                 "name": "Command and Control",
                 "description": "The adversary is trying to communicate with compromised AI systems to control them",
             },
-            "AML.TA0010": {
+            AML_TA0010: {
                 "name": "Exfiltration",
                 "description": "The adversary is trying to steal AI artifacts or other information about the AI system",
             },
@@ -140,11 +146,11 @@ FRAMEWORKS: Dict[str, Dict] = {
                 "name": "Защита информации при использовании ИИ",
                 "description": "Общие требования к защите информации при использовании технологий искусственного интеллекта",
             },
-            "п.61а": {
+            P_61A: {
                 "name": "Контроль шаблонных запросов и ответов ИИ",
                 "description": "Контроль содержания шаблонных запросов к технологиям ИИ и полученных ответов",
             },
-            "п.61б": {
+            P_61B: {
                 "name": "Контроль свободных текстовых запросов и ответов ИИ",
                 "description": "Контроль содержания свободных текстовых запросов к технологиям ИИ и полученных ответов",
             },
@@ -172,7 +178,7 @@ FRAMEWORKS: Dict[str, Dict] = {
 _PROMPT_INJECTION_BASE: Dict[str, List[str]] = {
     "OWASP_LLM_TOP_10": ["LLM01"],
     "MITRE_ATLAS": ["AML.TA0005", "AML.TA0012", "AML.TA0007"],  # Execution + Privilege Escalation + Defense Evasion
-    "FSTEK_117": ["п.61а", "п.61б", "п.66"],
+    "FSTEK_117": [P_61A, P_61B, "п.66"],
 }
 
 ATTACK_TYPE_FRAMEWORK_MAP: Dict[str, Dict[str, List[str]]] = {
@@ -208,16 +214,16 @@ BASE_CATEGORY_FRAMEWORK_MAP: Dict[str, Dict[str, List[str]]] = {
     "Harmful Content Generation": {
         "OWASP_LLM_TOP_10": ["LLM04"],
         "MITRE_ATLAS": ["AML.TA0003", "AML.TA0011"],  # Resource Development + Impact
-        "FSTEK_117": ["п.61а", "п.61б"],
+        "FSTEK_117": [P_61A, P_61B],
     },
     "Internal Information Exposure": {
         "OWASP_LLM_TOP_10": ["LLM02"],
-        "MITRE_ATLAS": ["AML.TA0002", "AML.TA0010"],  # Reconnaissance + Exfiltration
+        "MITRE_ATLAS": [AML_TA0002, AML_TA0010],  # Reconnaissance + Exfiltration
         "FSTEK_117": ["п.60", "п.66"],
     },
     "System Prompt Extraction": {
         "OWASP_LLM_TOP_10": ["LLM07"],
-        "MITRE_ATLAS": ["AML.TA0002", "AML.TA0010"],  # Reconnaissance + Exfiltration
+        "MITRE_ATLAS": [AML_TA0002, AML_TA0010],  # Reconnaissance + Exfiltration
         "FSTEK_117": ["п.60", "п.66"],
     },
 }
@@ -225,7 +231,7 @@ BASE_CATEGORY_FRAMEWORK_MAP: Dict[str, Dict[str, List[str]]] = {
 SUBCATEGORY_FRAMEWORK_MAP: Dict[str, Dict[str, List[str]]] = {
     "System Prompt Extraction": {
         "OWASP_LLM_TOP_10": ["LLM07"],
-        "MITRE_ATLAS": ["AML.TA0002", "AML.TA0010"],  # Reconnaissance + Exfiltration
+        "MITRE_ATLAS": [AML_TA0002, AML_TA0010],  # Reconnaissance + Exfiltration
         "FSTEK_117": ["п.60", "п.66"],
     },
 }

@@ -75,8 +75,8 @@ class RestModel(Model):
         api_key: Optional[str] = None,
         request_timeout: int = 20,
         verify_ssl: bool = True,
-        ratelimit_codes: Optional[List[int]] = [429],
-        skip_codes: Optional[List[int]] = [],
+        ratelimit_codes: Optional[List[int]] = None,
+        skip_codes: Optional[List[int]] = None,
         retry_5xx: bool = True,
         max_retries: int = 3,
         max_concurrency: Optional[int] = None,
@@ -92,8 +92,8 @@ class RestModel(Model):
         self.response_json_field = response_json_field
         self.request_timeout = request_timeout
         self.verify_ssl = verify_ssl
-        self.ratelimit_codes = ratelimit_codes
-        self.skip_codes = skip_codes
+        self.ratelimit_codes = ratelimit_codes if ratelimit_codes is not None else [429]
+        self.skip_codes = skip_codes if skip_codes is not None else []
         self.retry_5xx = retry_5xx
         self.max_retries = max_retries
         self.proxies = proxies

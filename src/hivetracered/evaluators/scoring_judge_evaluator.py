@@ -100,8 +100,8 @@ class ScoringJudgeEvaluator(ModelEvaluator):
         except (json.JSONDecodeError, ValueError, TypeError):
             pass
 
-        # Tier 2: regex for {"rating": N} pattern
-        json_match = re.search(r'\{[^}]*"rating"\s*:\s*(\d+)[^}]*\}', text)
+        # Tier 2: regex for "rating": N — linear-time, no backtracking
+        json_match = re.search(r'"rating"\s*:\s*(\d+)', text)
         if json_match:
             try:
                 return max(1, min(10, int(json_match.group(1))))

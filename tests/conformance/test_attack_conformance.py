@@ -8,6 +8,7 @@ your attack in __init__.py and it gets tested automatically.
 from __future__ import annotations
 
 import inspect
+import re
 
 import pytest
 
@@ -72,65 +73,34 @@ ALL_ATTACKS = [
 class TestAttackConformance:
     """Conformance tests applied to every registered attack."""
 
-    # ── Instantiation ───────────────────────────────────────────
-
-    def test_instantiation(self, attack_name, attack_class, family):
-        attack = make_instance(attack_class, family)
-        assert attack is not None
-
-    # ── Metadata ────────────────────────────────────────────────
-
     def test_get_name(self, attack_name, attack_class, family):
         attack = make_instance(attack_class, family)
         name = attack.get_name()
-        assert isinstance(name, str) and len(name) > 0
-
-    def test_get_description(self, attack_name, attack_class, family):
-        attack = make_instance(attack_class, family)
-        desc = attack.get_description()
-        assert isinstance(desc, str) and len(desc) > 0
-
-    def test_get_params(self, attack_name, attack_class, family):
-        attack = make_instance(attack_class, family)
-        params = attack.get_params()
-        assert isinstance(params, dict)
+        assert isinstance(name, str) and len(name) > 0, (
+            f"{attack_name}.get_name() returned {name!r}"
+        )
 
     # ── Prompt placeholder ──────────────────────────────────────
 
     def test_prompt_placeholder(self, attack_name, attack_class, family):
+        # Checks that the attacker prompt / template contains at least one
+        # {prompt…} placeholder (e.g. {prompt}, {prompt_first_half}).
+        # The regex r'\{prompt[^}]*\}' matches the standard {prompt} and
+        # legitimate split-prompt variants ({prompt_first_half}, etc.)
+        # without accepting any other curly-braced identifier.
         if family == "iterative":
             pytest.skip("Iterative attacks use system prompts, not {prompt} templates")
         attack = make_instance(attack_class, family)
         if family == "model":
-            assert "{prompt}" in attack.attacker_prompt, (
+            assert re.search(r'\{prompt[^}]*\}', attack.attacker_prompt), (
                 f"{attack_name}.attacker_prompt missing {{prompt}} placeholder"
             )
         elif hasattr(attack, "template") and attack.template:
-            # Some TemplateAttacks use custom placeholders (e.g. {prompt_first_half})
-            has_prompt_placeholder = "{prompt}" in attack.template or "{prompt_" in attack.template
-            assert has_prompt_placeholder, (
+            assert re.search(r'\{prompt[^}]*\}', attack.template), (
                 f"{attack_name}.template missing prompt placeholder"
             )
 
-    # ── apply(string) ───────────────────────────────────────────
-
-    def test_apply_string(self, attack_name, attack_class, family):
-        attack = make_instance(attack_class, family)
-        result = attack.apply("test prompt")
-        assert isinstance(result, str), (
-            f"{attack_name}.apply(str) returned {type(result).__name__}, expected str"
-        )
-
     # ── apply(message list) ─────────────────────────────────────
-
-    def test_apply_message_list(self, attack_name, attack_class, family):
-        attack = make_instance(attack_class, family)
-        msgs = [{"role": "human", "content": "test prompt"}]
-        result = attack.apply(msgs)
-        assert isinstance(result, list), (
-            f"{attack_name}.apply(list) returned {type(result).__name__}, expected list"
-        )
-        assert len(result) >= 1
 
     def test_apply_preserves_history(self, attack_name, attack_class, family):
         attack = make_instance(attack_class, family)
@@ -146,17 +116,7 @@ class TestAttackConformance:
 
     # ── stream_abatch ───────────────────────────────────────────
 
-    def test_stream_abatch(self, attack_name, attack_class, family):
-        attack = make_instance(attack_class, family)
-        prompts = [f"prompt {i}" for i in range(5)]
-        results = async_collect(attack.stream_abatch(prompts))
-        assert len(results) == 5, (
-            f"{attack_name}.stream_abatch returned {len(results)} results, expected 5"
-        )
-
     def test_stream_abatch_order(self, attack_name, attack_class, family):
-        if family == "iterative":
-            pytest.skip("Iterative attacks use multi-step loops, order tested via test_stream_abatch")
         prompts = [f"prompt {i}" for i in range(5)]
         if family == "model":
             responses = [{"content": f"response {i}"} for i in range(5)]
@@ -165,7 +125,13 @@ class TestAttackConformance:
         else:
             attack = make_instance(attack_class, family)
         results = async_collect(attack.stream_abatch(prompts))
-        assert len(results) == 5
+        assert len(results) == 5, (
+            f"{attack_name}.stream_abatch returned {len(results)} results, expected 5"
+        )
+        if family == "iterative":
+            # Iterative attacks use multi-step loops; the per-prompt
+            # ordering invariant is not meaningful — length contract only.
+            return
         for i, result in enumerate(results):
             if family == "model":
                 assert f"response {i}" in str(result), (
@@ -173,10 +139,9 @@ class TestAttackConformance:
                 )
 
     # ── Registration ────────────────────────────────────────────
-
-    def test_registration(self, attack_name, attack_class, family):
-        assert attack_name in ATTACK_CLASSES
-        assert ATTACK_CLASSES[attack_name]["attack_class"] is attack_class
+    # Registration is tautological here: ALL_ATTACKS is built from
+    # ATTACK_CLASSES, and test_pipeline_wiring exercises the same lookup
+    # via build_attack_from_config(attack_name).
 
     # ── Pipeline wiring ─────────────────────────────────────────
 

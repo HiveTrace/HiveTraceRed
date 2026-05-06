@@ -51,7 +51,8 @@ class TextContinuingAttack(ModelAttack):
             template = self._make_template(prompt)
             return template
         else:
-            result = prompt.copy()
+            # Per-message dict copy so caller's input is not mutated.
+            result = [dict(msg) for msg in prompt]
             for i in range(len(result) - 1, -1, -1):
                 if result[i].get("role") == "user":
                     content = result[i].get("content", "")
@@ -66,12 +67,13 @@ class TextContinuingAttack(ModelAttack):
                 template = self._make_template(prompt)
                 result.append(template)
             else:
-                for i in range(len(prompt) - 1, -1, -1):
-                    if prompt[i].get("role") == "user":
-                        content = prompt[i].get("content", "")
+                copied = [dict(msg) for msg in prompt]
+                for i in range(len(copied) - 1, -1, -1):
+                    if copied[i].get("role") == "user":
+                        content = copied[i].get("content", "")
                         template = self._make_template(content)
-                        prompt[i]["content"] = template
-                result.append(prompt)
+                        copied[i]["content"] = template
+                result.append(copied)
         return result
     
     async def stream_abatch(self, prompts: List[str | List[Dict[str, str]]]) -> AsyncGenerator[str | List[Dict[str, str]], None]:
@@ -92,8 +94,8 @@ class TextContinuingAttack(ModelAttack):
                 transformed_prompt = self._make_template(prompt)
                 yield transformed_prompt
             else:
-                # For message lists, create a copy to avoid modifying the original
-                result = prompt.copy()
+                # For message lists, copy each dict so the caller's input is not mutated.
+                result = [dict(msg) for msg in prompt]
                 for j in range(len(result) - 1, -1, -1):
                     if result[j].get("role") == "user":
                         content = result[j].get("content", "")

@@ -7,7 +7,9 @@ and enriches response data with evaluation results and metrics.
 from typing import Dict, List, Any, Optional, AsyncGenerator
 
 from hivetracered.evaluators import BaseEvaluator, ModelEvaluator
-    
+
+RESPONSE_BLOCKED = "Response was blocked"
+
 
 async def evaluate_response(
     evaluator: BaseEvaluator,
@@ -33,7 +35,7 @@ async def evaluate_response(
             **response_data,
             "evaluation": {
                 "success": False,
-                "reason": "Response was blocked"
+                "reason": RESPONSE_BLOCKED
             },
             "evaluator": "",
             "success": False,
@@ -123,7 +125,7 @@ async def stream_evaluated_responses(
             **responses[i],
             "evaluation": {
                 "success": False,
-                "reason": "Response was blocked"
+                "reason": RESPONSE_BLOCKED
             },
             "evaluator": "",
             "success": False,
@@ -150,7 +152,7 @@ async def stream_evaluated_responses(
                 **responses[i],
                 "evaluation": {
                     "success": False,
-                    "reason": "Response was blocked"
+                    "reason": RESPONSE_BLOCKED
                 },
                 "evaluator": "",
                 "success": False,

@@ -17,6 +17,57 @@ from hivetracered.evaluators.scoring_judge_evaluator import ScoringJudgeEvaluato
 
 from hivetracered.pipeline.constants import ATTACK_CLASSES
 
+def _parse_attack_config(attack_config):
+    if isinstance(attack_config, str):
+        return attack_config, {}, None
+    attack_name = attack_config.get("name", "")
+    params = attack_config.get("params", {})
+    inner_attack_cfg = attack_config.get("inner_attack", None)
+    return attack_name, params, inner_attack_cfg
+
+
+def _resolve_iterative_evaluator(attack_config, attack_name, evaluator,
+                                 evaluation_model, setup_evaluator_fn):
+    attack_evaluator = None
+    if not isinstance(attack_config, str) and attack_config.get("evaluator") and setup_evaluator_fn:
+        attack_evaluator = setup_evaluator_fn(
+            attack_config["evaluator"], evaluation_model
+        )
+        if not attack_evaluator:
+            print(f"Warning: Per-attack evaluator config invalid for '{attack_name}'")
+
+    if not attack_evaluator and evaluator and isinstance(evaluator, ScoringJudgeEvaluator):
+        attack_evaluator = evaluator
+
+    if not attack_evaluator and evaluation_model:
+        print(f"Using default ScoringJudgeEvaluator for iterative attack '{attack_name}'")
+        attack_evaluator = ScoringJudgeEvaluator(model=evaluation_model)
+
+    return attack_evaluator
+
+
+def _build_iterative_attack(attack_class, attack_config, attack_name, params,
+                            attacker_model, target_model, evaluator,
+                            evaluation_model, setup_evaluator_fn):
+    attack_evaluator = _resolve_iterative_evaluator(
+        attack_config, attack_name, evaluator, evaluation_model, setup_evaluator_fn
+    )
+
+    if not attacker_model:
+        raise ValueError(f"Attacker model is required for iterative attack '{attack_name}'")
+    if not target_model:
+        raise ValueError(f"Target model is required for iterative attack '{attack_name}'")
+    if not attack_evaluator:
+        raise ValueError(f"Evaluator is required for iterative attack '{attack_name}'")
+
+    return attack_class(
+        attacker_model=attacker_model,
+        target_model=target_model,
+        evaluator=attack_evaluator,
+        **params
+    )
+
+
 def build_attack_from_config(attack_config, attacker_model=None, target_model=None,
                              evaluator=None, evaluation_model=None, setup_evaluator_fn=None):
     """
@@ -34,46 +85,17 @@ def build_attack_from_config(attack_config, attacker_model=None, target_model=No
     Raises:
         ValueError: If attack name is unknown or required models/evaluator are missing
     """
-    if isinstance(attack_config, str):
-        attack_name, params = attack_config, {}
-        inner_attack_cfg = None
-    else:
-        attack_name = attack_config.get("name", "")
-        params = attack_config.get("params", {})
-        inner_attack_cfg = attack_config.get("inner_attack", None)
+    attack_name, params, inner_attack_cfg = _parse_attack_config(attack_config)
 
     if attack_name not in ATTACK_CLASSES:
         raise ValueError(f"Unknown attack '{attack_name}'")
     attack_class = ATTACK_CLASSES[attack_name]["attack_class"]
 
-    # Handle iterative attacks (TAP, PAIR)
     if issubclass(attack_class, IterativeAttack):
-        attack_evaluator = None
-        if not isinstance(attack_config, str) and attack_config.get("evaluator") and setup_evaluator_fn:
-            attack_evaluator = setup_evaluator_fn(
-                attack_config["evaluator"], evaluation_model
-            )
-            if not attack_evaluator:
-                print(f"Warning: Per-attack evaluator config invalid for '{attack_name}'")
-
-        if not attack_evaluator and evaluator and isinstance(evaluator, ScoringJudgeEvaluator):
-            attack_evaluator = evaluator
-
-        if not attack_evaluator and evaluation_model:
-            print(f"Using default ScoringJudgeEvaluator for iterative attack '{attack_name}'")
-            attack_evaluator = ScoringJudgeEvaluator(model=evaluation_model)
-
-        if not attacker_model:
-            raise ValueError(f"Attacker model is required for iterative attack '{attack_name}'")
-        if not target_model:
-            raise ValueError(f"Target model is required for iterative attack '{attack_name}'")
-        if not attack_evaluator:
-            raise ValueError(f"Evaluator is required for iterative attack '{attack_name}'")
-        attack = attack_class(
-            attacker_model=attacker_model,
-            target_model=target_model,
-            evaluator=attack_evaluator,
-            **params
+        attack = _build_iterative_attack(
+            attack_class, attack_config, attack_name, params,
+            attacker_model, target_model, evaluator,
+            evaluation_model, setup_evaluator_fn,
         )
     elif issubclass(attack_class, ModelAttack):
         if not attacker_model:
@@ -81,6 +103,7 @@ def build_attack_from_config(attack_config, attacker_model=None, target_model=No
         attack = attack_class(model=attacker_model, **params)
     else:
         attack = attack_class(**params)
+
     if inner_attack_cfg:
         inner_attack = build_attack_from_config(inner_attack_cfg, attacker_model, target_model, evaluator,
                                                 evaluation_model=evaluation_model, setup_evaluator_fn=setup_evaluator_fn)

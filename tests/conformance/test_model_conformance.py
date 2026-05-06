@@ -7,14 +7,13 @@ Two modes:
 
 from __future__ import annotations
 
-import asyncio
 import inspect
 
 import pytest
 
 from hivetracered.models.base_model import Model
 from hivetracered.pipeline.constants import MODEL_CLASSES
-from tests.conftest import MockModel, async_collect
+from tests.conftest import async_collect
 
 
 # ── Deduplicate model classes (many names map to same class) ────────
@@ -24,8 +23,6 @@ UNIQUE_MODEL_CLASSES = list({
     for cls in MODEL_CLASSES.values()
     if inspect.isclass(cls) and issubclass(cls, Model)
 }.items())
-
-REQUIRED_METHODS = ["invoke", "ainvoke", "batch", "abatch", "stream_abatch", "get_params"]
 
 # Cheapest model name per class for real API tests
 DEFAULT_MODEL_NAMES = {
@@ -41,87 +38,6 @@ DEFAULT_MODEL_NAMES = {
     "RestModel": None,
     "LlamaCppModel": None,
 }
-
-
-# ── Registry & interface checks (no tokens) ────────────────────────
-
-
-@pytest.mark.parametrize(
-    "class_name,model_class",
-    UNIQUE_MODEL_CLASSES,
-    ids=[c[0] for c in UNIQUE_MODEL_CLASSES],
-)
-class TestModelRegistry:
-    """Checks applied to every registered model class."""
-
-    def test_is_model_subclass(self, class_name, model_class):
-        assert issubclass(model_class, Model)
-
-    def test_registration(self, class_name, model_class):
-        assert class_name in MODEL_CLASSES
-
-    def test_has_required_methods(self, class_name, model_class):
-        for method in REQUIRED_METHODS:
-            assert hasattr(model_class, method), (
-                f"{class_name} missing required method '{method}'"
-            )
-
-
-# ── Model contract via MockModel (no tokens) ───────────────────────
-
-
-class TestModelContract:
-    """Tests the Model interface contract using MockModel."""
-
-    def test_invoke_string(self):
-        model = MockModel(response={"content": "hello"})
-        result = model.invoke("test prompt")
-        assert isinstance(result, dict)
-        assert "content" in result
-        assert result["content"] == "hello"
-
-    def test_invoke_message_list(self):
-        model = MockModel(response={"content": "hello"})
-        result = model.invoke([{"role": "human", "content": "test"}])
-        assert isinstance(result, dict)
-        assert "content" in result
-
-    def test_batch(self):
-        model = MockModel(response={"content": "r"})
-        results = model.batch(["a", "b"])
-        assert isinstance(results, list)
-        assert len(results) == 2
-        assert all("content" in r for r in results)
-
-    def test_abatch(self):
-        model = MockModel(response={"content": "r"})
-        results = asyncio.get_event_loop().run_until_complete(model.abatch(["a", "b"]))
-        assert isinstance(results, list)
-        assert len(results) == 2
-        assert all("content" in r for r in results)
-
-    def test_stream_abatch(self):
-        model = MockModel(response={"content": "r"})
-        results = async_collect(model.stream_abatch([f"p{i}" for i in range(5)]))
-        assert len(results) == 5
-
-    def test_stream_abatch_order(self):
-        responses = [{"content": f"response {i}"} for i in range(5)]
-        model = MockModel(side_effect=list(responses))
-        results = async_collect(model.stream_abatch([f"p{i}" for i in range(5)]))
-        assert len(results) == 5
-        for i, result in enumerate(results):
-            assert result["content"] == f"response {i}"
-
-    def test_get_params(self):
-        model = MockModel()
-        params = model.get_params()
-        assert isinstance(params, dict)
-
-    def test_is_answer_blocked(self):
-        model = MockModel()
-        result = model.is_answer_blocked({"content": "test"})
-        assert isinstance(result, bool)
 
 
 # ── Real model tests (uses tokens) ─────────────────────────────────

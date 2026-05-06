@@ -12,13 +12,14 @@ from yandexcloud import SDK
 from yandex_ai_studio_sdk.retry import RetryPolicy
 import warnings
 
-import time
 import threading
 from concurrent.futures import ThreadPoolExecutor
 from grpc.aio import AioRpcError
 from tqdm import tqdm
 from typing import AsyncGenerator
 from hivetracered.registry import Registry
+
+YANDEX_INTERNET_SEARCH_NOTICE = 'В интернете есть много сайтов с информацией на эту тему. [Посмотрите, что нашлось в поиске](https://ya.ru)'
 
 @Registry.model()
 class YandexGPTModel(Model):
@@ -167,12 +168,14 @@ class YandexGPTModel(Model):
             Returns a fallback response if the API request fails
         """
         try:
-            operation = self.client.run_deferred(self._format_prompt(prompt))
-            response = operation.wait()
+            operation = await asyncio.to_thread(
+                self.client.run_deferred, self._format_prompt(prompt)
+            )
+            response = await asyncio.to_thread(operation.wait)
             return self._format_response(response)
         except AioRpcError as e:
             return {
-                'content': 'В интернете есть много сайтов с информацией на эту тему. [Посмотрите, что нашлось в поиске](https://ya.ru)',
+                'content': YANDEX_INTERNET_SEARCH_NOTICE,
                 'role': 'assistant',
                 'status': 4
             }
@@ -225,22 +228,22 @@ class YandexGPTModel(Model):
                      unit="batch"):
             for prompt in formatted_prompts[i:i + self.max_concurrency]:
                 try:
-                    operation = self.client.run_deferred(prompt)
+                    operation = await asyncio.to_thread(self.client.run_deferred, prompt)
                     last_operation = operation
                     operations.append(operation)
                 except AioRpcError as e:
                     operations.append({
-                        'content': 'В интернете есть много сайтов с информацией на эту тему. [Посмотрите, что нашлось в поиске](https://ya.ru)',
+                        'content': YANDEX_INTERNET_SEARCH_NOTICE,
                         'role': 'assistant',
                         'status': 4
                     })
-            time.sleep(1)
+            await asyncio.sleep(1)
 
         # Wait for operations to complete
         if last_operation:
             with tqdm(total=1, desc=f"Waiting for operations to complete", unit="batch") as pbar:
-                while last_operation.get_status().is_running:
-                    time.sleep(0.1)
+                while (await asyncio.to_thread(last_operation.get_status)).is_running:
+                    await asyncio.sleep(0.1)
                 pbar.update(1)
 
         # Collect results
@@ -249,7 +252,8 @@ class YandexGPTModel(Model):
             if isinstance(operation, dict):
                 results.append(operation)
             else:
-                results.append(self._format_response(operation.get_result()))
+                result = await asyncio.to_thread(operation.get_result)
+                results.append(self._format_response(result))
         return results
     
     def is_answer_blocked(self, answer: dict) -> bool:
@@ -300,18 +304,18 @@ class YandexGPTModel(Model):
                      unit="batch"):
             for prompt in formatted_prompts[i:i + batch_size]:
                 try:
-                    operation = self.client.run_deferred(prompt)
+                    operation = await asyncio.to_thread(self.client.run_deferred, prompt)
                     operations.append(operation)
                 except AioRpcError as e:
                     # Return error response with proper error metadata
                     operations.append({
-                        'content': 'В интернете есть много сайтов с информацией на эту тему. [Посмотрите, что нашлось в поиске](https://ya.ru)',
+                        'content': YANDEX_INTERNET_SEARCH_NOTICE,
                         'role': 'assistant',
                         'status': 4,
                         'error': str(e),
                         'error_type': type(e).__name__
                     })
-            time.sleep(1)
+            await asyncio.sleep(1)
 
         # Use context manager for proper cleanup even if errors occur
         with tqdm(total=len(operations), desc=f"Processing requests with {self.model_name}", unit="request") as progress_bar:
@@ -321,5 +325,5 @@ class YandexGPTModel(Model):
                 if isinstance(operation, dict):
                     yield operation
                 else:
-                    response = operation.wait()
+                    response = await asyncio.to_thread(operation.wait)
                     yield self._format_response(response)

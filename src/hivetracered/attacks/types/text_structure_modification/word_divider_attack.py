@@ -4,6 +4,7 @@ Word divider attack that inserts characters between letters in words to modify t
 
 from typing import Union, List, Dict, Optional
 from hivetracered.attacks.algo_attack import AlgoAttack
+import math
 import random
 from hivetracered.registry import Registry
 
@@ -44,7 +45,7 @@ class WordDividerAttack(AlgoAttack):
         name += ")"
         
         divider_desc = "dots" if divider_char == "." else f"'{divider_char}' characters"
-        density_desc = "" if density == 1.0 else f" with {int(density * 100)}% word modification rate"
+        density_desc = "" if math.isclose(density, 1.0) else f" with {int(density * 100)}% word modification rate"
         description = f"Inserts {divider_desc} between letters in words{density_desc}, potentially bypassing content filters while keeping text readable."
         
         super().__init__(raw=raw, template=template, name=name, description=description)

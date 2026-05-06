@@ -24,48 +24,51 @@ def is_parquet_serializable(value) -> bool:
     except (pa.ArrowInvalid, pa.ArrowTypeError, TypeError, ValueError):
         return False
 
+def _convert_dict_to_parquet_compatible(value: dict) -> dict:
+    res = {}
+    for k, v in value.items():
+        # If the value is an empty dictionary, skip it
+        if isinstance(v, dict) and not v:
+            res[k] = None
+            continue
+        converted = make_parquet_compatible(v)
+        # Only add if the converted value is serializable
+        if is_parquet_serializable(converted):
+            res[k] = converted
+    return res
+
+def _convert_object_to_parquet_compatible(value):
+    name = value.__class__.__name__
+    res_args = {}
+    for k, v in value.__dict__.items():
+        if k.startswith("_"):
+            continue
+        converted = make_parquet_compatible(v)
+        # Only add if the converted value is serializable
+        if is_parquet_serializable(converted):
+            res_args[k] = converted
+    return {name: res_args} if res_args else str(value)
+
 def make_parquet_compatible(value):
     # Check for basic Parquet-compatible types
     if isinstance(value, (int, float, str, bool, type(None))):
         return value
     # Recursively process lists
-    elif isinstance(value, list) or isinstance(value, np.ndarray):
+    if isinstance(value, (list, np.ndarray)):
         return [make_parquet_compatible(item) for item in value]
     # Recursively process tuples
-    elif isinstance(value, tuple):
+    if isinstance(value, tuple):
         return tuple(make_parquet_compatible(item) for item in value)
     # Recursively process sets
-    elif isinstance(value, set):
+    if isinstance(value, set):
         return set(make_parquet_compatible(item) for item in value)
     # Recursively process dictionaries
-    if isinstance(value, Model):
+    if isinstance(value, (Model, BaseAttack)):
         return value.get_params()
-    elif isinstance(value, BaseAttack):
-        return value.get_params()
-    elif isinstance(value, dict):
-        res = {}
-        for k, v in value.items():
-            # If the value is an empty dictionary, skip it
-            if isinstance(v, dict) and not v:
-                res[k] = None
-            else:
-                converted = make_parquet_compatible(v)
-                # Only add if the converted value is serializable
-                if is_parquet_serializable(converted):
-                    res[k] = converted
-        return res
+    if isinstance(value, dict):
+        return _convert_dict_to_parquet_compatible(value)
     # Convert any other type to its string representation
-    else:
-        name = value.__class__.__name__
-        args = value.__dict__
-        res_args = {}
-        for k, v in args.items():
-            if not k.startswith("_"):
-                converted = make_parquet_compatible(v)
-                # Only add if the converted value is serializable
-                if is_parquet_serializable(converted):
-                    res_args[k] = converted
-        return {name: res_args} if res_args else str(value)
+    return _convert_object_to_parquet_compatible(value)
     
 def save_to_csv(data: Dict[str, Any], output_dir: str, filename: str) -> str:
     """
@@ -281,7 +284,7 @@ def load_from_json(file_path: str) -> Dict[str, Any]:
         try:
             df = pd.read_json(file_path, orient='records')
             data = df.to_dict(orient='records')
-        except:
+        except ValueError:
             # If that fails, try reading as a general object
             data = pd.read_json(file_path, typ='series').to_dict()
         

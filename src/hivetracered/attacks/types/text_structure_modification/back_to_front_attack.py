@@ -2,7 +2,6 @@
 Back-to-front attack that reverses the text order.
 """
 
-from typing import Union, List, Dict, Optional
 from hivetracered.attacks.algo_attack import AlgoAttack
 from hivetracered.registry import Registry
 

@@ -1,4 +1,3 @@
-from typing import Union, List, Dict, Optional
 from collections.abc import AsyncGenerator
 from abc import ABC, abstractmethod
 from hivetracered.attacks.template_attack import TemplateAttack

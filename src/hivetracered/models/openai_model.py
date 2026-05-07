@@ -1,15 +1,8 @@
-from typing import List, Any, Optional, Union, Dict
 from langchain_openai import ChatOpenAI
 from hivetracered.models.langchain_model import LangchainModel
 from dotenv import load_dotenv
 import os
-from collections.abc import AsyncGenerator
-import asyncio
-from tqdm import tqdm
-import warnings
 
-from langchain_core.rate_limiters import InMemoryRateLimiter
-from langchain_core.runnables import RunnableLambda
 from hivetracered.registry import Registry
 
 @Registry.model()
@@ -43,22 +36,7 @@ class OpenAIModel(LangchainModel):
         self.model_name = model
         self.max_retries = max_retries
 
-        # Handle deprecation
-        if batch_size is not None:
-            warnings.warn(
-                "The 'batch_size' parameter is deprecated and will be removed in v2.0.0. "
-                "Use 'max_concurrency' instead.",
-                DeprecationWarning,
-                stacklevel=2
-            )
-            if max_concurrency is None:
-                max_concurrency = batch_size
-
-        # Set default if neither provided
-        if max_concurrency is None:
-            max_concurrency = 1
-
-        self.max_concurrency = max_concurrency
+        self.max_concurrency = self._resolve_concurrency(max_concurrency, batch_size, default=1)
         # Keep for backward compatibility in get_params()
         self.batch_size = self.max_concurrency
 
@@ -66,10 +44,6 @@ class OpenAIModel(LangchainModel):
 
         if "temperature" not in self.kwargs:
             self.kwargs["temperature"] = 0.000001
-        rate_limiter = InMemoryRateLimiter(
-            requests_per_second=rpm / 60,
-            check_every_n_seconds=0.1,
-        )
+        rate_limiter = self._make_rate_limiter(rpm)
         self.client = ChatOpenAI(model=model, rate_limiter=rate_limiter, base_url=base_url, api_key=api_key, **self.kwargs)
         self.client = self._add_retry_policy(self.client)
-    

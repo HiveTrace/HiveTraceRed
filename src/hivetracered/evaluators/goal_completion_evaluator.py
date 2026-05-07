@@ -7,7 +7,7 @@ plus an overall score, returning continuous scores suitable for iterative attack
 
 import json
 import re
-from typing import Dict, Any, Optional
+from typing import Any
 
 from hivetracered.evaluators.model_evaluator import ModelEvaluator
 from hivetracered.models.base_model import Model

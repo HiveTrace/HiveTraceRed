@@ -22,8 +22,8 @@ from __future__ import annotations
 
 import asyncio
 import json
-from typing import Any, AsyncGenerator, Dict, List
-from unittest.mock import AsyncMock, MagicMock, patch
+from typing import Any, AsyncGenerator
+from unittest.mock import MagicMock, patch
 
 import aiohttp
 import pytest
@@ -300,7 +300,7 @@ def test_parse_response_happy_paths(response_json_field, text, expected):
         kwargs["response_json_field"] = response_json_field
     model = RestModel(**kwargs)
 
-    assert model._parse_response(200, text) == expected
+    assert model._parse_response(text) == expected
 
 
 def test_parse_response_raises_when_jsonpath_matches_nothing():
@@ -308,14 +308,14 @@ def test_parse_response_raises_when_jsonpath_matches_nothing():
     payload = json.dumps({"other": 1})
 
     with pytest.raises(ValueError, match=r"matched nothing"):
-        model._parse_response(200, payload)
+        model._parse_response(payload)
 
 
 def test_parse_response_raises_on_malformed_json():
     model = RestModel(uri="http://x/y", response_json_field="$.x")
 
     with pytest.raises(json.JSONDecodeError):
-        model._parse_response(200, "{not json")
+        model._parse_response("{not json")
 
 
 # ── _should_retry / _retry_delay / _get_aiohttp_proxy ──────────────

@@ -8,7 +8,6 @@ through browser automation when no official API is available.
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import Dict, List, Optional, Tuple, Union
 from collections.abc import AsyncGenerator
 
 import asyncio

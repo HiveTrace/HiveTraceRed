@@ -9,7 +9,7 @@ Reference: https://arxiv.org/abs/2312.02119
 """
 
 import asyncio
-from typing import Optional, Dict, Any, List, Tuple
+from typing import Optional, Any
 from dataclasses import dataclass, field
 
 from hivetracered.attacks.iterative_attack import IterativeAttack, IterationResult, IterativeAttackResult, LanguageConfig

@@ -11,8 +11,6 @@ from pathlib import Path
 
 import pytest
 
-from hivetracered.attacks.model_attack import ModelAttack
-from hivetracered.attacks.template_attack import TemplateAttack
 from hivetracered.attacks.yaml_loader import load_attacks_from_dir
 from hivetracered.registry import Registry
 from tests.conftest import MockModel

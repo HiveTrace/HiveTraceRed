@@ -2,8 +2,6 @@
 JSON transform attack that converts strings into JSON objects with alternating words as keys and values.
 """
 
-from typing import Union, List, Dict, Optional
-import json
 from hivetracered.attacks.algo_attack import AlgoAttack
 from hivetracered.registry import Registry
 

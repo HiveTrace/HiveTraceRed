@@ -3,7 +3,6 @@ Utilities for loading default keywords from CSV files.
 """
 import os
 import csv
-from typing import Dict, List, Set, Optional
 
 def get_data_file_path(filename: str) -> str:
     """

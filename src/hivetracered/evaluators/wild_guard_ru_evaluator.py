@@ -1,8 +1,6 @@
-from typing import Dict, Any, Union, List, Optional
+from typing import Any
 from hivetracered.evaluators.model_evaluator import ModelEvaluator
 from hivetracered.models.base_model import Model
-import re
-from collections.abc import Coroutine
 from hivetracered.registry import Registry
 
 ERROR_LITERAL_RU = "ошибка"
@@ -64,20 +62,3 @@ class WildGuardGPTRuEvaluator(ModelEvaluator):
             'success': success,
             'raw_evaluation': evaluation_response,
         }
-    
-    def _extract_answer(self, text: str, pattern: str, default: str) -> str:
-        """
-        Extract an answer using a regex pattern.
-        
-        Args:
-            text: The text to search in
-            pattern: The regex pattern to use
-            default: The default value to return if no match is found
-            
-        Returns:
-            The extracted answer or the default value
-        """
-        match = re.search(pattern, text, re.IGNORECASE)
-        if match and match.group(1):
-            return match.group(1).lower()
-        return default 

@@ -11,7 +11,6 @@ Each YAML declares one attack:
 """
 
 from pathlib import Path
-from typing import Dict, Type
 
 import yaml
 

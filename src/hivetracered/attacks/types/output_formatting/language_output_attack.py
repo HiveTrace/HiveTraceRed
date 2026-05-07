@@ -1,4 +1,3 @@
-from typing import Optional
 from hivetracered.attacks.template_attack import TemplateAttack
 from hivetracered.registry import Registry
 

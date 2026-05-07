@@ -25,7 +25,7 @@ project does not depend on pytest-asyncio.
 from __future__ import annotations
 
 import asyncio
-from typing import Any, AsyncGenerator, List
+from typing import Any, AsyncGenerator
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 

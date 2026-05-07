@@ -29,7 +29,7 @@ Usage::
 import importlib
 import logging
 import pkgutil
-from typing import Any, Dict, List, Optional, Set, Type
+from typing import Any
 
 logger = logging.getLogger(__name__)
 

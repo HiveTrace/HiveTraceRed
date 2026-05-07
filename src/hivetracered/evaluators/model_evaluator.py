@@ -1,4 +1,5 @@
-from typing import Dict, Any, Union, List, Optional
+import re
+from typing import Any
 from collections.abc import AsyncGenerator
 from hivetracered.evaluators.base_evaluator import BaseEvaluator
 from hivetracered.models.base_model import Model
@@ -36,13 +37,16 @@ class ModelEvaluator(BaseEvaluator):
         """
         return {}
 
-    def create_evaluation_prompt(self, prompt: str | list[dict[str, str]], response: str) -> str:
+    def create_evaluation_prompt(self, prompt: str | list[dict[str, str]], response: Any) -> str:
         """
         Create the evaluation prompt to send to the model.
 
         Args:
             prompt: The original prompt as a string or list of messages
-            response: The model's response to evaluate
+            response: The model's response to evaluate. Accepts a string,
+                a dict with a ``content`` key, an object exposing a
+                ``.content`` attribute (e.g. LangChain message), or any
+                value with a sensible ``__str__``.
 
         Returns:
             The formatted evaluation prompt
@@ -95,6 +99,23 @@ class ModelEvaluator(BaseEvaluator):
         Parse the evaluation response from the model.
         """
         pass
+
+    def _extract_answer(self, text: str, pattern: str, default: str) -> str:
+        """
+        Extract an answer using a regex pattern.
+
+        Args:
+            text: The text to search in
+            pattern: The regex pattern to use
+            default: The default value to return if no match is found
+
+        Returns:
+            The extracted answer or the default value
+        """
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match and match.group(1):
+            return match.group(1).lower()
+        return default
     
     async def stream_abatch(self, prompts: list[dict[str, str]], responses: list[Any]) -> AsyncGenerator[dict[str, Any], None]:
         """

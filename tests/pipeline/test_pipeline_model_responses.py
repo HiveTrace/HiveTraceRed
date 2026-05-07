@@ -6,11 +6,6 @@ propagation from the model, and is_blocked flag.
 
 from __future__ import annotations
 
-from typing import Any, AsyncGenerator, Dict, List
-
-import pytest
-
-from hivetracered.models.base_model import Model
 from hivetracered.pipeline.model_responses import stream_model_responses
 from tests.conftest import MockModel, async_collect
 
@@ -18,11 +13,11 @@ from tests.conftest import MockModel, async_collect
 # ── Yielded shape ───────────────────────────────────────────────────
 
 
-def test_stream_model_responses_record_contains_response_and_metadata(tmp_path):
+def test_stream_model_responses_record_contains_response_and_metadata():
     model = MockModel(side_effect=[{"content": "the-answer"}])
     attack_prompts = [{"prompt": "hello", "attack_name": "A", "extra": "kept"}]
 
-    results = async_collect(stream_model_responses(model, attack_prompts, str(tmp_path)))
+    results = async_collect(stream_model_responses(model, attack_prompts))
 
     record = results[0]
     assert record["response"] == "the-answer"
@@ -37,11 +32,11 @@ def test_stream_model_responses_record_contains_response_and_metadata(tmp_path):
 # ── Ordering ────────────────────────────────────────────────────────
 
 
-def test_stream_model_responses_preserves_input_order(tmp_path):
+def test_stream_model_responses_preserves_input_order():
     model = MockModel(side_effect=[{"content": f"r{i}"} for i in range(5)])
     attack_prompts = [{"prompt": f"p{i}", "attack_name": "A"} for i in range(5)]
 
-    results = async_collect(stream_model_responses(model, attack_prompts, str(tmp_path)))
+    results = async_collect(stream_model_responses(model, attack_prompts))
 
     assert [r["response"] for r in results] == [f"r{i}" for i in range(5)]
     assert [r["prompt"] for r in results] == [f"p{i}" for i in range(5)]
@@ -50,22 +45,22 @@ def test_stream_model_responses_preserves_input_order(tmp_path):
 # ── Error propagation ───────────────────────────────────────────────
 
 
-def test_stream_model_responses_records_error_when_model_returns_error_field(tmp_path):
+def test_stream_model_responses_records_error_when_model_returns_error_field():
     # Per the source: when a response dict has "error" key, the record copies it.
     model = MockModel(side_effect=[{"content": "", "error": "rate-limited"}])
     attack_prompts = [{"prompt": "p", "attack_name": "A"}]
 
-    results = async_collect(stream_model_responses(model, attack_prompts, str(tmp_path)))
+    results = async_collect(stream_model_responses(model, attack_prompts))
 
     assert results[0]["error"] == "rate-limited"
     assert results[0]["response"] == ""
 
 
-def test_stream_model_responses_does_not_add_error_field_on_success(tmp_path):
+def test_stream_model_responses_does_not_add_error_field_on_success():
     model = MockModel(side_effect=[{"content": "ok"}])
     attack_prompts = [{"prompt": "p", "attack_name": "A"}]
 
-    results = async_collect(stream_model_responses(model, attack_prompts, str(tmp_path)))
+    results = async_collect(stream_model_responses(model, attack_prompts))
 
     assert "error" not in results[0]
 
@@ -78,14 +73,14 @@ class _BlockingModel(MockModel):
         return answer.get("content") == "BLOCKED"
 
 
-def test_stream_model_responses_marks_blocked_when_model_says_blocked(tmp_path):
+def test_stream_model_responses_marks_blocked_when_model_says_blocked():
     model = _BlockingModel(side_effect=[{"content": "BLOCKED"}, {"content": "ok"}])
     attack_prompts = [
         {"prompt": "p0", "attack_name": "A"},
         {"prompt": "p1", "attack_name": "A"},
     ]
 
-    results = async_collect(stream_model_responses(model, attack_prompts, str(tmp_path)))
+    results = async_collect(stream_model_responses(model, attack_prompts))
 
     assert results[0]["is_blocked"] is True
     assert results[1]["is_blocked"] is False
@@ -94,9 +89,9 @@ def test_stream_model_responses_marks_blocked_when_model_says_blocked(tmp_path):
 # ── Empty input ─────────────────────────────────────────────────────
 
 
-def test_stream_model_responses_empty_input_yields_nothing(tmp_path):
+def test_stream_model_responses_empty_input_yields_nothing():
     model = MockModel()
 
-    results = async_collect(stream_model_responses(model, [], str(tmp_path)))
+    results = async_collect(stream_model_responses(model, []))
 
     assert results == []

@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import pytest
 
 from hivetracered.pipeline.mitigations import (
     SYSTEM_PROMPT_HARDENING,

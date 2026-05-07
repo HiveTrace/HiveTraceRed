@@ -1,3 +1,4 @@
+# pyright: reportUnusedParameter=false, reportUnusedFunction=false
 """Shared contract tests across the four ChatOpenAI-based adapters.
 
 OpenAIModel, CloudRuModel, OpenRouterModel, and VLLMModel each construct a
@@ -20,6 +21,7 @@ import pytest
 
 from hivetracered.models import (
     cloud_ru_model as cm,
+    langchain_model as lm,
     openai_model as om,
     openrouter_model as orm,
     vllm_model as vm,
@@ -49,7 +51,7 @@ def _setup_adapter(
     if has_rate_limiter:
         rl_instance = MagicMock(name="InMemoryRateLimiter-instance")
         fake_rate_limiter = MagicMock(name="InMemoryRateLimiter-class", return_value=rl_instance)
-        monkeypatch.setattr(module, "InMemoryRateLimiter", fake_rate_limiter)
+        monkeypatch.setattr(lm, "InMemoryRateLimiter", fake_rate_limiter)
 
     monkeypatch.setattr(module, "load_dotenv", lambda *a, **kw: False)
     monkeypatch.delenv(env_var, raising=False)

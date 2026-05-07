@@ -1,4 +1,4 @@
-from typing import List, Any, Optional, Union, Dict
+import warnings
 from collections.abc import AsyncGenerator
 from abc import ABC, abstractmethod
 
@@ -83,6 +83,33 @@ class Model(ABC):
         """
         return self.__dict__
     
+    @staticmethod
+    def _resolve_concurrency(
+        max_concurrency: int | None,
+        batch_size: int | None,
+        default: int,
+    ) -> int:
+        """
+        Resolve effective concurrency, honoring the deprecated `batch_size` alias.
+
+        Emits DeprecationWarning if batch_size is provided. When both are set,
+        max_concurrency wins. Falls back to `default` when neither is provided.
+        """
+        if batch_size is not None:
+            warnings.warn(
+                "The 'batch_size' parameter is deprecated and will be removed in v2.0.0. "
+                "Use 'max_concurrency' instead.",
+                DeprecationWarning,
+                stacklevel=3,
+            )
+            if max_concurrency is None:
+                max_concurrency = batch_size
+
+        if max_concurrency is None:
+            max_concurrency = default
+
+        return max_concurrency
+
     @abstractmethod
     async def stream_abatch(self, prompts: list[str | list[dict[str, str]]]) -> AsyncGenerator[dict, None]:
         """

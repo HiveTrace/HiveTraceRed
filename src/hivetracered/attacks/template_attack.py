@@ -1,4 +1,3 @@
-from typing import Union, List, Optional, Dict
 from collections.abc import AsyncGenerator
 from hivetracered.attacks.base_attack import BaseAttack
 

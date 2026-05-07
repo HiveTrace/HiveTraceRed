@@ -2,7 +2,6 @@
 Unicode-based attacks that transform text into various unicode styles to bypass detection systems.
 """
 
-from typing import Union, List, Dict, Optional
 from hivetracered.attacks.algo_attack import AlgoAttack
 import random
 from hivetracered.registry import Registry

@@ -7,7 +7,6 @@ interface at chat.mistral.ai when no official API is available.
 
 from __future__ import annotations
 
-from typing import Tuple
 
 from playwright.async_api import (
     BrowserContext,

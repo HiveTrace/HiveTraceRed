@@ -16,7 +16,7 @@ import logging
 import random
 import time
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 from collections.abc import AsyncGenerator
 
 import aiohttp
@@ -156,7 +156,7 @@ class RestModel(Model):
 
         return url, hdrs, body
 
-    def _parse_response(self, status_code: int, text: str) -> dict:
+    def _parse_response(self, text: str) -> dict:
         if not self.response_json_field or not text or not text.strip():
             return {"content": text or ""}
 
@@ -213,7 +213,7 @@ class RestModel(Model):
                     continue
 
                 resp.raise_for_status()
-                return self._parse_response(resp.status_code, resp.text)
+                return self._parse_response(resp.text)
             except Exception as e:
                 if attempt < self.max_retries:
                     time.sleep(self._retry_delay(attempt))
@@ -259,7 +259,7 @@ class RestModel(Model):
                                 status=resp.status,
                                 message=text,
                             )
-                        return self._parse_response(resp.status, text)
+                        return self._parse_response(text)
             except Exception as e:
                 if attempt < self.max_retries:
                     await asyncio.sleep(self._retry_delay(attempt))

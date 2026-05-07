@@ -1,3 +1,4 @@
+# pyright: reportUnusedParameter=false, reportUnusedFunction=false
 """Unit tests for hivetracered.models.cloud_ru_model.CloudRuModel — adapter-specific.
 
 Shared adapter contract tests live in tests/models/test_models_chatopenai_adapter_contract.py.
@@ -12,6 +13,7 @@ from unittest.mock import MagicMock
 import pytest
 
 from hivetracered.models import cloud_ru_model as cm
+from hivetracered.models import langchain_model as lm
 from hivetracered.models.cloud_ru_model import CloudRuModel
 
 
@@ -31,7 +33,7 @@ def fake_chat_openai(monkeypatch):
 def fake_rate_limiter(monkeypatch):
     instance = MagicMock(name="InMemoryRateLimiter-instance")
     cls = MagicMock(name="InMemoryRateLimiter-class", return_value=instance)
-    monkeypatch.setattr(cm, "InMemoryRateLimiter", cls)
+    monkeypatch.setattr(lm, "InMemoryRateLimiter", cls)
     return cls
 
 

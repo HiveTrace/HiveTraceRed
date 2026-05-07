@@ -6,7 +6,7 @@ import os
 import pandas as pd
 import numpy as np
 import pyarrow as pa
-from typing import Dict, Any
+from typing import Any
 from datetime import datetime
 from hivetracered.models.base_model import Model
 from hivetracered.attacks.base_attack import BaseAttack

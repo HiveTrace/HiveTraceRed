@@ -7,7 +7,7 @@ classes registered after this module is imported are still visible.
 """
 
 from collections.abc import Mapping
-from typing import Any, Dict, List
+from typing import Any
 from collections.abc import Iterator
 
 from hivetracered.registry import Registry
@@ -18,10 +18,6 @@ Registry.discover("hivetracered.attacks.types")
 Registry.discover("hivetracered.evaluators")
 
 # Re-export base classes for existing downstream imports.
-from hivetracered.attacks.base_attack import BaseAttack
-from hivetracered.models.base_model import Model
-from hivetracered.attacks import ModelAttack
-from hivetracered.attacks.iterative_attack import IterativeAttack
 
 
 class _RegistryView(Mapping):

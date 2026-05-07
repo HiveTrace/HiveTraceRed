@@ -3,7 +3,6 @@ Typo attack that introduces typographical errors into text to modify its structu
 """
 
 import random
-from typing import Union, List, Dict, Optional, Set
 from hivetracered.attacks.algo_attack import AlgoAttack
 from hivetracered.registry import Registry
 

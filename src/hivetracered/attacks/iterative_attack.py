@@ -8,7 +8,7 @@ import json
 import re
 from abc import abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, Dict, List, Optional, Union
+from typing import Any
 from collections.abc import AsyncGenerator
 
 from hivetracered.attacks.base_attack import BaseAttack

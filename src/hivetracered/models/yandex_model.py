@@ -1,18 +1,11 @@
-from typing import List, Any, Optional, Union, Dict
-from abc import ABC, abstractmethod
+from typing import Any
 import os
-import aiohttp
-import json
 import asyncio
 from hivetracered.models.base_model import Model
 from dotenv import load_dotenv
-import requests
 from yandex_ai_studio_sdk import AIStudio
-from yandexcloud import SDK
 from yandex_ai_studio_sdk.retry import RetryPolicy
-import warnings
 
-import threading
 from concurrent.futures import ThreadPoolExecutor
 from grpc.aio import AioRpcError
 from tqdm import tqdm
@@ -47,22 +40,7 @@ class YandexGPTModel(Model):
         self.model_name = model
         self.max_retries = max_retries
 
-        # Handle deprecation
-        if batch_size is not None:
-            warnings.warn(
-                "The 'batch_size' parameter is deprecated and will be removed in v2.0.0. "
-                "Use 'max_concurrency' instead.",
-                DeprecationWarning,
-                stacklevel=2
-            )
-            if max_concurrency is None:
-                max_concurrency = batch_size
-
-        # Set default if neither provided
-        if max_concurrency is None:
-            max_concurrency = 10
-
-        self.max_concurrency = max_concurrency
+        self.max_concurrency = self._resolve_concurrency(max_concurrency, batch_size, default=10)
         # Keep for backward compatibility in get_params()
         self.batch_size = self.max_concurrency
 

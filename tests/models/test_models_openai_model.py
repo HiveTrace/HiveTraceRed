@@ -1,3 +1,4 @@
+# pyright: reportUnusedParameter=false, reportUnusedFunction=false
 """Unit tests for hivetracered.models.openai_model.OpenAIModel — adapter-specific.
 
 Shared adapter contract tests (max_concurrency default, temperature resolution,
@@ -16,6 +17,7 @@ from unittest.mock import MagicMock
 
 import pytest
 
+from hivetracered.models import langchain_model as lm
 from hivetracered.models import openai_model as om
 from hivetracered.models.openai_model import OpenAIModel
 
@@ -36,7 +38,7 @@ def fake_chat_openai(monkeypatch):
 def fake_rate_limiter(monkeypatch):
     instance = MagicMock(name="InMemoryRateLimiter-instance")
     cls = MagicMock(name="InMemoryRateLimiter-class", return_value=instance)
-    monkeypatch.setattr(om, "InMemoryRateLimiter", cls)
+    monkeypatch.setattr(lm, "InMemoryRateLimiter", cls)
     return cls
 
 

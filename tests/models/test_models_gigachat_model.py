@@ -21,7 +21,6 @@ belongs to LangchainModel's own test surface.
 from __future__ import annotations
 
 import warnings
-from unittest.mock import MagicMock
 
 import pytest
 

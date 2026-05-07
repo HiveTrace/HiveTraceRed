@@ -7,7 +7,6 @@ errors='replace' (matches the documented contract via stdlib codec semantics).
 
 from __future__ import annotations
 
-import pytest
 
 from hivetracered.attacks.types.token_smuggling.encoding_attack import EncodingAttack
 

@@ -13,10 +13,10 @@ import signal
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, List, Dict, Any, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from playwright.sync_api import sync_playwright, Page, Browser
+    from playwright.sync_api import Page, Browser  # noqa: F401
 
 
 # JavaScript tracking scripts
@@ -479,8 +479,8 @@ class WebActionRecorder:
             verbose: If True, print events to console as they're captured
         """
         self.events: list[dict[str, Any]] = []
-        self.browser: Optional["Browser"] = None
-        self.page: Optional["Page"] = None
+        self.browser: "Browser | None" = None
+        self.page: "Page | None" = None
         self.verbose = verbose
         self._playwright = None
         self._cleanup_called = False
@@ -690,7 +690,7 @@ def main():
     """CLI entry point for the web action recorder."""
     # Check for playwright availability early
     try:
-        from playwright.sync_api import sync_playwright
+        from playwright.sync_api import sync_playwright  # noqa: F401
     except ImportError:
         print("Error: The web action recorder requires the 'web' extras.", file=sys.stderr)
         print("Install with: pip install 'hivetracered[web]'", file=sys.stderr)

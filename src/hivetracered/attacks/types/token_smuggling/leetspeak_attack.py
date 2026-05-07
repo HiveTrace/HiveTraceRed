@@ -2,7 +2,6 @@
 Leetspeak attack that converts text to leetspeak (replacing letters with numbers or symbols).
 """
 
-from typing import Union, List, Dict, Optional
 from hivetracered.attacks.algo_attack import AlgoAttack
 from hivetracered.registry import Registry
 

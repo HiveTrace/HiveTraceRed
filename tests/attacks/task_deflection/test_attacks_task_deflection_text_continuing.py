@@ -4,12 +4,10 @@ Covers __init__ defaults (raw_prompt=False), the _make_template path
 (prefix-instruction prepended unless raw_prompt=True; the literal
 "Вот преобразованный запрос:" marker stripped from the model's response),
 apply() for str and list-of-dict (role=="user" — note: parent ModelAttack uses
-role=="human"), the async aapply_to_list and stream_abatch generators.
+role=="human"), and the async stream_abatch generator.
 """
 
 from __future__ import annotations
-
-import asyncio
 
 import pytest
 
@@ -146,48 +144,6 @@ def test_apply_list_with_no_user_role_returns_copy_unchanged_and_does_not_call_m
     result = attack.apply(msgs)
 
     assert result == msgs
-    assert model.call_log == []
-
-
-# ── aapply_to_list ──────────────────────────────────────────────────────
-
-
-def test_aapply_to_list_handles_mixed_str_and_list_prompts():
-    model = MockModel(side_effect=[
-        {"content": f"{PREFIX_MARKER} c1"},
-        {"content": f"{PREFIX_MARKER} c2"},
-    ])
-    attack = TextContinuingAttack(model=model, raw_prompt=True)
-    prompts = [
-        "string prompt",
-        [{"role": "user", "content": "list prompt"}],
-    ]
-
-    coro = attack.aapply_to_list(prompts)
-    result = asyncio.new_event_loop().run_until_complete(coro)
-
-    assert result[0] == "c1"
-    assert result[1] == [{"role": "user", "content": "c2"}]
-
-
-def test_aapply_to_list_skips_messages_that_are_not_role_user():
-    model = MockModel(response={"content": f"{PREFIX_MARKER} new"})
-    attack = TextContinuingAttack(model=model, raw_prompt=True)
-    prompts = [
-        [
-            {"role": "system", "content": "sys"},
-            {"role": "assistant", "content": "ai"},
-        ],
-    ]
-
-    coro = attack.aapply_to_list(prompts)
-    result = asyncio.new_event_loop().run_until_complete(coro)
-
-    # No user messages → model is never called, prompt unchanged.
-    assert result == [[
-        {"role": "system", "content": "sys"},
-        {"role": "assistant", "content": "ai"},
-    ]]
     assert model.call_log == []
 
 

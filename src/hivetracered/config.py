@@ -9,7 +9,7 @@ file is the single source of truth for a run.
 
 import logging
 import os
-from typing import Any, Dict
+from typing import Any
 
 import yaml
 

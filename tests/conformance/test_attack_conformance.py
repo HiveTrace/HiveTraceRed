@@ -14,11 +14,9 @@ import pytest
 
 from hivetracered.attacks.base_attack import BaseAttack
 from hivetracered.attacks.model_attack import ModelAttack
-from hivetracered.attacks.template_attack import TemplateAttack
 from hivetracered.attacks.algo_attack import AlgoAttack
 from hivetracered.attacks.iterative_attack import IterativeAttack
 from hivetracered.evaluators.keyword_evaluator import KeywordEvaluator
-from hivetracered.evaluators.scoring_judge_evaluator import ScoringJudgeEvaluator
 from hivetracered.pipeline.constants import ATTACK_CLASSES
 from hivetracered.pipeline.create_dataset import build_attack_from_config
 from tests.conftest import MockModel, async_collect

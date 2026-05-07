@@ -7,7 +7,7 @@ generates jailbreak prompts and refines them based on target model responses.
 Reference: https://arxiv.org/abs/2310.08419
 """
 
-from typing import Optional, Dict, Any, List, Tuple
+from typing import Any
 
 from hivetracered.attacks.iterative_attack import IterativeAttack, IterationResult, IterativeAttackResult, LanguageConfig
 from hivetracered.models.base_model import Model

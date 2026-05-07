@@ -12,7 +12,7 @@ import asyncio
 import logging
 import os
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import yaml
 
@@ -110,7 +110,7 @@ async def get_model_responses(
         return []
 
     model_responses: list[dict[str, Any]] = []
-    async for response in stream_model_responses(response_model, attack_prompts, run_dir):
+    async for response in stream_model_responses(response_model, attack_prompts):
         model_responses.append(response)
 
     if not model_responses:

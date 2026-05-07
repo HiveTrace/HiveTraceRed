@@ -2,7 +2,7 @@
 Past tense attack that converts text to past tense using an LLM.
 """
 
-from typing import Union, List, Dict, Optional, Any
+from typing import Any
 from hivetracered.attacks.model_attack import ModelAttack
 from hivetracered.models.base_model import Model
 from hivetracered.registry import Registry

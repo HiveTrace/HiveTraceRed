@@ -11,7 +11,7 @@ import asyncio
 import logging
 import os
 from pathlib import Path
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, List, Tuple
 from unittest.mock import MagicMock
 
 import pandas as pd
@@ -373,7 +373,7 @@ def test_get_model_responses_no_response_model_returns_empty(monkeypatch, tmp_pa
 def test_get_model_responses_no_responses_returns_empty(monkeypatch, tmp_path, caplog):
     caplog.set_level(logging.WARNING, logger="hivetracered.runner")
     monkeypatch.setattr(runner, "setup_model", lambda cfg: MagicMock())
-    monkeypatch.setattr(runner, "stream_model_responses", lambda model, prompts, run_dir: _aiter([]))
+    monkeypatch.setattr(runner, "stream_model_responses", lambda model, prompts: _aiter([]))
     saved: List[str] = []
     monkeypatch.setattr(
         runner, "save_pipeline_results",

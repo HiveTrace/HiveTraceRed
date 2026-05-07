@@ -1,10 +1,10 @@
-from typing import Optional, Dict, Any, Union, List
+from typing import Any
 from collections.abc import AsyncGenerator
 
 from hivetracered.attacks.base_attack import BaseAttack
 from hivetracered.attacks.model_attack import ModelAttack
 from hivetracered.models.base_model import Model
-from hivetracered.utils import get_unsafe_word, GET_UNSAFE_WORD_PROMPT
+from hivetracered.utils import GET_UNSAFE_WORD_PROMPT
 from hivetracered.registry import Registry
 
 

@@ -2,7 +2,6 @@
 Word divider attack that inserts characters between letters in words to modify text structure.
 """
 
-from typing import Union, List, Dict, Optional
 from hivetracered.attacks.algo_attack import AlgoAttack
 import math
 import random

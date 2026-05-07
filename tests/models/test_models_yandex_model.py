@@ -11,7 +11,6 @@ from __future__ import annotations
 import asyncio
 import warnings
 from types import SimpleNamespace
-from typing import Any, List
 from unittest.mock import MagicMock
 
 import pytest

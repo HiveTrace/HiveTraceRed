@@ -1,13 +1,6 @@
-from typing import List, Any, Optional, Union, Dict
 from hivetracered.models.langchain_model import LangchainModel
 from langchain_google_genai import ChatGoogleGenerativeAI
 from dotenv import load_dotenv
-import os
-from collections.abc import AsyncGenerator
-import asyncio
-from tqdm import tqdm
-import warnings
-from langchain_core.rate_limiters import InMemoryRateLimiter
 from hivetracered.registry import Registry
 
 @Registry.model()
@@ -17,7 +10,7 @@ class GeminiModel(LangchainModel):
     Provides standardized access to Google's Gemini models with built-in rate limiting
     and support for both synchronous and asynchronous operations.
     """
-    
+
     def __init__(self, model: str = "gemini-2.5-flash-preview-04-17", max_concurrency: int | None = None, batch_size: int | None = None, rpm: int = 10, max_retries: int = 3, **kwargs):
         """
         Initialize the Gemini model client with the specified configuration.
@@ -38,22 +31,7 @@ class GeminiModel(LangchainModel):
         self.model_name = model
         self.max_retries = max_retries
 
-        # Handle deprecation
-        if batch_size is not None:
-            warnings.warn(
-                "The 'batch_size' parameter is deprecated and will be removed in v2.0.0. "
-                "Use 'max_concurrency' instead.",
-                DeprecationWarning,
-                stacklevel=2
-            )
-            if max_concurrency is None:
-                max_concurrency = batch_size
-
-        # Set default if neither provided
-        if max_concurrency is None:
-            max_concurrency = 0
-
-        self.max_concurrency = max_concurrency
+        self.max_concurrency = self._resolve_concurrency(max_concurrency, batch_size, default=0)
         # Keep for backward compatibility in get_params()
         self.batch_size = self.max_concurrency
 
@@ -62,9 +40,6 @@ class GeminiModel(LangchainModel):
         if not "temperature" in self.kwargs:
             self.kwargs["temperature"] = 0.000001
 
-        rate_limiter = InMemoryRateLimiter(
-            requests_per_second=rpm / 60,
-            check_every_n_seconds=0.1,
-        )
+        rate_limiter = self._make_rate_limiter(rpm)
         self.client = ChatGoogleGenerativeAI(model=model, rate_limiter=rate_limiter, **self.kwargs)
-        self.client = self._add_retry_policy(self.client) 
+        self.client = self._add_retry_policy(self.client)

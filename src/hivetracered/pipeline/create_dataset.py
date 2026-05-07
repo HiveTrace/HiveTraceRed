@@ -3,9 +3,8 @@ Dataset creation module that generates attack prompts by applying attacks to bas
 Supports regular and model-based attacks with efficient batch processing.
 """
 
-import os
-import asyncio
-from typing import Dict, List, Any, Optional, Tuple
+import logging
+from typing import Any
 from collections.abc import AsyncGenerator
 from tqdm import tqdm
 
@@ -17,6 +16,9 @@ from hivetracered.evaluators.base_evaluator import BaseEvaluator
 from hivetracered.evaluators.scoring_judge_evaluator import ScoringJudgeEvaluator
 
 from hivetracered.pipeline.constants import ATTACK_CLASSES
+
+logger = logging.getLogger(__name__)
+
 
 def _parse_attack_config(attack_config):
     if isinstance(attack_config, str):
@@ -35,13 +37,13 @@ def _resolve_iterative_evaluator(attack_config, attack_name, evaluator,
             attack_config["evaluator"], evaluation_model
         )
         if not attack_evaluator:
-            print(f"Warning: Per-attack evaluator config invalid for '{attack_name}'")
+            logger.warning(f"Per-attack evaluator config invalid for '{attack_name}'")
 
     if not attack_evaluator and evaluator and isinstance(evaluator, ScoringJudgeEvaluator):
         attack_evaluator = evaluator
 
     if not attack_evaluator and evaluation_model:
-        print(f"Using default ScoringJudgeEvaluator for iterative attack '{attack_name}'")
+        logger.info(f"Using default ScoringJudgeEvaluator for iterative attack '{attack_name}'")
         attack_evaluator = ScoringJudgeEvaluator(model=evaluation_model)
 
     return attack_evaluator
@@ -111,6 +113,7 @@ def build_attack_from_config(attack_config, attacker_model=None, target_model=No
         attack = inner_attack | attack
     return attack
 
+
 def setup_attacks(
     attack_configs: list[dict],
     attacker_model: Model | None = None,
@@ -138,8 +141,9 @@ def setup_attacks(
                                                 evaluation_model=evaluation_model, setup_evaluator_fn=setup_evaluator_fn)
             attacks[attack.__class__.__name__] = attack
         except Exception as e:
-            print(f"Warning: Failed to initialize attack from config {attack_config}: {str(e)}")
+            logger.warning(f"Failed to initialize attack from config {attack_config}: {str(e)}")
     return attacks
+
 
 def extract_prompt_text(base_prompt: Any) -> str:
     """
@@ -162,6 +166,7 @@ def extract_prompt_text(base_prompt: Any) -> str:
     else:
         raise ValueError(f"Unsupported base_prompt type: {type(base_prompt)}")
 
+
 def create_prompt(base_prompt: Any, system_prompt: str | None = None) -> Any:
     """
     Format a prompt with optional system instructions.
@@ -181,51 +186,6 @@ def create_prompt(base_prompt: Any, system_prompt: str | None = None) -> Any:
         ]
     return prompt_text
 
-async def generate_attack_prompt(attack: BaseAttack, base_prompt: Any,
-                                system_prompt: str | None = None) -> dict[str, Any]:
-    """
-    Apply an attack to a single prompt.
-
-    Args:
-        attack: Attack instance to apply
-        base_prompt: Original prompt content (string or dict with columns)
-        system_prompt: Optional system instructions
-
-    Returns:
-        Dictionary with attack result and metadata (preserves all base_prompt columns)
-    """
-    prompt = create_prompt(base_prompt, system_prompt)
-    attack_name = attack.__class__.__name__
-
-    # Extract base fields if base_prompt is a dict
-    base_fields = {}
-    if isinstance(base_prompt, dict):
-        base_fields = {k: v for k, v in base_prompt.items()}
-
-    try:
-        attack_prompt = attack.apply(prompt)
-        return {
-            **base_fields,  # Preserve all original columns
-            "base_prompt": extract_prompt_text(base_prompt),
-            "prompt": attack_prompt,
-            "attack_name": attack_name,
-            "attack_type": ATTACK_CLASSES[attack_name]["attack_type"],
-            "attack_params": attack.get_params(),
-            # "attack_timestamp": get_timestamp(),
-            "error": ""
-        }
-    except Exception as e:
-        print(f"Error generating prompt for attack {attack_name}: {str(e)}")
-        return {
-            **base_fields,  # Preserve all original columns
-            "base_prompt": extract_prompt_text(base_prompt) if not isinstance(base_prompt, str) else base_prompt,
-            "prompt": "",
-            "attack_name": attack_name,
-            "attack_type": ATTACK_CLASSES[attack_name]["attack_type"],
-            "attack_params": attack.get_params(),
-            # "attack_timestamp": get_timestamp(),
-            "error": str(e)
-        }
 
 async def stream_attack(attack: BaseAttack,
                         base_prompts: list[Any], system_prompt: str | None = None) -> AsyncGenerator[dict[str, Any], None]:
@@ -259,12 +219,11 @@ async def stream_attack(attack: BaseAttack,
                     "attack_name": attack_name,
                     "attack_type": ATTACK_CLASSES[attack_name]["attack_type"],
                     "attack_params": attack.get_params(),
-                    # "attack_timestamp": get_timestamp(),
                     "error": ""
                 }
             i += 1
     except Exception as e:
-        print(f"Error generating prompts for model attack {attack_name}: {str(e)}")
+        logger.error(f"Error generating prompts for model attack {attack_name}: {str(e)}")
         for base_prompt in base_prompts:
             # Extract base fields if base_prompt is a dict
             base_fields = {}
@@ -278,7 +237,6 @@ async def stream_attack(attack: BaseAttack,
                 "attack_name": attack_name,
                 "attack_type": ATTACK_CLASSES[attack_name]["attack_type"],
                 "attack_params": attack.get_params(),
-                # "attack_timestamp": get_timestamp(),
                 "error": str(e)
             }
 
@@ -296,14 +254,13 @@ async def stream_attack_prompts(attacks: dict[str, BaseAttack],
     Yields:
         Attack result dictionaries with metadata (preserves all base_prompt columns)
     """
-    
+
     # Initialize result list
     attack_prompts = []
-    
+
     if attacks:
         # Process regular attacks with tqdm for progress tracking
         for i, (name, attack) in tqdm(enumerate(attacks.items()), total=len(attacks), desc="Processing Attacks"):
             async for attack_prompt_data in stream_attack(attack, base_prompts, system_prompt):
                 attack_prompts.append(attack_prompt_data)
                 yield attack_prompt_data
-    

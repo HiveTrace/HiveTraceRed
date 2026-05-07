@@ -1,11 +1,9 @@
-from typing import Any, Optional
+from typing import Any
 from langchain_openai import ChatOpenAI
 from hivetracered.models.langchain_model import LangchainModel
 from dotenv import load_dotenv
 import os
-import warnings
 
-from langchain_core.rate_limiters import InMemoryRateLimiter
 from hivetracered.registry import Registry
 
 
@@ -49,22 +47,7 @@ class CloudRuModel(LangchainModel):
         self.model_name = model
         self.max_retries = max_retries
 
-        # Handle deprecation
-        if batch_size is not None:
-            warnings.warn(
-                "The 'batch_size' parameter is deprecated and will be removed in v2.0.0. "
-                "Use 'max_concurrency' instead.",
-                DeprecationWarning,
-                stacklevel=2
-            )
-            if max_concurrency is None:
-                max_concurrency = batch_size
-
-        # Set default if neither provided
-        if max_concurrency is None:
-            max_concurrency = 1
-
-        self.max_concurrency = max_concurrency
+        self.max_concurrency = self._resolve_concurrency(max_concurrency, batch_size, default=1)
         # Keep for backward compatibility in get_params()
         self.batch_size = self.max_concurrency
 
@@ -73,12 +56,7 @@ class CloudRuModel(LangchainModel):
         if "temperature" not in self.kwargs:
             self.kwargs["temperature"] = 0.000001
 
-        # Simple client-side rate limiting (same approach as OpenAIModel)
-        rate_limiter = InMemoryRateLimiter(
-            requests_per_second=max(1, rpm) / 60,
-            check_every_n_seconds=0.1,
-            max_bucket_size=self.max_concurrency,
-        )
+        rate_limiter = self._make_rate_limiter(rpm, max_bucket_size=self.max_concurrency)
 
         # LangChain ChatOpenAI supports OpenAI-compatible endpoints via base_url
         self.client = ChatOpenAI(
@@ -89,5 +67,3 @@ class CloudRuModel(LangchainModel):
             **self.kwargs,
         )
         self.client = self._add_retry_policy(self.client)
-
-

@@ -1,9 +1,5 @@
-from typing import List, Any, Optional, Union, Dict, Type
-from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.language_models.llms import BaseLLM
+from typing import Any
 from hivetracered.models.base_model import Model
-from dotenv import load_dotenv
-import os
 from collections.abc import AsyncGenerator
 import asyncio
 from tqdm import tqdm
@@ -11,8 +7,8 @@ from abc import abstractmethod
 
 from uuid import UUID
 from langchain_core.callbacks import BaseCallbackHandler
+from langchain_core.rate_limiters import InMemoryRateLimiter
 from langchain.schema import LLMResult
-from langchain_core.exceptions import OutputParserException
 
 class LangchainModel(Model):
     """
@@ -48,6 +44,27 @@ class LangchainModel(Model):
             - self.client = self._add_retry_policy(self.client)
         """
         pass
+
+    @staticmethod
+    def _make_rate_limiter(rpm: int, max_bucket_size: int | None = None) -> InMemoryRateLimiter:
+        """
+        Build an InMemoryRateLimiter from a requests-per-minute setting.
+
+        Args:
+            rpm: Target rate in requests per minute. Clamped to a minimum of 1
+                so a misconfigured 0 still produces a usable limiter.
+            max_bucket_size: Optional burst capacity for the token bucket.
+
+        Returns:
+            Configured InMemoryRateLimiter instance.
+        """
+        kwargs: dict[str, Any] = {
+            "requests_per_second": max(1, rpm) / 60,
+            "check_every_n_seconds": 0.1,
+        }
+        if max_bucket_size is not None:
+            kwargs["max_bucket_size"] = max_bucket_size
+        return InMemoryRateLimiter(**kwargs)
 
     def _add_retry_policy(self, client):
         """

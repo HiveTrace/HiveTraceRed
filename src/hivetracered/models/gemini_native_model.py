@@ -1,4 +1,5 @@
-from typing import List, Any, Optional, Union, Dict
+import logging
+from typing import Any
 from collections.abc import AsyncGenerator
 from hivetracered.models.base_model import Model
 from google import genai
@@ -9,15 +10,15 @@ import asyncio
 from tqdm import tqdm
 import time
 import json
-import warnings
 from tenacity import (
     retry,
     stop_after_attempt,
     wait_exponential_jitter,
     retry_if_exception_type,
-    RetryError,
 )
 from hivetracered.registry import Registry
+
+logger = logging.getLogger(__name__)
 
 
 
@@ -51,22 +52,7 @@ class GeminiNativeModel(Model):
         self.rpm = rpm
         self.max_retries = max_retries
 
-        # Handle deprecation
-        if batch_size is not None:
-            warnings.warn(
-                "The 'batch_size' parameter is deprecated and will be removed in v2.0.0. "
-                "Use 'max_concurrency' instead.",
-                DeprecationWarning,
-                stacklevel=2
-            )
-            if max_concurrency is None:
-                max_concurrency = batch_size
-
-        # Set default if neither provided
-        if max_concurrency is None:
-            max_concurrency = 0
-
-        self.max_concurrency = max_concurrency
+        self.max_concurrency = self._resolve_concurrency(max_concurrency, batch_size, default=0)
         # Keep for backward compatibility in get_params()
         self.batch_size = self.max_concurrency
 
@@ -200,7 +186,7 @@ class GeminiNativeModel(Model):
             parsed_content = structured_content["response"]
         except Exception as e:
             # If parsing fails, fall back to text response
-            print(f"Warning: Failed to parse structured response: {str(e)}")
+            logger.warning(f"Failed to parse structured response: {str(e)}")
         
         return {
             "content": parsed_content,

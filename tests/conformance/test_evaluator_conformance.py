@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import pytest
 
-from hivetracered.evaluators.base_evaluator import BaseEvaluator
 from hivetracered.evaluators.model_evaluator import ModelEvaluator
 from hivetracered.pipeline.constants import EVALUATOR_CLASSES
 from tests.conftest import MockModel, async_collect

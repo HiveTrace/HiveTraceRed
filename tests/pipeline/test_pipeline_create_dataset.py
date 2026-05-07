@@ -14,7 +14,6 @@ from hivetracered.pipeline.create_dataset import (
     build_attack_from_config,
     create_prompt,
     extract_prompt_text,
-    generate_attack_prompt,
     setup_attacks,
     stream_attack,
 )
@@ -28,8 +27,8 @@ from tests.conftest import async_collect
 def template_attack_cls(monkeypatch):
     """Register a tiny TemplateAttack subclass into ATTACK_CLASSES.
 
-    Lets us drive build_attack_from_config / generate_attack_prompt / stream_attack
-    against a deterministic attack without invoking real registered classes.
+    Lets us drive build_attack_from_config / stream_attack against a
+    deterministic attack without invoking real registered classes.
     """
     class _BangAttack(TemplateAttack):
         def __init__(self, suffix: str = "!"):
@@ -123,58 +122,6 @@ def test_setup_attacks_failed_init_is_skipped_not_raised(caplog):
 
     assert "NoneAttack" in attacks
     assert len(attacks) == 1
-
-
-# ── generate_attack_prompt (async) ──────────────────────────────────
-
-
-def _run(coro):
-    import asyncio
-
-    return asyncio.get_event_loop().run_until_complete(coro)
-
-
-@pytest.mark.parametrize(
-    ("input_val", "extra_checks"),
-    [
-        ("hi", {"attack_name": "TemplateAttack", "attack_type": "test", "error": ""}),
-        ({"prompt": "hi", "category": "violence"}, {"category": "violence"}),
-    ],
-    ids=["string", "dict"],
-)
-def test_generate_attack_prompt_success_returns_metadata_dict(input_val, extra_checks):
-    attack = TemplateAttack(template="{prompt}!")
-    from hivetracered.registry import Registry
-    Registry._attacks["TemplateAttack"] = {"class": TemplateAttack, "category": "test"}
-
-    try:
-        result = _run(generate_attack_prompt(attack, input_val))
-
-        assert result["base_prompt"] == "hi"
-        assert result["prompt"] == "hi!"
-        for k, v in extra_checks.items():
-            assert result[k] == v
-    finally:
-        Registry._attacks.pop("TemplateAttack", None)
-
-
-def test_generate_attack_prompt_failure_captures_error_in_dict():
-    class _BoomAttack(TemplateAttack):
-        def apply(self, prompt):
-            raise RuntimeError("boom")
-
-    from hivetracered.registry import Registry
-    Registry._attacks["_BoomAttack"] = {"class": _BoomAttack, "category": "test"}
-    attack = _BoomAttack(template="{prompt}")
-
-    try:
-        result = _run(generate_attack_prompt(attack, "hi"))
-
-        assert result["prompt"] == ""
-        assert result["error"] == "boom"
-        assert result["attack_name"] == "_BoomAttack"
-    finally:
-        Registry._attacks.pop("_BoomAttack", None)
 
 
 # ── stream_attack (async generator) ─────────────────────────────────

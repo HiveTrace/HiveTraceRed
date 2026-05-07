@@ -7,7 +7,8 @@ classes registered after this module is imported are still visible.
 """
 
 from collections.abc import Mapping
-from typing import Any, Dict, Iterator, List
+from typing import Any, Dict, List
+from collections.abc import Iterator
 
 from hivetracered.registry import Registry
 
@@ -45,7 +46,7 @@ class _RegistryView(Mapping):
         return repr(self._fetch())
 
 
-def _attack_classes_view() -> Dict[str, Dict[str, Any]]:
+def _attack_classes_view() -> dict[str, dict[str, Any]]:
     return {
         name: {"attack_class": info["class"], "attack_type": info["category"]}
         for name, info in Registry.all_attacks().items()
@@ -56,11 +57,11 @@ MODEL_CLASSES: Mapping[str, Any] = _RegistryView(Registry.all_models)
 """Live view mapping model class names to their implementation classes.
 Pipeline configs specify the class plus the model name separately."""
 
-ATTACK_CLASSES: Mapping[str, Dict[str, Any]] = _RegistryView(_attack_classes_view)
+ATTACK_CLASSES: Mapping[str, dict[str, Any]] = _RegistryView(_attack_classes_view)
 """Live view mapping attack names to their implementation classes and types.
 Allows dynamic instantiation of attacks based on configuration strings."""
 
-ATTACK_TYPES: Mapping[str, List[str]] = _RegistryView(Registry.attack_categories)
+ATTACK_TYPES: Mapping[str, list[str]] = _RegistryView(Registry.attack_categories)
 """Live view of category -> [attack_names]. Used for organizing attacks by strategy."""
 
 EVALUATOR_CLASSES: Mapping[str, Any] = _RegistryView(Registry.all_evaluators)

@@ -61,7 +61,7 @@ def make_parquet_compatible(value):
         return tuple(make_parquet_compatible(item) for item in value)
     # Recursively process sets
     if isinstance(value, set):
-        return set(make_parquet_compatible(item) for item in value)
+        return {make_parquet_compatible(item) for item in value}
     # Recursively process dictionaries
     if isinstance(value, (Model, BaseAttack)):
         return value.get_params()
@@ -70,7 +70,7 @@ def make_parquet_compatible(value):
     # Convert any other type to its string representation
     return _convert_object_to_parquet_compatible(value)
     
-def save_to_csv(data: Dict[str, Any], output_dir: str, filename: str) -> str:
+def save_to_csv(data: dict[str, Any], output_dir: str, filename: str) -> str:
     """
     Save data to a CSV file using pandas.
 
@@ -117,7 +117,7 @@ def save_to_csv(data: Dict[str, Any], output_dir: str, filename: str) -> str:
         print(f"Error saving to CSV: {str(e)}")
         return ""
 
-def load_from_csv(file_path: str) -> Dict[str, Any]:
+def load_from_csv(file_path: str) -> dict[str, Any]:
     """
     Load data from a CSV file.
 
@@ -144,7 +144,7 @@ def load_from_csv(file_path: str) -> Dict[str, Any]:
         print(f"Error loading from CSV: {str(e)}")
         return {}
 
-def save_to_parquet(data: Dict[str, Any], output_dir: str, filename: str) -> str:
+def save_to_parquet(data: dict[str, Any], output_dir: str, filename: str) -> str:
     """
     Save data to a parquet file using pandas.
     
@@ -195,7 +195,7 @@ def save_to_parquet(data: Dict[str, Any], output_dir: str, filename: str) -> str
         print(f"Error saving to parquet: {str(e)}")
         return ""
 
-def load_from_parquet(file_path: str) -> Dict[str, Any]:
+def load_from_parquet(file_path: str) -> dict[str, Any]:
     """
     Load data from a parquet file.
     
@@ -225,7 +225,7 @@ def load_from_parquet(file_path: str) -> Dict[str, Any]:
         print(f"Error loading from parquet: {str(e)}")
         return {}
 
-def save_to_json(data: Dict[str, Any], output_dir: str, filename: str) -> str:
+def save_to_json(data: dict[str, Any], output_dir: str, filename: str) -> str:
     """
     Save data to a JSON file using pandas.
     
@@ -269,7 +269,7 @@ def save_to_json(data: Dict[str, Any], output_dir: str, filename: str) -> str:
         print(f"Error saving to JSON: {str(e)}")
         return ""
 
-def load_from_json(file_path: str) -> Dict[str, Any]:
+def load_from_json(file_path: str) -> dict[str, Any]:
     """
     Load data from a JSON file.
     
@@ -294,7 +294,7 @@ def load_from_json(file_path: str) -> Dict[str, Any]:
         print(f"Error loading from JSON: {str(e)}")
         return {}
 
-def save_to_xlsx(data: Dict[str, Any], output_dir: str, filename: str) -> str:
+def save_to_xlsx(data: dict[str, Any], output_dir: str, filename: str) -> str:
     """
     Save data to an XLSX (Excel) file using pandas.
 
@@ -341,7 +341,7 @@ def save_to_xlsx(data: Dict[str, Any], output_dir: str, filename: str) -> str:
         print(f"Error saving to XLSX: {str(e)}")
         return ""
 
-def load_from_xlsx(file_path: str) -> Dict[str, Any]:
+def load_from_xlsx(file_path: str) -> dict[str, Any]:
     """
     Load data from an XLSX (Excel) file.
 
@@ -368,7 +368,7 @@ def load_from_xlsx(file_path: str) -> Dict[str, Any]:
         print(f"Error loading from XLSX: {str(e)}")
         return {}
 
-def save_pipeline_results(data: Dict[str, Any], output_dir: str, stage: str, format: str = "csv") -> Dict[str, str]:
+def save_pipeline_results(data: dict[str, Any], output_dir: str, stage: str, format: str = "csv") -> dict[str, str]:
     """
     Save pipeline results in the specified format (csv, xlsx, or parquet), with JSON fallback.
 

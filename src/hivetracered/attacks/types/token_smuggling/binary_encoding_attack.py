@@ -14,7 +14,7 @@ class BinaryEncodingAttack(AlgoAttack):
     Supports both Latin and Cyrillic characters.
     """
     
-    def __init__(self, raw: bool = False, template: Optional[str] = None):
+    def __init__(self, raw: bool = False, template: str | None = None):
         """
         Initialize the Binary Encoding Attack.
         

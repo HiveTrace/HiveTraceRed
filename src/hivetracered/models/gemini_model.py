@@ -3,7 +3,7 @@ from hivetracered.models.langchain_model import LangchainModel
 from langchain_google_genai import ChatGoogleGenerativeAI
 from dotenv import load_dotenv
 import os
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 import asyncio
 from tqdm import tqdm
 import warnings
@@ -18,7 +18,7 @@ class GeminiModel(LangchainModel):
     and support for both synchronous and asynchronous operations.
     """
     
-    def __init__(self, model: str = "gemini-2.5-flash-preview-04-17", max_concurrency: Optional[int] = None, batch_size: Optional[int] = None, rpm: int = 10, max_retries: int = 3, **kwargs):
+    def __init__(self, model: str = "gemini-2.5-flash-preview-04-17", max_concurrency: int | None = None, batch_size: int | None = None, rpm: int = 10, max_retries: int = 3, **kwargs):
         """
         Initialize the Gemini model client with the specified configuration.
 

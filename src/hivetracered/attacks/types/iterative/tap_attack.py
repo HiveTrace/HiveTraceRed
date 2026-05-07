@@ -53,11 +53,11 @@ APPROACH_HINTS = [
 class TreeNode:
     """A node in the TAP attack tree."""
     attack_prompt: str
-    response: Optional[str] = None
+    response: str | None = None
     score: float = 0.0
     depth: int = 0
     parent: Optional['TreeNode'] = None
-    children: List['TreeNode'] = field(default_factory=list)
+    children: list['TreeNode'] = field(default_factory=list)
     improvement: str = ""
     pruned: bool = False
 
@@ -90,10 +90,10 @@ class TAPAttack(IterativeAttack):
         max_depth: int = 4,
         branching_factor: int = 3,
         prune_threshold: float = 0.4,
-        attacker_system_prompt: Optional[str] = None,
-        language_config: Optional[LanguageConfig] = None,
-        name: Optional[str] = None,
-        description: Optional[str] = None
+        attacker_system_prompt: str | None = None,
+        language_config: LanguageConfig | None = None,
+        name: str | None = None,
+        description: str | None = None
     ):
         """
         Initialize TAP attack.
@@ -188,7 +188,7 @@ class TAPAttack(IterativeAttack):
             parent.children.append(node)
         return node
 
-    def _initialize_root(self, goal: str) -> Tuple[TreeNode, IterationResult]:
+    def _initialize_root(self, goal: str) -> tuple[TreeNode, IterationResult]:
         initial_prompt = self._create_initial_prompt(goal)
         attacker_response = self.attacker_model.invoke(initial_prompt)["content"]
         root_attack = self._extract_attack(attacker_response)
@@ -215,7 +215,7 @@ class TAPAttack(IterativeAttack):
         parent: TreeNode,
         branch_idx: int,
         depth: int,
-    ) -> Tuple[TreeNode, IterationResult]:
+    ) -> tuple[TreeNode, IterationResult]:
         branch_prompt = self._create_branch_prompt(
             goal=goal,
             parent_attack=parent.attack_prompt,
@@ -249,8 +249,8 @@ class TAPAttack(IterativeAttack):
         self,
         child: TreeNode,
         iteration: IterationResult,
-        state: Dict[str, Any],
-        next_level: List[TreeNode],
+        state: dict[str, Any],
+        next_level: list[TreeNode],
     ) -> bool:
         iteration.iteration = state["total_iterations"]
         state["iterations"].append(iteration)
@@ -274,8 +274,8 @@ class TAPAttack(IterativeAttack):
         goal: str,
         root: TreeNode,
         root_iteration: IterationResult,
-        state: Dict[str, Any],
-    ) -> Optional[IterativeAttackResult]:
+        state: dict[str, Any],
+    ) -> IterativeAttackResult | None:
         state["iterations"].append(root_iteration)
         state["total_iterations"] += 1
 
@@ -300,7 +300,7 @@ class TAPAttack(IterativeAttack):
         Returns:
             IterativeAttackResult with all iterations and best attack
         """
-        state: Dict[str, Any] = {
+        state: dict[str, Any] = {
             "iterations": [],
             "best_attack": "",
             "best_score": 0.0,
@@ -341,11 +341,11 @@ class TAPAttack(IterativeAttack):
     def _run_depth_sync(
         self,
         goal: str,
-        current_level: List[TreeNode],
+        current_level: list[TreeNode],
         depth: int,
-        state: Dict[str, Any],
-    ) -> Tuple[List[TreeNode], bool]:
-        next_level: List[TreeNode] = []
+        state: dict[str, Any],
+    ) -> tuple[list[TreeNode], bool]:
+        next_level: list[TreeNode] = []
         for parent in current_level:
             if parent.pruned:
                 continue
@@ -358,8 +358,8 @@ class TAPAttack(IterativeAttack):
         goal: str,
         parent: TreeNode,
         depth: int,
-        state: Dict[str, Any],
-        next_level: List[TreeNode],
+        state: dict[str, Any],
+        next_level: list[TreeNode],
     ) -> bool:
         for branch_idx in range(self.branching_factor):
             if state["total_iterations"] >= self.max_iterations:
@@ -376,7 +376,7 @@ class TAPAttack(IterativeAttack):
         parent: 'TreeNode',
         branch_idx: int,
         depth: int,
-    ) -> Tuple[int, str, str, str, float, bool, 'TreeNode', int]:
+    ) -> tuple[int, str, str, str, float, bool, 'TreeNode', int]:
         """Explore a single branch: attacker → target → evaluator.
 
         Returns (idx, child_attack, target_response, attacker_response,
@@ -407,7 +407,7 @@ class TAPAttack(IterativeAttack):
 
         return idx, child_attack, target_response, attacker_response, child_score, child_success, child, branch_idx
 
-    async def _initialize_root_async(self, goal: str) -> Tuple[TreeNode, IterationResult]:
+    async def _initialize_root_async(self, goal: str) -> tuple[TreeNode, IterationResult]:
         initial_prompt = self._create_initial_prompt(goal)
         attacker_response_raw = await self.attacker_model.ainvoke(initial_prompt)
         attacker_response = attacker_response_raw["content"]
@@ -433,11 +433,11 @@ class TAPAttack(IterativeAttack):
     def _launch_depth_tasks(
         self,
         goal: str,
-        current_level: List[TreeNode],
+        current_level: list[TreeNode],
         depth: int,
         total_iterations: int,
-    ) -> List[asyncio.Task]:
-        tasks: List[asyncio.Task] = []
+    ) -> list[asyncio.Task]:
+        tasks: list[asyncio.Task] = []
         task_idx = 0
         for parent in current_level:
             if parent.pruned:
@@ -453,10 +453,10 @@ class TAPAttack(IterativeAttack):
 
     def _record_async_result(
         self,
-        result: Tuple,
+        result: tuple,
         depth: int,
-        state: Dict[str, Any],
-        next_level: List[TreeNode],
+        state: dict[str, Any],
+        next_level: list[TreeNode],
     ) -> None:
         child_attack, target_response, _attacker_response, child_score, child_success, child, branch_idx = result
 
@@ -483,12 +483,12 @@ class TAPAttack(IterativeAttack):
 
     async def _process_depth_async(
         self,
-        tasks: List[asyncio.Task],
+        tasks: list[asyncio.Task],
         depth: int,
-        state: Dict[str, Any],
-    ) -> List[TreeNode]:
-        next_level: List[TreeNode] = []
-        branch_results: Dict[int, Tuple] = {}
+        state: dict[str, Any],
+    ) -> list[TreeNode]:
+        next_level: list[TreeNode] = []
+        branch_results: dict[int, tuple] = {}
         cur_branch_idx = 0
 
         for task in asyncio.as_completed(tasks):
@@ -517,7 +517,7 @@ class TAPAttack(IterativeAttack):
         Returns:
             IterativeAttackResult with all iterations and best attack
         """
-        state: Dict[str, Any] = {
+        state: dict[str, Any] = {
             "iterations": [],
             "best_attack": "",
             "best_score": 0.0,
@@ -566,12 +566,12 @@ class TAPAttack(IterativeAttack):
         success: bool,
         best_attack: str,
         best_score: float,
-        iterations: List[IterationResult],
+        iterations: list[IterationResult],
         total_iterations: int,
         max_depth_reached: int,
     ) -> IterativeAttackResult:
         """Build the IterativeAttackResult."""
-        metadata: Dict[str, Any] = {"max_depth_reached": max_depth_reached}
+        metadata: dict[str, Any] = {"max_depth_reached": max_depth_reached}
         if success:
             metadata["success_depth"] = max_depth_reached
         else:
@@ -588,7 +588,7 @@ class TAPAttack(IterativeAttack):
             metadata=metadata,
         )
 
-    def get_params(self) -> Dict[str, Any]:
+    def get_params(self) -> dict[str, Any]:
         """Get the parameters of the attack."""
         params = super().get_params()
         params.update({

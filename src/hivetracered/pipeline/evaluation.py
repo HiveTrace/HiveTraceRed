@@ -4,7 +4,8 @@ Processes responses through evaluators to determine if attacks were successful
 and enriches response data with evaluation results and metrics.
 """
 
-from typing import Dict, List, Any, Optional, AsyncGenerator
+from typing import Dict, List, Any, Optional
+from collections.abc import AsyncGenerator
 
 from hivetracered.evaluators import BaseEvaluator, ModelEvaluator
 
@@ -13,8 +14,8 @@ RESPONSE_BLOCKED = "Response was blocked"
 
 async def evaluate_response(
     evaluator: BaseEvaluator,
-    response_data: Dict[str, Any]
-) -> Dict[str, Any]:
+    response_data: dict[str, Any]
+) -> dict[str, Any]:
     """
     Evaluate a single model response using the provided evaluator.
     
@@ -81,8 +82,8 @@ async def evaluate_response(
 
 async def stream_evaluated_responses(
     evaluator: BaseEvaluator,
-    responses: List[Dict[str, Any]],
-) -> AsyncGenerator[Dict[str, Any], None]:
+    responses: list[dict[str, Any]],
+) -> AsyncGenerator[dict[str, Any], None]:
     """
     Process and evaluate model responses, yielding results as they become available.
     

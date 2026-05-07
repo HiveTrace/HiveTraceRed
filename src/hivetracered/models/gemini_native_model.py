@@ -1,4 +1,5 @@
-from typing import List, Any, Optional, Union, Dict, AsyncGenerator
+from typing import List, Any, Optional, Union, Dict
+from collections.abc import AsyncGenerator
 from hivetracered.models.base_model import Model
 from google import genai
 from google.genai import types
@@ -28,7 +29,7 @@ class GeminiNativeModel(Model):
     thinking budget, and rate limiting with both synchronous and asynchronous interfaces.
     """
     
-    def __init__(self, model: str = "gemini-2.5-flash-preview-04-17", max_concurrency: Optional[int] = None, batch_size: Optional[int] = None, thinking_budget: int = 0, rpm: int = 10, max_retries: int = 3, **kwargs):
+    def __init__(self, model: str = "gemini-2.5-flash-preview-04-17", max_concurrency: int | None = None, batch_size: int | None = None, thinking_budget: int = 0, rpm: int = 10, max_retries: int = 3, **kwargs):
         """
         Initialize the Gemini model with the specified configuration.
 
@@ -207,7 +208,7 @@ class GeminiNativeModel(Model):
             "raw_response": response
         }
     
-    def invoke(self, prompt: Union[str, List[Dict[str, str]]]) -> dict:
+    def invoke(self, prompt: str | list[dict[str, str]]) -> dict:
         """
         Send a single request to the model synchronously with automatic retries.
 
@@ -230,7 +231,7 @@ class GeminiNativeModel(Model):
                 "error": str(e)
             }
 
-    def _invoke_internal(self, prompt: Union[str, List[Dict[str, str]]]) -> dict:
+    def _invoke_internal(self, prompt: str | list[dict[str, str]]) -> dict:
         """
         Internal method that performs the actual API call (wrapped by retry logic).
         Raises exceptions for retry logic to handle.
@@ -278,7 +279,7 @@ class GeminiNativeModel(Model):
             "raw_response": response
         }
     
-    async def ainvoke(self, prompt: Union[str, List[Dict[str, str]]]) -> dict:
+    async def ainvoke(self, prompt: str | list[dict[str, str]]) -> dict:
         """
         Send a single request to the model asynchronously.
         
@@ -294,7 +295,7 @@ class GeminiNativeModel(Model):
         loop = asyncio.get_event_loop()
         return await loop.run_in_executor(None, self.invoke, prompt)
     
-    def batch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> List[dict]:
+    def batch(self, prompts: list[str | list[dict[str, str]]]) -> list[dict]:
         """
         Send multiple requests to the model synchronously.
         
@@ -320,7 +321,7 @@ class GeminiNativeModel(Model):
         
         return results
     
-    async def abatch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> List[dict]:
+    async def abatch(self, prompts: list[str | list[dict[str, str]]]) -> list[dict]:
         """
         Send multiple requests to the model asynchronously.
         
@@ -342,7 +343,7 @@ class GeminiNativeModel(Model):
         
         return results 
         
-    async def stream_abatch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> AsyncGenerator[dict, None]:
+    async def stream_abatch(self, prompts: list[str | list[dict[str, str]]]) -> AsyncGenerator[dict, None]:
         """
         Send multiple requests to the model asynchronously and yield results as they complete.
 
@@ -404,7 +405,7 @@ class GeminiNativeModel(Model):
                         pending_tasks.add(new_task)
                         next_prompt_index += 1 
 
-    def get_params(self) -> Dict[str, Any]:
+    def get_params(self) -> dict[str, Any]:
         return {
             "model": self.model_name,
             "batch_size": self.batch_size,

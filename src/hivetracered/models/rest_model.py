@@ -16,7 +16,8 @@ import logging
 import random
 import time
 from concurrent.futures import ThreadPoolExecutor
-from typing import Any, AsyncGenerator, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
+from collections.abc import AsyncGenerator
 
 import aiohttp
 import requests
@@ -69,18 +70,18 @@ class RestModel(Model):
         model: str = "rest",
         *,
         method: str = "POST",
-        headers: Optional[Dict[str, str]] = None,
-        req_template: Optional[Dict[str, Any]] = None,
-        response_json_field: Optional[str] = None,
-        api_key: Optional[str] = None,
+        headers: dict[str, str] | None = None,
+        req_template: dict[str, Any] | None = None,
+        response_json_field: str | None = None,
+        api_key: str | None = None,
         request_timeout: int = 20,
         verify_ssl: bool = True,
-        ratelimit_codes: Optional[List[int]] = None,
-        skip_codes: Optional[List[int]] = None,
+        ratelimit_codes: list[int] | None = None,
+        skip_codes: list[int] | None = None,
         retry_5xx: bool = True,
         max_retries: int = 3,
-        max_concurrency: Optional[int] = None,
-        proxies: Optional[Dict[str, str]] = None,
+        max_concurrency: int | None = None,
+        proxies: dict[str, str] | None = None,
         **kwargs,
     ):
         load_dotenv(override=True)
@@ -128,7 +129,7 @@ class RestModel(Model):
     # ── prompt extraction ────────────────────────────────────────────
 
     @staticmethod
-    def _extract_prompt_text(prompt: Union[str, List[Dict[str, str]]]) -> str:
+    def _extract_prompt_text(prompt: str | list[dict[str, str]]) -> str:
         if isinstance(prompt, str):
             return prompt
         parts = []
@@ -181,14 +182,14 @@ class RestModel(Model):
         base = min(2 ** attempt, 60)
         return random.uniform(0, base)
 
-    def _get_aiohttp_proxy(self) -> Optional[str]:
+    def _get_aiohttp_proxy(self) -> str | None:
         if not self.proxies:
             return None
         return self.proxies.get("https") or self.proxies.get("http")
 
     # ── sync invoke ──────────────────────────────────────────────────
 
-    def invoke(self, prompt: Union[str, List[Dict[str, str]]]) -> dict:
+    def invoke(self, prompt: str | list[dict[str, str]]) -> dict:
         prompt_text = self._extract_prompt_text(prompt)
         url, hdrs, body = self._build_request(prompt_text)
 
@@ -226,7 +227,7 @@ class RestModel(Model):
 
     # ── async invoke ─────────────────────────────────────────────────
 
-    async def ainvoke(self, prompt: Union[str, List[Dict[str, str]]]) -> dict:
+    async def ainvoke(self, prompt: str | list[dict[str, str]]) -> dict:
         prompt_text = self._extract_prompt_text(prompt)
         url, hdrs, body = self._build_request(prompt_text)
 
@@ -272,7 +273,7 @@ class RestModel(Model):
 
     # ── batch (sync, threaded) ───────────────────────────────────────
 
-    def batch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> List[dict]:
+    def batch(self, prompts: list[str | list[dict[str, str]]]) -> list[dict]:
         if self.max_concurrency == 0:
             results = []
             for prompt in tqdm(prompts, desc=f"Processing requests with {self.model_name}", unit="request"):
@@ -289,7 +290,7 @@ class RestModel(Model):
 
     # ── abatch (async, semaphore) ────────────────────────────────────
 
-    async def abatch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> List[dict]:
+    async def abatch(self, prompts: list[str | list[dict[str, str]]]) -> list[dict]:
         semaphore = asyncio.Semaphore(self.max_concurrency or len(prompts))
 
         async def sem_task(idx, prompt):
@@ -310,7 +311,7 @@ class RestModel(Model):
 
     # ── stream_abatch ────────────────────────────────────────────────
 
-    async def stream_abatch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> AsyncGenerator[dict, None]:
+    async def stream_abatch(self, prompts: list[str | list[dict[str, str]]]) -> AsyncGenerator[dict]:
         semaphore = asyncio.Semaphore(self.max_concurrency or len(prompts))
 
         async def sem_task(idx, prompt):

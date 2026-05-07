@@ -19,10 +19,10 @@ class CloudRuModel(LangchainModel):
     def __init__(
         self,
         model: str = "GigaChat/GigaChat-2-Max",
-        max_concurrency: Optional[int] = None,
-        batch_size: Optional[int] = None,
+        max_concurrency: int | None = None,
+        batch_size: int | None = None,
         rpm: int = 60,
-        api_key: Optional[str] = None,
+        api_key: str | None = None,
         base_url: str = "https://foundation-models.api.cloud.ru/v1",
         max_retries: int = 3,
         **kwargs: Any,

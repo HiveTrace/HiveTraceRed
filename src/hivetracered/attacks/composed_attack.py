@@ -1,4 +1,5 @@
-from typing import Union, List, Dict, Optional, AsyncGenerator
+from typing import Union, List, Dict, Optional
+from collections.abc import AsyncGenerator
 from hivetracered.attacks.base_attack import BaseAttack
 
 class ComposedAttack(BaseAttack):
@@ -6,7 +7,7 @@ class ComposedAttack(BaseAttack):
     An attack that composes two attacks sequentially, where the output of the inner attack 
     becomes the input to the outer attack, creating a pipeline of transformations.
     """
-    def __init__(self, outer_attack: BaseAttack, inner_attack: BaseAttack, name: Optional[str] = None, description: Optional[str] = None):
+    def __init__(self, outer_attack: BaseAttack, inner_attack: BaseAttack, name: str | None = None, description: str | None = None):
         """
         Initialize a composed attack with inner and outer attack components.
         
@@ -21,7 +22,7 @@ class ComposedAttack(BaseAttack):
         self._name = name or f"Composed({outer_attack.get_name()} ∘ {inner_attack.get_name()})"
         self._description = description or f"Composes {outer_attack.get_name()} after {inner_attack.get_name()}"
 
-    def apply(self, prompt: Union[str, List[Dict[str, str]]]) -> Union[str, List[Dict[str, str]]]:
+    def apply(self, prompt: str | list[dict[str, str]]) -> str | list[dict[str, str]]:
         """
         Apply the inner attack followed by the outer attack to the given prompt.
         
@@ -34,7 +35,7 @@ class ComposedAttack(BaseAttack):
         inner_result = self.inner_attack.apply(prompt)
         return self.outer_attack.apply(inner_result)
 
-    async def stream_abatch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> AsyncGenerator[List[Union[str, List[Dict[str, str]]]], None]:
+    async def stream_abatch(self, prompts: list[str | list[dict[str, str]]]) -> AsyncGenerator[list[str | list[dict[str, str]]], None]:
         """
         Apply the composition of attacks to a batch of prompts asynchronously.
         

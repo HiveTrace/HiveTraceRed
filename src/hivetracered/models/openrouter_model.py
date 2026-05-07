@@ -4,7 +4,7 @@ from langchain_openai import ChatOpenAI
 from hivetracered.models.langchain_model import LangchainModel
 from dotenv import load_dotenv
 import os
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 import asyncio
 from tqdm import tqdm
 import warnings
@@ -23,7 +23,7 @@ class OpenRouterModel(LangchainModel):
     both synchronous and asynchronous processing capabilities.
     """
     
-    def __init__(self, model: str = "nvidia/nemotron-nano-9b-v2", base_url = "https://openrouter.ai/api/v1", max_concurrency: Optional[int] = None, batch_size: Optional[int] = None, rpm: int = 300, api_key: Optional[str] = None, max_retries: int = 3, **kwargs):
+    def __init__(self, model: str = "nvidia/nemotron-nano-9b-v2", base_url = "https://openrouter.ai/api/v1", max_concurrency: int | None = None, batch_size: int | None = None, rpm: int = 300, api_key: str | None = None, max_retries: int = 3, **kwargs):
 
         """
         Initialize the OpenAI model client with the specified configuration.

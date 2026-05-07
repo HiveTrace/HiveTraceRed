@@ -13,7 +13,7 @@ class BackToFrontAttack(AlgoAttack):
     while making it harder to immediately understand the prompt.
     """
     
-    def __init__(self, raw: bool = False, template: Optional[str] = None):
+    def __init__(self, raw: bool = False, template: str | None = None):
         """
         Initialize the Back-to-Front Attack.
         

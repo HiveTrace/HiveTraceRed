@@ -13,7 +13,7 @@ class VerticalTextAttack(AlgoAttack):
     stacked vertically, potentially bypassing content filters while preserving readability.
     """
     
-    def __init__(self, raw: bool = False, template: Optional[str] = None):
+    def __init__(self, raw: bool = False, template: str | None = None):
         """
         Initialize the Vertical Text Attack.
         

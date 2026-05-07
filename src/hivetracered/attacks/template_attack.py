@@ -1,4 +1,5 @@
-from typing import Union, List, Optional, Dict, AsyncGenerator
+from typing import Union, List, Optional, Dict
+from collections.abc import AsyncGenerator
 from hivetracered.attacks.base_attack import BaseAttack
 
 class TemplateAttack(BaseAttack):
@@ -7,7 +8,7 @@ class TemplateAttack(BaseAttack):
     Allows creating new attacks by defining a template string with a '{prompt}' placeholder where the original prompt will be inserted.
     """
     
-    def __init__(self, template: str = "{prompt}", name: Optional[str] = None, description: Optional[str] = None):
+    def __init__(self, template: str = "{prompt}", name: str | None = None, description: str | None = None):
         """
         Initialize the template attack with a specific template string.
         
@@ -20,7 +21,7 @@ class TemplateAttack(BaseAttack):
         self._name = name
         self._description = description
     
-    def apply(self, prompt: Union[str, List[Dict[str, str]]]) -> Union[str, List[Dict[str, str]]]:
+    def apply(self, prompt: str | list[dict[str, str]]) -> str | list[dict[str, str]]:
         """
         Apply the template attack to the given prompt.
         
@@ -49,7 +50,7 @@ class TemplateAttack(BaseAttack):
         else:
             raise ValueError("Prompt is not a string or list of messages")
     
-    async def stream_abatch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> AsyncGenerator[List[Union[str, List[Dict[str, str]]]], None]:
+    async def stream_abatch(self, prompts: list[str | list[dict[str, str]]]) -> AsyncGenerator[list[str | list[dict[str, str]]], None]:
         """
         Apply the template attack to a batch of prompts asynchronously.
         

@@ -14,7 +14,7 @@ class AtbashCipherAttack(AlgoAttack):
     This implementation supports both English and Russian alphabets.
     """
     
-    def __init__(self, raw: bool = False, template: Optional[str] = None):
+    def __init__(self, raw: bool = False, template: str | None = None):
         """
         Initialize the Atbash Cipher Attack.
         

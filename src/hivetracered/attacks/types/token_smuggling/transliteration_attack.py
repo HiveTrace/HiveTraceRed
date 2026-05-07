@@ -59,7 +59,7 @@ class TransliterationAttack(AlgoAttack):
         'ukrainian': 'ua',
     }
     
-    def __init__(self, source_language: str = "russian", target_language: str = "english", raw: bool = True, template: Optional[str] = None):
+    def __init__(self, source_language: str = "russian", target_language: str = "english", raw: bool = True, template: str | None = None):
         """
         Initialize the transliteration attack with source and target languages.
         

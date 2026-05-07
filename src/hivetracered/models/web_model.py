@@ -8,7 +8,8 @@ through browser automation when no official API is available.
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import AsyncGenerator, Dict, List, Optional, Tuple, Union
+from typing import Dict, List, Optional, Tuple, Union
+from collections.abc import AsyncGenerator
 
 import asyncio
 
@@ -74,8 +75,8 @@ class WebModel(Model):
         self._init_lock = asyncio.Lock()
 
         self.playwright = None
-        self.browser: Optional[Browser] = None
-        self._semaphore: Optional[asyncio.Semaphore] = None
+        self.browser: Browser | None = None
+        self._semaphore: asyncio.Semaphore | None = None
 
     async def _initialize_browser(self) -> None:
         # Fast path: if already initialized, return immediately
@@ -109,7 +110,7 @@ class WebModel(Model):
 
         return await self.playwright.chromium.launch(headless=self.headless)
 
-    async def _setup_context_and_page(self) -> Tuple[BrowserContext, Page]:
+    async def _setup_context_and_page(self) -> tuple[BrowserContext, Page]:
         """
         Create and configure a (context, page) pair.
         """
@@ -170,7 +171,7 @@ class WebModel(Model):
         """
         pass
 
-    def _prompt_to_message(self, prompt: Union[str, List[Dict[str, str]]]) -> str:
+    def _prompt_to_message(self, prompt: str | list[dict[str, str]]) -> str:
         if isinstance(prompt, list):
             return prompt[-1].get("content", "") if prompt else ""
         return prompt
@@ -180,7 +181,7 @@ class WebModel(Model):
         raise NotImplementedError
 
     async def _process_single_prompt(
-        self, page: Page, prompt: Union[str, List[Dict[str, str]]]
+        self, page: Page, prompt: str | list[dict[str, str]]
     ) -> dict:
         message = self._prompt_to_message(prompt)
         try:
@@ -189,7 +190,7 @@ class WebModel(Model):
         except Exception as exc:
             return {"content": "", "error": str(exc), "error_type": type(exc).__name__}
 
-    async def _run_in_new_context(self, prompt: Union[str, List[Dict[str, str]]]) -> dict:
+    async def _run_in_new_context(self, prompt: str | list[dict[str, str]]) -> dict:
         """
         Run a prompt in a new (context, page) pair and dispose it afterwards.
 
@@ -200,8 +201,8 @@ class WebModel(Model):
             raise RuntimeError("Concurrency semaphore is not initialized.")
 
         async with self._semaphore:
-            context: Optional[BrowserContext] = None
-            page: Optional[Page] = None
+            context: BrowserContext | None = None
+            page: Page | None = None
             try:
                 context, page = await self._setup_context_and_page()
                 return await self._process_single_prompt(page, prompt)
@@ -217,10 +218,10 @@ class WebModel(Model):
                     except Exception:
                         pass
 
-    async def ainvoke(self, prompt: Union[str, List[Dict[str, str]]]) -> dict:
+    async def ainvoke(self, prompt: str | list[dict[str, str]]) -> dict:
         return await self._run_in_new_context(prompt)
 
-    def invoke(self, prompt: Union[str, List[Dict[str, str]]]) -> dict:
+    def invoke(self, prompt: str | list[dict[str, str]]) -> dict:
         try:
             loop = asyncio.get_event_loop()
             if loop.is_running():
@@ -236,11 +237,11 @@ class WebModel(Model):
 
         return loop.run_until_complete(self.ainvoke(prompt))
 
-    async def abatch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> List[dict]:
+    async def abatch(self, prompts: list[str | list[dict[str, str]]]) -> list[dict]:
         tasks = [self._run_in_new_context(prompt) for prompt in prompts]
         return await asyncio.gather(*tasks)
 
-    def batch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> List[dict]:
+    def batch(self, prompts: list[str | list[dict[str, str]]]) -> list[dict]:
         try:
             loop = asyncio.get_event_loop()
             if loop.is_running():
@@ -257,21 +258,21 @@ class WebModel(Model):
         return loop.run_until_complete(self.abatch(prompts))
 
     async def stream_abatch(
-        self, prompts: List[Union[str, List[Dict[str, str]]]]
-    ) -> AsyncGenerator[dict, None]:
+        self, prompts: list[str | list[dict[str, str]]]
+    ) -> AsyncGenerator[dict]:
         await self._initialize_browser()
         if self._semaphore is None:
             raise RuntimeError("Concurrency semaphore is not initialized.")
 
         async def sem_task(
-            idx: int, prompt: Union[str, List[Dict[str, str]]]
-        ) -> Tuple[int, dict]:
+            idx: int, prompt: str | list[dict[str, str]]
+        ) -> tuple[int, dict]:
             result = await self._run_in_new_context(prompt)
             return idx, result
 
         tasks = [asyncio.create_task(sem_task(i, p)) for i, p in enumerate(prompts)]
         total_tasks = len(tasks)
-        results: Dict[int, dict] = {}
+        results: dict[int, dict] = {}
         cur_idx = 0
 
         with tqdm(
@@ -291,7 +292,7 @@ class WebModel(Model):
         self,
         page: Page,
         selector: str,
-        last_content: Optional[str],
+        last_content: str | None,
         fallback_to_last: bool,
     ) -> str:
         if fallback_to_last and last_content:
@@ -312,11 +313,11 @@ class WebModel(Model):
         self,
         page: Page,
         selector: str,
-        last_content: Optional[str],
+        last_content: str | None,
         last_change_time: float,
         now: float,
         stable_time: float,
-    ) -> Tuple[Optional[str], Optional[str], float]:
+    ) -> tuple[str | None, str | None, float]:
         try:
             elements = await page.locator(selector).all()
             if not elements:
@@ -334,8 +335,8 @@ class WebModel(Model):
         self,
         page: Page,
         selector: str,
-        timeout: Optional[int] = None,
-        stable_time: Optional[float] = None,
+        timeout: int | None = None,
+        stable_time: float | None = None,
         fallback_to_last: bool = True,
     ) -> str:
         """
@@ -379,8 +380,8 @@ class WebModel(Model):
             await asyncio.sleep(0.5)
 
     async def _find_element_with_fallbacks(
-        self, page: Page, selectors: List[str], timeout: int = 3000
-    ) -> Optional[object]:
+        self, page: Page, selectors: list[str], timeout: int = 3000
+    ) -> object | None:
         """
         Try multiple selectors in order until one is found.
 

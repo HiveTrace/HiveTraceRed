@@ -2,7 +2,7 @@ from typing import Dict, Any, Union, List, Optional
 from hivetracered.evaluators.model_evaluator import ModelEvaluator
 from hivetracered.models.base_model import Model
 import re
-from typing import Coroutine
+from collections.abc import Coroutine
 from hivetracered.registry import Registry
 
 ERROR_LITERAL_RU = "ошибка"
@@ -29,8 +29,8 @@ class WildGuardGPTRuHalEvaluator(ModelEvaluator):
     
     def __init__(self, 
                  model: Model,
-                 name: Optional[str] = None,
-                 description: Optional[str] = None):
+                 name: str | None = None,
+                 description: str | None = None):
         """
         Initialize the WildGuardGPTRu evaluator.
         
@@ -46,7 +46,7 @@ class WildGuardGPTRuHalEvaluator(ModelEvaluator):
             description=description or "Evaluates prompt-response pairs for policy compliance and safety. Uses the translated to Russian WildGuard prompt for gpt4."
         )
     
-    def _parse_evaluation_response(self, evaluation_response: Dict[str, Any]) -> Dict[str, Any]:
+    def _parse_evaluation_response(self, evaluation_response: dict[str, Any]) -> dict[str, Any]:
         """
         Parse the evaluation response from the model.
         """
@@ -60,7 +60,7 @@ class WildGuardGPTRuHalEvaluator(ModelEvaluator):
             relevant = self._extract_answer(eval_content, r"4\.\s*(да|нет)", ERROR_LITERAL_RU)
         else:
             try:
-                should_block, did_answer, is_harmful, relevant = [re.sub(r"^\d+\.\s*", "", x.strip()) for x in eval_content.strip().split("\n")]
+                should_block, did_answer, is_harmful, relevant = (re.sub(r"^\d+\.\s*", "", x.strip()) for x in eval_content.strip().split("\n"))
             except ValueError as e:
                 print(e)
                 print(eval_content)

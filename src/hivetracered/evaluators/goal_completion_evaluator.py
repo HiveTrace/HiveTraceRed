@@ -44,9 +44,9 @@ class GoalCompletionEvaluator(ModelEvaluator):
         self,
         model: Model,
         success_threshold: float = 0.7,
-        evaluation_prompt_template: Optional[str] = None,
-        name: Optional[str] = None,
-        description: Optional[str] = None,
+        evaluation_prompt_template: str | None = None,
+        name: str | None = None,
+        description: str | None = None,
     ):
         """
         Initialize the goal completion evaluator.
@@ -73,8 +73,8 @@ class GoalCompletionEvaluator(ModelEvaluator):
         self.success_threshold = success_threshold
 
     def _parse_evaluation_response(
-        self, evaluation_response: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, evaluation_response: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Parse the judge's response to extract sub-dimension and overall scores.
 
@@ -122,7 +122,7 @@ class GoalCompletionEvaluator(ModelEvaluator):
             result[f] = self._coerce_score(match.group(1), defaults[f]) if match else defaults[f]
         return result
 
-    def _extract_scores(self, text: str) -> Dict[str, int]:
+    def _extract_scores(self, text: str) -> dict[str, int]:
         """
         Extract relevance, completeness, actionability, and overall scores.
 
@@ -138,7 +138,7 @@ class GoalCompletionEvaluator(ModelEvaluator):
 
         return self._scores_from_regex(text, fields, defaults)
 
-    def get_params(self) -> Dict[str, Any]:
+    def get_params(self) -> dict[str, Any]:
         """Get the parameters of the evaluator."""
         return {
             **self.model.get_params(),

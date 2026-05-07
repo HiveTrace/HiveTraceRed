@@ -23,7 +23,7 @@ class ZeroWidthAttack(AlgoAttack):
         '\uFEFF',  # Zero Width No-Break Space
     ]
     
-    def __init__(self, density: float = 0.5, raw: bool = True, template: Optional[str] = None):
+    def __init__(self, density: float = 0.5, raw: bool = True, template: str | None = None):
         """
         Initialize the Zero-Width Character Attack.
         

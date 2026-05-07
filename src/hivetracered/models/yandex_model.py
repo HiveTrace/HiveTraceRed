@@ -16,7 +16,7 @@ import threading
 from concurrent.futures import ThreadPoolExecutor
 from grpc.aio import AioRpcError
 from tqdm import tqdm
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 from hivetracered.registry import Registry
 
 YANDEX_INTERNET_SEARCH_NOTICE = 'В интернете есть много сайтов с информацией на эту тему. [Посмотрите, что нашлось в поиске](https://ya.ru)'
@@ -29,7 +29,7 @@ class YandexGPTModel(Model):
     and asynchronous operations, batched requests, and error handling.
     """
     
-    def __init__(self, model="yandexgpt", max_concurrency: Optional[int] = None, batch_size: Optional[int] = None, max_retries: int = 3, **kwargs):
+    def __init__(self, model="yandexgpt", max_concurrency: int | None = None, batch_size: int | None = None, max_retries: int = 3, **kwargs):
         """
         Initialize the Yandex GPT model client with the specified configuration.
 
@@ -85,7 +85,7 @@ class YandexGPTModel(Model):
             **self.kwargs
         )
         
-    def _format_prompt(self, prompt: Union[str, List[Dict[str, str]]]) -> List[Dict[str, str]]:
+    def _format_prompt(self, prompt: str | list[dict[str, str]]) -> list[dict[str, str]]:
         """
         Format the prompt for the Yandex GPT API.
         
@@ -110,7 +110,7 @@ class YandexGPTModel(Model):
                     formatted_messages.append({"role": "assistant", "text": message["content"]})
             return formatted_messages
     
-    def _format_response(self, response: Any) -> Dict:
+    def _format_response(self, response: Any) -> dict:
         """
         Format the API response to match the expected output format.
 
@@ -140,7 +140,7 @@ class YandexGPTModel(Model):
             "model_version": model_version
         }
     
-    def invoke(self, prompt: Union[str, List[Dict[str, str]]]) -> dict:
+    def invoke(self, prompt: str | list[dict[str, str]]) -> dict:
         """
         Send a single request to the model synchronously.
         
@@ -154,7 +154,7 @@ class YandexGPTModel(Model):
         
         return self._format_response(response)
     
-    async def ainvoke(self, prompt: Union[str, List[Dict[str, str]]]) -> dict:
+    async def ainvoke(self, prompt: str | list[dict[str, str]]) -> dict:
         """
         Send a single request to the model asynchronously.
         
@@ -180,7 +180,7 @@ class YandexGPTModel(Model):
                 'status': 4
             }
     
-    def batch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> List[dict]:
+    def batch(self, prompts: list[str | list[dict[str, str]]]) -> list[dict]:
         """
         Send multiple requests to the model synchronously.
         
@@ -205,7 +205,7 @@ class YandexGPTModel(Model):
                 results = [future.result() for future in tqdm(futures, desc=f"Processing requests with {self.model_name}", unit="request")]
             return results
 
-    async def abatch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> List[dict]:
+    async def abatch(self, prompts: list[str | list[dict[str, str]]]) -> list[dict]:
         """
         Send multiple requests to the model asynchronously.
         
@@ -281,7 +281,7 @@ class YandexGPTModel(Model):
             **self.kwargs
         }
 
-    async def stream_abatch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> AsyncGenerator[dict, None]:
+    async def stream_abatch(self, prompts: list[str | list[dict[str, str]]]) -> AsyncGenerator[dict, None]:
         """
         Send multiple requests to the model asynchronously and yield results as they complete.
         

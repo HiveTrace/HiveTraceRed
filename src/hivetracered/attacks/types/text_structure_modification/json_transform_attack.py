@@ -14,7 +14,7 @@ class JSONTransformAttack(AlgoAttack):
     For example, "How to get a cake?" becomes {"How": "to", "get": "a", "cake?": ""}.
     """
     
-    def __init__(self, raw: bool = True, template: Optional[str] = None):
+    def __init__(self, raw: bool = True, template: str | None = None):
         """
         Initialize the JSON Transform Attack.
         

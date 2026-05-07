@@ -49,7 +49,7 @@ _KNOWN_REPORT_KEYS = frozenset({
 })
 
 
-def load_config(config_path: str) -> Dict[str, Any]:
+def load_config(config_path: str) -> dict[str, Any]:
     """Load and return the YAML configuration at ``config_path``.
 
     The file must exist and parse to a mapping. Unknown keys at the top
@@ -63,7 +63,7 @@ def load_config(config_path: str) -> Dict[str, Any]:
     if not os.path.exists(config_path):
         raise FileNotFoundError(f"Config file not found: {config_path}")
 
-    with open(config_path, "r", encoding="utf-8") as f:
+    with open(config_path, encoding="utf-8") as f:
         config = yaml.safe_load(f)
 
     if config is None:

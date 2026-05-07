@@ -37,15 +37,15 @@ logger = logging.getLogger(__name__)
 class Registry:
     """Central registry for attacks, models, and evaluators."""
 
-    _attacks: Dict[str, Dict[str, Any]] = {}   # name -> {"class": cls, "category": str}
-    _models: Dict[str, Type] = {}              # class_name -> cls
-    _evaluators: Dict[str, Type] = {}          # class_name -> cls
-    _discovered: Set[str] = set()
+    _attacks: dict[str, dict[str, Any]] = {}   # name -> {"class": cls, "category": str}
+    _models: dict[str, type] = {}              # class_name -> cls
+    _evaluators: dict[str, type] = {}          # class_name -> cls
+    _discovered: set[str] = set()
 
     # ── decorators ────────────────────────────────────────────────────
 
     @classmethod
-    def attack(cls, category: str, name: Optional[str] = None):
+    def attack(cls, category: str, name: str | None = None):
         """Register an attack class under the given category.
 
         Args:
@@ -108,24 +108,24 @@ class Registry:
     # ── introspection ─────────────────────────────────────────────────
 
     @classmethod
-    def all_attacks(cls) -> Dict[str, Dict[str, Any]]:
+    def all_attacks(cls) -> dict[str, dict[str, Any]]:
         """Return a copy of the full attack registry."""
         return dict(cls._attacks)
 
     @classmethod
-    def all_models(cls) -> Dict[str, Type]:
+    def all_models(cls) -> dict[str, type]:
         """Return a copy of the full model registry."""
         return dict(cls._models)
 
     @classmethod
-    def all_evaluators(cls) -> Dict[str, Type]:
+    def all_evaluators(cls) -> dict[str, type]:
         """Return a copy of the full evaluator registry."""
         return dict(cls._evaluators)
 
     @classmethod
-    def attack_categories(cls) -> Dict[str, List[str]]:
+    def attack_categories(cls) -> dict[str, list[str]]:
         """Return category -> [attack_names] mapping."""
-        cats: Dict[str, List[str]] = {}
+        cats: dict[str, list[str]] = {}
         for name, info in cls._attacks.items():
             cats.setdefault(info["category"], []).append(name)
         return cats

@@ -80,7 +80,7 @@ class MistralWebModel(WebModel):
         # Set the target URL for Mistral Le Chat
         self.target_url = "https://chat.mistral.ai/chat"
 
-    async def _setup_context_and_page(self) -> Tuple[BrowserContext, Page]:
+    async def _setup_context_and_page(self) -> tuple[BrowserContext, Page]:
         """
         Create and configure a (context, page) pair with domcontentloaded navigation.
 

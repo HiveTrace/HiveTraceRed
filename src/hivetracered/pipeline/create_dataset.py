@@ -5,7 +5,8 @@ Supports regular and model-based attacks with efficient batch processing.
 
 import os
 import asyncio
-from typing import Dict, List, Any, Optional, Tuple, AsyncGenerator
+from typing import Dict, List, Any, Optional, Tuple
+from collections.abc import AsyncGenerator
 from tqdm import tqdm
 
 from hivetracered.attacks.base_attack import BaseAttack
@@ -111,13 +112,13 @@ def build_attack_from_config(attack_config, attacker_model=None, target_model=No
     return attack
 
 def setup_attacks(
-    attack_configs: List[dict],
-    attacker_model: Optional[Model] = None,
-    target_model: Optional[Model] = None,
-    evaluator: Optional[BaseEvaluator] = None,
-    evaluation_model: Optional[Model] = None,
+    attack_configs: list[dict],
+    attacker_model: Model | None = None,
+    target_model: Model | None = None,
+    evaluator: BaseEvaluator | None = None,
+    evaluation_model: Model | None = None,
     setup_evaluator_fn=None
-) -> Dict[str, BaseAttack]:
+) -> dict[str, BaseAttack]:
     """
     Initialize attack instances from configuration list.
 
@@ -161,7 +162,7 @@ def extract_prompt_text(base_prompt: Any) -> str:
     else:
         raise ValueError(f"Unsupported base_prompt type: {type(base_prompt)}")
 
-def create_prompt(base_prompt: Any, system_prompt: Optional[str] = None) -> Any:
+def create_prompt(base_prompt: Any, system_prompt: str | None = None) -> Any:
     """
     Format a prompt with optional system instructions.
 
@@ -181,7 +182,7 @@ def create_prompt(base_prompt: Any, system_prompt: Optional[str] = None) -> Any:
     return prompt_text
 
 async def generate_attack_prompt(attack: BaseAttack, base_prompt: Any,
-                                system_prompt: Optional[str] = None) -> Dict[str, Any]:
+                                system_prompt: str | None = None) -> dict[str, Any]:
     """
     Apply an attack to a single prompt.
 
@@ -227,7 +228,7 @@ async def generate_attack_prompt(attack: BaseAttack, base_prompt: Any,
         }
 
 async def stream_attack(attack: BaseAttack,
-                        base_prompts: List[Any], system_prompt: Optional[str] = None) -> AsyncGenerator[Dict[str, Any], None]:
+                        base_prompts: list[Any], system_prompt: str | None = None) -> AsyncGenerator[dict[str, Any], None]:
     """
     Apply an attack to multiple prompts in streaming mode.
 
@@ -282,8 +283,8 @@ async def stream_attack(attack: BaseAttack,
             }
 
 
-async def stream_attack_prompts(attacks: Dict[str, BaseAttack],
-                                base_prompts: List[Any], system_prompt: Optional[str] = None) -> AsyncGenerator[Dict[str, Any], None]:
+async def stream_attack_prompts(attacks: dict[str, BaseAttack],
+                                base_prompts: list[Any], system_prompt: str | None = None) -> AsyncGenerator[dict[str, Any], None]:
     """
     Process all attacks on all base prompts and stream results.
 

@@ -4,7 +4,8 @@ Handles streaming API interactions, error recovery, and response standardization
 """
 
 import os
-from typing import List, Dict, Any, AsyncGenerator
+from typing import List, Dict, Any
+from collections.abc import AsyncGenerator
 
 import asyncio
 from hivetracered.pipeline.utils.data_io import save_pipeline_results
@@ -13,9 +14,9 @@ from hivetracered.models.base_model import Model
 
 async def stream_model_responses(
     model: Model,
-    attack_prompts: List[Dict[str, Any]],
+    attack_prompts: list[dict[str, Any]],
     output_dir: str = "pipeline/data",
-) -> AsyncGenerator[Dict[str, Any], None]:
+) -> AsyncGenerator[dict[str, Any], None]:
     """
     Process attack prompts through a model and stream responses as they become available.
     

@@ -1,4 +1,5 @@
-from typing import Union, List, Optional, Dict, Any, AsyncGenerator
+from typing import Union, List, Optional, Dict, Any
+from collections.abc import AsyncGenerator
 from hivetracered.attacks.base_attack import BaseAttack
 from hivetracered.models.base_model import Model
 
@@ -11,9 +12,9 @@ class ModelAttack(BaseAttack):
     def __init__(self, 
                  model: Model,
                  attacker_prompt: str, 
-                 model_kwargs: Optional[Dict[str, Any]] = None,
-                 name: Optional[str] = None, 
-                 description: Optional[str] = None):
+                 model_kwargs: dict[str, Any] | None = None,
+                 name: str | None = None, 
+                 description: str | None = None):
         """
         Initialize the model attack with a specific model and attacker prompt.
         
@@ -64,7 +65,7 @@ class ModelAttack(BaseAttack):
 
         return response
     
-    def apply(self, prompt: Union[str, List[Dict[str, str]]]) -> Union[str, List[Dict[str, str]]]:
+    def apply(self, prompt: str | list[dict[str, str]]) -> str | list[dict[str, str]]:
         """
         Apply the model attack to the given prompt.
         
@@ -104,7 +105,7 @@ class ModelAttack(BaseAttack):
         else:
             raise ValueError("Prompt is not a string or list of messages")
     
-    async def batch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> List[Union[str, List[Dict[str, str]]]]:
+    async def batch(self, prompts: list[str | list[dict[str, str]]]) -> list[str | list[dict[str, str]]]:
         """
         Apply the model attack to a batch of prompts in a non-streaming manner.
         
@@ -149,7 +150,7 @@ class ModelAttack(BaseAttack):
         
         return transformed_prompts
     
-    async def stream_abatch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> AsyncGenerator[List[Union[str, List[Dict[str, str]]]], None]:
+    async def stream_abatch(self, prompts: list[str | list[dict[str, str]]]) -> AsyncGenerator[list[str | list[dict[str, str]]], None]:
         """
         Apply the model attack to a batch of prompts asynchronously.
         

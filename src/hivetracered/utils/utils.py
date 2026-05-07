@@ -54,7 +54,7 @@ GET_ALL_UNSAFE_WORDS_PROMPT = """Ты - помощник по модерации
 Текст: {prompt}
 Ответ: """
 
-def get_unsafe_word(prompt: str, model: Model) -> Optional[str]:
+def get_unsafe_word(prompt: str, model: Model) -> str | None:
     """
     Identify the first potentially unsafe word in text using an LLM.
     
@@ -90,7 +90,7 @@ def get_unsafe_word(prompt: str, model: Model) -> Optional[str]:
         raise e
 
 
-def get_all_unsafe_words(prompt: str, model: Model) -> List[str]:
+def get_all_unsafe_words(prompt: str, model: Model) -> list[str]:
     """
     Identify all potentially unsafe words in text using an LLM.
     

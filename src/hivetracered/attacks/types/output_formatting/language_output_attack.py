@@ -9,7 +9,7 @@ class LanguageOutputAttack(TemplateAttack):
     Forces the model to respond in a specific language, potentially bypassing content filters
     that might be language-specific.
     """
-    def __init__(self, language: Optional[str] = "chinese"):
+    def __init__(self, language: str | None = "chinese"):
         """
         Initialize the language output attack.
         

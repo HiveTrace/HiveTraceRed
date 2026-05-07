@@ -18,7 +18,7 @@ def get_data_file_path(filename: str) -> str:
     current_dir = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(current_dir, filename)
 
-def load_keywords() -> List[str]:
+def load_keywords() -> list[str]:
     """
     Load default keywords from the keywords.csv file.
     
@@ -29,7 +29,7 @@ def load_keywords() -> List[str]:
     keywords_file = get_data_file_path("keywords.csv")
     
     try:
-        with open(keywords_file, 'r', newline='', encoding='utf-8') as csvfile:
+        with open(keywords_file, newline='', encoding='utf-8') as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:
                 keywords.append(row['keyword'])

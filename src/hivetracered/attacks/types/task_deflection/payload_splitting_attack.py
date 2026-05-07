@@ -25,7 +25,7 @@ class PayloadSplittingAttack(TemplateAttack):
             description="Payload splitting attack that breaks a harmful request into separate parts to bypass content filters."
         )
     
-    def apply(self, prompt: Union[str, List[Dict[str, str]]]) -> Union[str, List[Dict[str, str]]]:
+    def apply(self, prompt: str | list[dict[str, str]]) -> str | list[dict[str, str]]:
         """
         Apply the payload splitting attack to the given prompt.
         

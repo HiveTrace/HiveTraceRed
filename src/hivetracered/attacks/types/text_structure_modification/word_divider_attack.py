@@ -17,7 +17,7 @@ class WordDividerAttack(AlgoAttack):
     
     def __init__(self, divider_char: str = "+", density: float = 1.0, 
                  apply_to_words_longer_than: int = 1, raw: bool = True, 
-                 template: Optional[str] = None):
+                 template: str | None = None):
         """
         Initialize the Word Divider Attack.
         

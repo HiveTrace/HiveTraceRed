@@ -1,4 +1,5 @@
-from typing import AsyncGenerator, Coroutine, Union, List, Dict, Optional, Any
+from typing import Union, List, Dict, Optional, Any
+from collections.abc import AsyncGenerator, Coroutine
 from hivetracered.attacks.model_attack import ModelAttack
 from hivetracered.attacks.base_attack import BaseAttack
 from hivetracered.models.base_model import Model
@@ -13,7 +14,7 @@ class TextContinuingAttack(ModelAttack):
     """
     def __init__(self, 
                  model: Model,
-                 model_kwargs: Optional[Dict[str, Any]] = None,
+                 model_kwargs: dict[str, Any] | None = None,
                  raw_prompt: bool = False):
         self.raw_prompt = raw_prompt
 
@@ -46,7 +47,7 @@ class TextContinuingAttack(ModelAttack):
         transformed_prompt = transformed_prompt.strip().replace("Вот преобразованный запрос:", "").strip()
         return template + transformed_prompt
             
-    def apply(self, prompt: Union[str, List[Dict[str, str]]]) -> Union[str, List[Dict[str, str]]]:
+    def apply(self, prompt: str | list[dict[str, str]]) -> str | list[dict[str, str]]:
         if isinstance(prompt, str):
             template = self._make_template(prompt)
             return template
@@ -60,7 +61,7 @@ class TextContinuingAttack(ModelAttack):
                     result[i]["content"] = template
             return result
 
-    async def aapply_to_list(self, prompts: List[str | List[Dict[str, str]]]) -> Coroutine[Any, Any, List[str | List[Dict[str, str]]]]:
+    async def aapply_to_list(self, prompts: list[str | list[dict[str, str]]]) -> Coroutine[Any, Any, list[str | list[dict[str, str]]]]:
         result = []
         for prompt in prompts:
             if isinstance(prompt, str):
@@ -76,7 +77,7 @@ class TextContinuingAttack(ModelAttack):
                 result.append(copied)
         return result
     
-    async def stream_abatch(self, prompts: List[str | List[Dict[str, str]]]) -> AsyncGenerator[str | List[Dict[str, str]], None]:
+    async def stream_abatch(self, prompts: list[str | list[dict[str, str]]]) -> AsyncGenerator[str | list[dict[str, str]], None]:
         """
         Apply the text continuing attack to each prompt and yield results as they complete.
         

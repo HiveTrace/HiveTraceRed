@@ -8,7 +8,8 @@ import json
 import re
 from abc import abstractmethod
 from dataclasses import dataclass, field
-from typing import Any, AsyncGenerator, Dict, List, Optional, Union
+from typing import Any, Dict, List, Optional, Union
+from collections.abc import AsyncGenerator
 
 from hivetracered.attacks.base_attack import BaseAttack
 from hivetracered.evaluators.base_evaluator import BaseEvaluator
@@ -28,7 +29,7 @@ class LanguageConfig:
     code: str
     target_str: str
     attacker_suffix: str
-    approach_hints: List[str]
+    approach_hints: list[str]
 
 
 RUSSIAN_LANGUAGE_CONFIG = LanguageConfig(
@@ -85,8 +86,8 @@ class IterationResult:
     target_response: str
     success: bool
     score: float = 0.0
-    conversation: List[Dict[str, str]] = field(default_factory=list)
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    conversation: list[dict[str, str]] = field(default_factory=list)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
@@ -107,9 +108,9 @@ class IterativeAttackResult:
     success: bool
     best_attack_prompt: str
     best_score: float
-    iterations: List[IterationResult]
+    iterations: list[IterationResult]
     total_iterations: int
-    metadata: Dict[str, Any] = field(default_factory=dict)
+    metadata: dict[str, Any] = field(default_factory=dict)
 
 
 class IterativeAttack(BaseAttack):
@@ -128,9 +129,9 @@ class IterativeAttack(BaseAttack):
         target_model: Model,
         evaluator: BaseEvaluator,
         max_iterations: int = 10,
-        language_config: Optional[LanguageConfig] = None,
-        name: Optional[str] = None,
-        description: Optional[str] = None
+        language_config: LanguageConfig | None = None,
+        name: str | None = None,
+        description: str | None = None
     ):
         self.attacker_model = attacker_model
         self.target_model = target_model
@@ -153,7 +154,7 @@ class IterativeAttack(BaseAttack):
             response = response[:-3]
         return response.strip()
 
-    def _extract_json_field(self, response: str, field: str) -> Optional[str]:
+    def _extract_json_field(self, response: str, field: str) -> str | None:
         """Extract a field from a JSON response, falling back to regex if parsing fails."""
         try:
             data = json.loads(self._strip_markdown_json(response))
@@ -200,14 +201,14 @@ class IterativeAttack(BaseAttack):
 
     # --- Shared evaluation ---
 
-    def _evaluate_response(self, goal: str, target_response: str) -> Dict[str, Any]:
+    def _evaluate_response(self, goal: str, target_response: str) -> dict[str, Any]:
         """Evaluate the target's response and return success, score, and raw result."""
         eval_result = self.evaluator.evaluate(goal, target_response)
         success = eval_result.get("success", False)
         score = eval_result.get("score", 1.0 if success else 0.0)
         return {"success": success, "score": score, "raw": eval_result}
 
-    async def _evaluate_response_async(self, goal: str, target_response: str) -> Dict[str, Any]:
+    async def _evaluate_response_async(self, goal: str, target_response: str) -> dict[str, Any]:
         """Async version of _evaluate_response using the evaluator's stream_abatch."""
         async for eval_result in self.evaluator.stream_abatch([goal], [target_response]):
             success = eval_result.get("success", False)
@@ -217,7 +218,7 @@ class IterativeAttack(BaseAttack):
 
     # --- BaseAttack interface ---
 
-    def _extract_goal(self, prompt: Union[str, List[Dict[str, str]]]) -> str:
+    def _extract_goal(self, prompt: str | list[dict[str, str]]) -> str:
         """Extract the goal string from a prompt (string or message list)."""
         if isinstance(prompt, str):
             return prompt
@@ -230,9 +231,9 @@ class IterativeAttack(BaseAttack):
 
     def _format_result(
         self,
-        prompt: Union[str, List[Dict[str, str]]],
+        prompt: str | list[dict[str, str]],
         best_attack_prompt: str
-    ) -> Union[str, List[Dict[str, str]]]:
+    ) -> str | list[dict[str, str]]:
         """Format the best attack prompt to match the original prompt's type."""
         if isinstance(prompt, str):
             return best_attack_prompt
@@ -240,7 +241,7 @@ class IterativeAttack(BaseAttack):
         messages.append({"role": "human", "content": best_attack_prompt})
         return messages
 
-    def apply(self, prompt: Union[str, List[Dict[str, str]]]) -> Union[str, List[Dict[str, str]]]:
+    def apply(self, prompt: str | list[dict[str, str]]) -> str | list[dict[str, str]]:
         """
         Apply the iterative attack to generate the best jailbreak prompt.
 
@@ -253,8 +254,8 @@ class IterativeAttack(BaseAttack):
 
     async def stream_abatch(
         self,
-        prompts: List[Union[str, List[Dict[str, str]]]]
-    ) -> AsyncGenerator[Union[str, List[Dict[str, str]]], None]:
+        prompts: list[str | list[dict[str, str]]]
+    ) -> AsyncGenerator[str | list[dict[str, str]], None]:
         """
         Apply the iterative attack to a batch of prompts asynchronously.
 
@@ -271,7 +272,7 @@ class IterativeAttack(BaseAttack):
 
         tasks = [asyncio.create_task(_run_task(i, p)) for i, p in enumerate(prompts)]
 
-        results: Dict[int, Any] = {}
+        results: dict[int, Any] = {}
         cur_idx = 0
         for task in asyncio.as_completed(tasks):
             idx, formatted = await task
@@ -291,7 +292,7 @@ class IterativeAttack(BaseAttack):
             f" against {self.target_model.__class__.__name__}"
         )
 
-    def get_params(self) -> Dict[str, Any]:
+    def get_params(self) -> dict[str, Any]:
         """Get the parameters of the attack."""
         return {
             "max_iterations": self.max_iterations,

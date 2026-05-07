@@ -13,7 +13,7 @@ class HexEncodingAttack(AlgoAttack):
     potentially bypassing content filters.
     """
     
-    def __init__(self, raw: bool = False, template: Optional[str] = None):
+    def __init__(self, raw: bool = False, template: str | None = None):
         """
         Initialize the Hex Encoding Attack.
         

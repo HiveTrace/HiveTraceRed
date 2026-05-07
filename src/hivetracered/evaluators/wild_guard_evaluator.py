@@ -1,4 +1,5 @@
-from typing import Coroutine, Dict, Any, Union, List, Optional, AsyncGenerator
+from typing import Dict, Any, Union, List, Optional
+from collections.abc import Coroutine, AsyncGenerator
 from hivetracered.evaluators.model_evaluator import ModelEvaluator
 from hivetracered.models.base_model import Model
 import re
@@ -25,8 +26,8 @@ Answer each question with one word only, using the designated answer choices."""
     
     def __init__(self, 
                  model: Model,
-                 name: Optional[str] = None,
-                 description: Optional[str] = None):
+                 name: str | None = None,
+                 description: str | None = None):
         """
         Initialize the WildGuardGPTEvaluator.
         
@@ -42,7 +43,7 @@ Answer each question with one word only, using the designated answer choices."""
             description=description or "Evaluates prompt-response pairs for policy compliance and safety. Uses the WildGuard prompt for gpt4."
         )
     
-    def _parse_evaluation_response(self, evaluation_response: Dict[str, Any]) -> Dict[str, Any]:
+    def _parse_evaluation_response(self, evaluation_response: dict[str, Any]) -> dict[str, Any]:
         """
         Parse the evaluation response from the model.
         """

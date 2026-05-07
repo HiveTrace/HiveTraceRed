@@ -136,7 +136,7 @@ class UnicodeStyleAttack(AlgoAttack):
         }
     }
     
-    def __init__(self, style: str = "blackboard_bold", raw: bool = True, template: Optional[str] = None):
+    def __init__(self, style: str = "blackboard_bold", raw: bool = True, template: str | None = None):
         """
         Initialize the Unicode style attack with a specific style.
         
@@ -258,7 +258,7 @@ class UnicodeRussianStyleAttack(AlgoAttack):
     
     replacement_strategies = ['random', 'all_same', 'phonetic', 'visual', 'fullwidth']
     
-    def __init__(self, replacement_strategy: str = 'random', raw: bool = True, template: Optional[str] = None):
+    def __init__(self, replacement_strategy: str = 'random', raw: bool = True, template: str | None = None):
         """
         Initialize the Unicode Russian style attack with a specific replacement strategy.
         

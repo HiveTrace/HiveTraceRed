@@ -93,9 +93,9 @@ class TypoAttack(AlgoAttack):
                  allow_doubles: bool = True, 
                  allow_adjacents: bool = True,
                  language: str = "both",
-                 forced_typo_words: Optional[List[str]] = None,
+                 forced_typo_words: list[str] | None = None,
                  raw: bool = True,
-                 template: Optional[str] = None):
+                 template: str | None = None):
         """
         Initialize the Typo Attack.
         

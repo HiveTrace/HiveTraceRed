@@ -4,7 +4,7 @@ from langchain_core.language_models.llms import BaseLLM
 from hivetracered.models.base_model import Model
 from dotenv import load_dotenv
 import os
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 import asyncio
 from tqdm import tqdm
 from abc import abstractmethod
@@ -79,7 +79,7 @@ class LangchainModel(Model):
             ),
         )
 
-    def invoke(self, prompt: Union[str, List[Dict[str, str]]]) -> dict:
+    def invoke(self, prompt: str | list[dict[str, str]]) -> dict:
         """
         Send a single request to the model synchronously.
         
@@ -91,7 +91,7 @@ class LangchainModel(Model):
         """
         return dict(self.client.invoke(prompt))
     
-    async def ainvoke(self, prompt: Union[str, List[Dict[str, str]]]) -> dict:
+    async def ainvoke(self, prompt: str | list[dict[str, str]]) -> dict:
         """
         Send a single request to the model asynchronously.
         
@@ -103,7 +103,7 @@ class LangchainModel(Model):
         """
         return dict(await self.client.ainvoke(prompt))
     
-    def batch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> List[dict]:
+    def batch(self, prompts: list[str | list[dict[str, str]]]) -> list[dict]:
         """
         Send multiple requests to the model synchronously.
 
@@ -118,7 +118,7 @@ class LangchainModel(Model):
         else:
             return [dict(response) for response in self.client.batch(prompts, config={"max_concurrency": self.max_concurrency})]
     
-    async def abatch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> List[dict]:
+    async def abatch(self, prompts: list[str | list[dict[str, str]]]) -> list[dict]:
         """
         Send multiple requests to the model asynchronously.
 
@@ -160,7 +160,7 @@ class LangchainModel(Model):
             "batch_size": self.batch_size
         }
     
-    async def stream_abatch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> AsyncGenerator[dict, None]:
+    async def stream_abatch(self, prompts: list[str | list[dict[str, str]]]) -> AsyncGenerator[dict, None]:
         """
         Send multiple requests to the model asynchronously and yield results as they complete.
 

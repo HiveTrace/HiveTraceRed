@@ -14,7 +14,7 @@ class EncodingAttack(AlgoAttack):
     potentially bypassing content filters due to different token representation.
     """
     
-    def __init__(self, source_encoding: str = "utf-8", target_encoding: str = "koi8-r", raw: bool = True, template: Optional[str] = None):
+    def __init__(self, source_encoding: str = "utf-8", target_encoding: str = "koi8-r", raw: bool = True, template: str | None = None):
         """
         Initialize the encoding attack with the specified target encoding.
         

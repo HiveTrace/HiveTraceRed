@@ -41,8 +41,8 @@ logger = logging.getLogger(__name__)
 
 
 async def create_attack_prompts(
-    config: Dict[str, Any], run_dir: str, output_format: str = "csv"
-) -> List[Dict[str, Any]]:
+    config: dict[str, Any], run_dir: str, output_format: str = "csv"
+) -> list[dict[str, Any]]:
     """Stage 1: Create attack prompts using configured attacks."""
     logger.info("STAGE 1: Creating attack prompts...")
 
@@ -82,7 +82,7 @@ async def create_attack_prompts(
 
     system_prompt = config.get("system_prompt", None)
 
-    attack_prompts: List[Dict[str, Any]] = []
+    attack_prompts: list[dict[str, Any]] = []
     async for ap in stream_attack_prompts(attacks, base_prompts, system_prompt):
         attack_prompts.append(ap)
 
@@ -96,11 +96,11 @@ async def create_attack_prompts(
 
 
 async def get_model_responses(
-    config: Dict[str, Any],
-    attack_prompts: List[Dict[str, Any]],
+    config: dict[str, Any],
+    attack_prompts: list[dict[str, Any]],
     run_dir: str,
     output_format: str = "csv",
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Stage 2: Get model responses for the attack prompts."""
     logger.info("STAGE 2: Getting model responses...")
 
@@ -109,7 +109,7 @@ async def get_model_responses(
         logger.warning("No valid response model configured.")
         return []
 
-    model_responses: List[Dict[str, Any]] = []
+    model_responses: list[dict[str, Any]] = []
     async for response in stream_model_responses(response_model, attack_prompts, run_dir):
         model_responses.append(response)
 
@@ -122,11 +122,11 @@ async def get_model_responses(
 
 
 async def evaluate_responses(
-    config: Dict[str, Any],
-    model_responses: List[Dict[str, Any]],
+    config: dict[str, Any],
+    model_responses: list[dict[str, Any]],
     run_dir: str,
     output_format: str = "csv",
-) -> Tuple[List[Dict[str, Any]], Optional[str]]:
+) -> tuple[list[dict[str, Any]], str | None]:
     """Stage 3: Evaluate model responses."""
     logger.info("STAGE 3: Evaluating responses...")
 
@@ -137,7 +137,7 @@ async def evaluate_responses(
         logger.warning("No valid evaluator configured.")
         return [], None
 
-    evaluation_results: List[Dict[str, Any]] = []
+    evaluation_results: list[dict[str, Any]] = []
     async for result in stream_evaluated_responses(evaluator, model_responses):
         evaluation_results.append(result)
 
@@ -161,8 +161,8 @@ async def evaluate_responses(
 
 
 def generate_report(
-    config: Dict[str, Any], run_dir: str, evaluation_file: str
-) -> Optional[str]:
+    config: dict[str, Any], run_dir: str, evaluation_file: str
+) -> str | None:
     """Stage 4: Generate HTML report from evaluation results.
 
     Exceptions propagate to the top-level CLI handler, which logs them
@@ -212,7 +212,7 @@ def generate_report(
 
 
 def _preflight_config(
-    config: Dict[str, Any],
+    config: dict[str, Any],
     enable_attacks: bool,
     enable_responses: bool,
     enable_eval: bool,
@@ -256,12 +256,12 @@ def _preflight_config(
             )
 
 
-def _dump_config_to_yaml(config: Dict[str, Any], config_path: str) -> None:
+def _dump_config_to_yaml(config: dict[str, Any], config_path: str) -> None:
     with open(config_path, "w", encoding="utf-8") as f:
         yaml.dump(config, f, default_flow_style=False)
 
 
-async def _prepare_run_dir(config: Dict[str, Any]) -> str:
+async def _prepare_run_dir(config: dict[str, Any]) -> str:
     output_dir = config.get("output_dir", "results")
     timestamp = datetime.now().strftime(config.get("timestamp_format", "%Y%m%d_%H%M%S"))
     run_dir = os.path.join(output_dir, f"run_{timestamp}")
@@ -274,9 +274,9 @@ async def _prepare_run_dir(config: Dict[str, Any]) -> str:
 
 
 async def _run_stage_attacks(
-    config: Dict[str, Any], run_dir: str, output_format: str,
+    config: dict[str, Any], run_dir: str, output_format: str,
     enable_attacks: bool, enable_responses: bool,
-) -> Tuple[List[Dict[str, Any]], bool]:
+) -> tuple[list[dict[str, Any]], bool]:
     if enable_attacks:
         attack_prompts = await create_attack_prompts(config, run_dir, output_format)
         if not attack_prompts and enable_responses:
@@ -294,10 +294,10 @@ async def _run_stage_attacks(
 
 
 async def _run_stage_responses(
-    config: Dict[str, Any], attack_prompts: List[Dict[str, Any]],
+    config: dict[str, Any], attack_prompts: list[dict[str, Any]],
     run_dir: str, output_format: str,
     enable_responses: bool, enable_eval: bool,
-) -> Tuple[List[Dict[str, Any]], bool]:
+) -> tuple[list[dict[str, Any]], bool]:
     if enable_responses:
         model_responses = await get_model_responses(config, attack_prompts, run_dir, output_format)
         if not model_responses and enable_eval:
@@ -315,10 +315,10 @@ async def _run_stage_responses(
 
 
 async def _run_stage_eval(
-    config: Dict[str, Any], model_responses: List[Dict[str, Any]],
+    config: dict[str, Any], model_responses: list[dict[str, Any]],
     run_dir: str, output_format: str,
     enable_eval: bool, enable_report: bool,
-) -> Tuple[List[Dict[str, Any]], Optional[str]]:
+) -> tuple[list[dict[str, Any]], str | None]:
     if enable_eval:
         return await evaluate_responses(config, model_responses, run_dir, output_format)
 
@@ -333,10 +333,10 @@ async def _run_stage_eval(
 
 def _log_summary(
     run_dir: str,
-    attack_prompts: List[Dict[str, Any]],
-    model_responses: List[Dict[str, Any]],
-    evaluation_results: List[Dict[str, Any]],
-    report_path: Optional[str],
+    attack_prompts: list[dict[str, Any]],
+    model_responses: list[dict[str, Any]],
+    evaluation_results: list[dict[str, Any]],
+    report_path: str | None,
 ) -> None:
     logger.info(
         "Pipeline complete: %d attack prompts, %d responses, %d evaluations",
@@ -350,7 +350,7 @@ def _log_summary(
         logger.info("Report: %s", report_path)
 
 
-async def run_pipeline(config: Dict[str, Any]) -> None:
+async def run_pipeline(config: dict[str, Any]) -> None:
     """Run the complete testing pipeline, controlling stages via config."""
     run_dir = await _prepare_run_dir(config)
     output_format = config.get("output_format", "csv")

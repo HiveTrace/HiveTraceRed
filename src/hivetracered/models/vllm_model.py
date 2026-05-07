@@ -25,9 +25,9 @@ class VLLMModel(LangchainModel):
         self,
         model: str,
         base_url: str = "http://localhost:8000/v1",
-        api_key: Optional[str] = None,
-        max_concurrency: Optional[int] = None,
-        batch_size: Optional[int] = None,
+        api_key: str | None = None,
+        max_concurrency: int | None = None,
+        batch_size: int | None = None,
         max_retries: int = 3,
         **kwargs,
     ):

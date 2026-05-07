@@ -1,4 +1,5 @@
-from typing import List, Any, Optional, Union, Dict, AsyncGenerator
+from typing import List, Any, Optional, Union, Dict
+from collections.abc import AsyncGenerator
 from abc import ABC, abstractmethod
 
 class Model(ABC):
@@ -10,7 +11,7 @@ class Model(ABC):
     model_name: str
 
     @abstractmethod
-    def invoke(self, prompt: Union[str, List[Dict[str, str]]]) -> dict:
+    def invoke(self, prompt: str | list[dict[str, str]]) -> dict:
         """
         Send a single request to the model synchronously.
         
@@ -23,7 +24,7 @@ class Model(ABC):
         pass
     
     @abstractmethod
-    async def ainvoke(self, prompt: Union[str, List[Dict[str, str]]]) -> dict:
+    async def ainvoke(self, prompt: str | list[dict[str, str]]) -> dict:
         """
         Send a single request to the model asynchronously.
         
@@ -36,7 +37,7 @@ class Model(ABC):
         pass
     
     @abstractmethod
-    def batch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> List[dict]:
+    def batch(self, prompts: list[str | list[dict[str, str]]]) -> list[dict]:
         """
         Send multiple requests to the model synchronously.
         
@@ -49,7 +50,7 @@ class Model(ABC):
         pass
     
     @abstractmethod
-    async def abatch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> List[dict]:
+    async def abatch(self, prompts: list[str | list[dict[str, str]]]) -> list[dict]:
         """
         Send multiple requests to the model asynchronously.
         
@@ -83,7 +84,7 @@ class Model(ABC):
         return self.__dict__
     
     @abstractmethod
-    async def stream_abatch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> AsyncGenerator[dict, None]:
+    async def stream_abatch(self, prompts: list[str | list[dict[str, str]]]) -> AsyncGenerator[dict, None]:
         """
         Send multiple requests to the model asynchronously and yield results as they complete.
         

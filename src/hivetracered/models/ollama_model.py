@@ -3,7 +3,7 @@ from langchain_ollama import ChatOllama
 from hivetracered.models.langchain_model import LangchainModel
 from dotenv import load_dotenv
 import os
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 import asyncio
 from tqdm import tqdm
 import warnings
@@ -23,8 +23,8 @@ class OllamaModel(LangchainModel):
     def __init__(
         self,
         model: str = "ollama/qwen3:0.6b",
-        max_concurrency: Optional[int] = None,
-        batch_size: Optional[int] = None,
+        max_concurrency: int | None = None,
+        batch_size: int | None = None,
         base_url: str = "http://localhost:11434",
         max_retries: int = 3,
         **kwargs

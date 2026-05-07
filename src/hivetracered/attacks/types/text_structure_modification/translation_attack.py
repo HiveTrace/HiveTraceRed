@@ -18,9 +18,9 @@ class TranslationAttack(ModelAttack):
                  model: Model,
                  source_language: str = "russian",
                  target_language: str = "english",
-                 model_kwargs: Optional[Dict[str, Any]] = None,
-                 name: Optional[str] = None, 
-                 description: Optional[str] = None):
+                 model_kwargs: dict[str, Any] | None = None,
+                 name: str | None = None, 
+                 description: str | None = None):
         """
         Initialize the Translation Attack.
         

@@ -27,7 +27,7 @@ _PROMPT_COLUMN_NAMES = (
 )
 
 
-def setup_model(model_config: Dict[str, Any]) -> Optional[Model]:
+def setup_model(model_config: dict[str, Any]) -> Model | None:
     """Set up a model based on configuration dict.
 
     Resolution order:
@@ -63,8 +63,8 @@ def setup_model(model_config: Dict[str, Any]) -> Optional[Model]:
 
 
 def setup_evaluator(
-    evaluator_config: Dict[str, Any], model: Optional[Model] = None
-) -> Optional[BaseEvaluator]:
+    evaluator_config: dict[str, Any], model: Model | None = None
+) -> BaseEvaluator | None:
     """Set up an evaluator based on configuration dict.
 
     ModelEvaluator subclasses receive ``model``; other evaluators are
@@ -113,7 +113,7 @@ def _read_tabular(file_path: str) -> pd.DataFrame:
     raise ValueError(f"Unsupported file extension: {ext}")
 
 
-def load_base_prompts(config: Dict[str, Any]) -> List[Union[str, Dict[str, Any]]]:
+def load_base_prompts(config: dict[str, Any]) -> list[str | dict[str, Any]]:
     """Load base prompts from ``base_prompts_file`` or fall back to
     ``base_prompts`` in the config.
 
@@ -133,7 +133,7 @@ def load_base_prompts(config: Dict[str, Any]) -> List[Union[str, Dict[str, Any]]
 
     ext = os.path.splitext(file_path)[1].lower()
     if ext == ".txt":
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             return [line.strip() for line in f.readlines()]
 
     df = _read_tabular(file_path)
@@ -151,7 +151,7 @@ def load_base_prompts(config: Dict[str, Any]) -> List[Union[str, Dict[str, Any]]
     )
 
 
-def load_records(file_path: str, label: str = "records") -> List[Dict[str, Any]]:
+def load_records(file_path: str, label: str = "records") -> list[dict[str, Any]]:
     """Load intermediate pipeline records from a file.
 
     Replaces the previous ``load_attack_prompts`` / ``load_model_responses``
@@ -170,7 +170,7 @@ def load_records(file_path: str, label: str = "records") -> List[Dict[str, Any]]
     try:
         ext = os.path.splitext(file_path)[1].lower()
         if ext == ".json":
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 data = json.load(f)
             if not isinstance(data, list):
                 raise ValueError(

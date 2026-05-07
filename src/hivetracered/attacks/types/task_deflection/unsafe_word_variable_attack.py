@@ -1,4 +1,5 @@
-from typing import Optional, Dict, Any, Union, List, AsyncGenerator
+from typing import Optional, Dict, Any, Union, List
+from collections.abc import AsyncGenerator
 
 from hivetracered.attacks.base_attack import BaseAttack
 from hivetracered.attacks.model_attack import ModelAttack
@@ -18,10 +19,10 @@ class UnsafeWordVariableAttack(BaseAttack):
     
     def __init__(
         self,
-        name: Optional[str] = None,
-        description: Optional[str] = None,
-        unsafe_word: Optional[str] = None,
-        unsafe_words: Optional[List[str]] = None,
+        name: str | None = None,
+        description: str | None = None,
+        unsafe_word: str | None = None,
+        unsafe_words: list[str] | None = None,
     ):
         """
         Initialize the UnsafeWordVariableAttack.
@@ -66,7 +67,7 @@ class UnsafeWordVariableAttack(BaseAttack):
         else:
             raise ValueError("Prompt is not a string or list of messages")
         
-    async def stream_abatch(self, prompts: List[Union[str, List[Dict[str, str]]]], unsafe_words: Optional[List[str]] = None) -> AsyncGenerator[List[Union[str, List[Dict[str, str]]]], None]:
+    async def stream_abatch(self, prompts: list[str | list[dict[str, str]]], unsafe_words: list[str] | None = None) -> AsyncGenerator[list[str | list[dict[str, str]]], None]:
         """
         Apply the attack to the list of prompts asynchronously.
         """
@@ -106,7 +107,7 @@ class UnsafeWordVariableFullAttack(ModelAttack):
     def __init__(
         self,
         model: Model,
-        model_kwargs: Optional[Dict[str, Any]] = None,
+        model_kwargs: dict[str, Any] | None = None,
     ):
         """
         Initialize the UnsafeWordVariableFullAttack.
@@ -124,7 +125,7 @@ class UnsafeWordVariableFullAttack(ModelAttack):
         )
         self.unsafe_word_attack = UnsafeWordVariableAttack()
     
-    def apply(self, prompt: Union[str, List[Dict[str, str]]]) -> Union[str, List[Dict[str, str]]]:
+    def apply(self, prompt: str | list[dict[str, str]]) -> str | list[dict[str, str]]:
         """
         Apply the model attack to the given prompt by first identifying unsafe words
         and then applying the variable attack.
@@ -160,7 +161,7 @@ class UnsafeWordVariableFullAttack(ModelAttack):
         else:
             raise ValueError("Prompt is not a string or list of messages")
     
-    async def stream_abatch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> AsyncGenerator[List[Union[str, List[Dict[str, str]]]], None]:
+    async def stream_abatch(self, prompts: list[str | list[dict[str, str]]]) -> AsyncGenerator[list[str | list[dict[str, str]]], None]:
         """
         Apply the model attack to the list of prompts asynchronously.
         

@@ -3,7 +3,7 @@ from langchain_community.chat_models import ChatLlamaCpp
 from hivetracered.models.langchain_model import LangchainModel
 from dotenv import load_dotenv
 import os
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 import asyncio
 from tqdm import tqdm
 import multiprocessing
@@ -25,12 +25,12 @@ class LlamaCppModel(LangchainModel):
     def __init__(
         self,
         model_path: str,
-        max_concurrency: Optional[int] = None,
-        batch_size: Optional[int] = None,
+        max_concurrency: int | None = None,
+        batch_size: int | None = None,
         n_ctx: int = 10000,
         n_gpu_layers: int = -1,
         n_batch: int = 512,
-        n_threads: Optional[int] = None,
+        n_threads: int | None = None,
         max_retries: int = 3,
         **kwargs
     ):

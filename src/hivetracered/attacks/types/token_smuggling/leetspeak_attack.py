@@ -37,7 +37,7 @@ class LeetspeakAttack(AlgoAttack):
         'Я': '9I', 'я': '9I'
     }
     
-    def __init__(self, raw: bool = True, template: Optional[str] = None):
+    def __init__(self, raw: bool = True, template: str | None = None):
         """
         Initialize the Leetspeak Attack.
         

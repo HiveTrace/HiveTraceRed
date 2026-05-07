@@ -18,7 +18,7 @@ class DisemvowelAttack(AlgoAttack):
     ENGLISH_VOWELS = {"a", "e", "i", "o", "u", "A", "E", "I", "O", "U"}
     RUSSIAN_VOWELS = {"а", "е", "ё", "и", "о", "у", "ы", "э", "ю", "я", "А", "Е", "Ё", "И", "О", "У", "Ы", "Э", "Ю", "Я"}
     
-    def __init__(self, only_last_vowel: bool = True, language: str = "both", raw: bool = True, template: Optional[str] = None):
+    def __init__(self, only_last_vowel: bool = True, language: str = "both", raw: bool = True, template: str | None = None):
         """
         Initialize the Disemvowel Attack.
         

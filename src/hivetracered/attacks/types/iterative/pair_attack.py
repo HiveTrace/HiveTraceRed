@@ -92,11 +92,11 @@ class PAIRAttack(IterativeAttack):
         target_model: Model,
         evaluator: BaseEvaluator,
         max_iterations: int = 20,
-        target_str: Optional[str] = None,
-        attacker_system_prompt: Optional[str] = None,
-        language_config: Optional[LanguageConfig] = None,
-        name: Optional[str] = None,
-        description: Optional[str] = None
+        target_str: str | None = None,
+        attacker_system_prompt: str | None = None,
+        language_config: LanguageConfig | None = None,
+        name: str | None = None,
+        description: str | None = None
     ):
         """
         Initialize PAIR attack.
@@ -168,7 +168,7 @@ class PAIRAttack(IterativeAttack):
         return f"{system_prompt}\n\n{user_message}"
 
     def _build_attacker_prompt(
-        self, goal: str, iteration: int, iterations: List[IterationResult]
+        self, goal: str, iteration: int, iterations: list[IterationResult]
     ) -> str:
         """Build the attacker prompt for the given iteration."""
         if iteration == 0:
@@ -185,11 +185,11 @@ class PAIRAttack(IterativeAttack):
         goal: str,
         attack_prompt: str,
         target_content: str,
-        conversation: List[Dict[str, str]],
+        conversation: list[dict[str, str]],
         best_attack: str,
         best_score: float,
         success: bool,
-    ) -> Tuple[IterationResult, str, float, bool, bool]:
+    ) -> tuple[IterationResult, str, float, bool, bool]:
         """Evaluate an iteration and update tracking state.
 
         Returns:
@@ -228,11 +228,11 @@ class PAIRAttack(IterativeAttack):
         goal: str,
         attack_prompt: str,
         target_content: str,
-        conversation: List[Dict[str, str]],
+        conversation: list[dict[str, str]],
         best_attack: str,
         best_score: float,
         success: bool,
-    ) -> Tuple[IterationResult, str, float, bool, bool]:
+    ) -> tuple[IterationResult, str, float, bool, bool]:
         """Async version of _process_iteration."""
         eval_result = await self._evaluate_response_async(goal, target_content)
         current_success = eval_result["success"]
@@ -267,7 +267,7 @@ class PAIRAttack(IterativeAttack):
         success: bool,
         best_attack: str,
         best_score: float,
-        iterations: List[IterationResult],
+        iterations: list[IterationResult],
     ) -> IterativeAttackResult:
         """Construct the final IterativeAttackResult."""
         return IterativeAttackResult(
@@ -286,11 +286,11 @@ class PAIRAttack(IterativeAttack):
 
     def run_attack(self, goal: str) -> IterativeAttackResult:
         """Run the PAIR attack with linear iterative refinement."""
-        iterations: List[IterationResult] = []
+        iterations: list[IterationResult] = []
         best_attack = ""
         best_score = 0.0
         success = False
-        conversation: List[Dict[str, str]] = []
+        conversation: list[dict[str, str]] = []
 
         for i in range(self.max_iterations):
             attacker_prompt = self._build_attacker_prompt(goal, i, iterations)
@@ -312,11 +312,11 @@ class PAIRAttack(IterativeAttack):
 
     async def run_attack_async(self, goal: str) -> IterativeAttackResult:
         """Run the PAIR attack asynchronously."""
-        iterations: List[IterationResult] = []
+        iterations: list[IterationResult] = []
         best_attack = ""
         best_score = 0.0
         success = False
-        conversation: List[Dict[str, str]] = []
+        conversation: list[dict[str, str]] = []
 
         for i in range(self.max_iterations):
             attacker_prompt = self._build_attacker_prompt(goal, i, iterations)
@@ -336,7 +336,7 @@ class PAIRAttack(IterativeAttack):
 
         return self._build_result(goal, success, best_attack, best_score, iterations)
 
-    def get_params(self) -> Dict[str, Any]:
+    def get_params(self) -> dict[str, Any]:
         """Get the parameters of the attack."""
         params = super().get_params()
         params.update({

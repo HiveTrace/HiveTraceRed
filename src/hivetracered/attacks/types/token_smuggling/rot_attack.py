@@ -13,7 +13,7 @@ class RotCipherAttack(AlgoAttack):
     This implementation supports both English and Russian alphabets.
     """
     
-    def __init__(self, rotation: int = 13, raw: bool = False, template: Optional[str] = None):
+    def __init__(self, rotation: int = 13, raw: bool = False, template: str | None = None):
         """
         Initialize with a specific rotation value. Default is ROT13.
         

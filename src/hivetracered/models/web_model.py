@@ -334,7 +334,6 @@ class WebModel(Model):
         self,
         page: Page,
         selector: str,
-        timeout: int | None = None,
         stable_time: float | None = None,
         fallback_to_last: bool = True,
     ) -> str:
@@ -342,11 +341,13 @@ class WebModel(Model):
         Wait until the matched element(s) text content stops changing.
 
         Useful for streaming UIs where the assistant response is progressively rendered.
+        The wall-clock deadline is ``self.response_wait_time`` seconds; callers that need
+        a different deadline should adjust that attribute or wrap the call in their own
+        ``async with asyncio.timeout(...):`` block.
 
         Args:
             page: Playwright page object
             selector: CSS selector for response element(s)
-            timeout: Maximum time to wait in seconds
             stable_time: Time content must be stable to consider complete
             fallback_to_last: If True, return last element's text on timeout/error
 
@@ -356,30 +357,34 @@ class WebModel(Model):
         Raises:
             RuntimeError: If no response found and fallback_to_last is False
         """
-        timeout = self.response_wait_time if timeout is None else timeout
         stable_time = self.stability_check_time if stable_time is None else stable_time
 
-        start_time = asyncio.get_event_loop().time()
         last_content = None
-        last_change_time = start_time
+        last_change_time = asyncio.get_event_loop().time()
 
-        while True:
-            now = asyncio.get_event_loop().time()
-            if now - start_time > timeout:
-                return await self._handle_stable_response_timeout(
-                    page, selector, last_content, fallback_to_last
-                )
+        try:
+            async with asyncio.timeout(self.response_wait_time):
+                while True:
+                    now = asyncio.get_event_loop().time()
+                    stable_result, last_content, last_change_time = await self._check_response_stability(
+                        page, selector, last_content, last_change_time, now, stable_time
+                    )
+                    if stable_result is not None:
+                        return stable_result
 
-            stable_result, last_content, last_change_time = await self._check_response_stability(
-                page, selector, last_content, last_change_time, now, stable_time
+                    await asyncio.sleep(0.5)
+        except TimeoutError:
+            return await self._handle_stable_response_timeout(
+                page, selector, last_content, fallback_to_last
             )
-            if stable_result is not None:
-                return stable_result
 
-            await asyncio.sleep(0.5)
+    # Per-selector budget passed to Playwright's wait_for_selector. Playwright's
+    # API exposes the deadline as a kwarg (in milliseconds), so the call still
+    # uses ``timeout=``; only our function's signature drops the parameter.
+    _FALLBACK_SELECTOR_TIMEOUT_MS: int = 3000
 
     async def _find_element_with_fallbacks(
-        self, page: Page, selectors: list[str], timeout: int = 3000
+        self, page: Page, selectors: list[str]
     ) -> object | None:
         """
         Try multiple selectors in order until one is found.
@@ -387,14 +392,15 @@ class WebModel(Model):
         Args:
             page: Playwright page object
             selectors: List of CSS selectors to try in order
-            timeout: Timeout per selector in milliseconds
 
         Returns:
             First matching element or None if none found
         """
         for selector in selectors:
             try:
-                element = await page.wait_for_selector(selector, timeout=timeout)
+                element = await page.wait_for_selector(
+                    selector, timeout=self._FALLBACK_SELECTOR_TIMEOUT_MS
+                )
                 if element:
                     return element
             except PlaywrightTimeoutError:

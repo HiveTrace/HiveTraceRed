@@ -424,6 +424,8 @@ Then use in configuration:
 
 .. code-block:: yaml
 
+   # doc-config-check: skip — a custom model registered under its own
+   # MODEL_CLASSES key is used via `name:` alone, with no `model:` class key.
    response_model:
      name: my-custom-model
      params:

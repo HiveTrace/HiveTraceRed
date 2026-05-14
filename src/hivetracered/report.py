@@ -1,6 +1,6 @@
 # Fix the f-string issue by building the attribute string separately and re-writing the file.
 
-import os, json, argparse
+import os, json, argparse, re
 from datetime import datetime
 import numpy as np
 import pandas as pd
@@ -215,7 +215,7 @@ def _per_type_stats(df, include_block_rate=False):
     return type_stats
 
 
-def _build_top_types_html(df):
+def _build_top_types_html(df, include_plotlyjs=True):
     if not {"attack_type", "success", "attack_name", "base_prompt"}.issubset(df.columns):
         return ""
     top_types = pd.DataFrame(_per_type_stats(df))
@@ -230,7 +230,7 @@ def _build_top_types_html(df):
         xaxis_title="Success Rate (% of Unique Prompts)", yaxis_title=ATTACK_TYPE, height=350, margin={"l": 10, "r": 10, "t": 30, "b": 10},
         **get_chart_style()
     )
-    return pio.to_html(fig_top_types, include_plotlyjs=True, full_html=False)
+    return pio.to_html(fig_top_types, include_plotlyjs=include_plotlyjs, full_html=False)
 
 
 def _build_top_attacks_html(df, include_plotlyjs):
@@ -324,9 +324,11 @@ def _build_answer_html(df):
     return pio.to_html(fig_answer, include_plotlyjs=False, full_html=False)
 
 
-def create_charts(df):
-    fig_top_types_html = _build_top_types_html(df)
-    fig_top_attacks_html = _build_top_attacks_html(df, include_plotlyjs=not fig_top_types_html)
+def create_charts(df, include_plotlyjs=True):
+    fig_top_types_html = _build_top_types_html(df, include_plotlyjs=include_plotlyjs)
+    fig_top_attacks_html = _build_top_attacks_html(
+        df, include_plotlyjs=include_plotlyjs and not fig_top_types_html
+    )
     fig_attack_type_html = _build_attack_type_html(df)
     fig_attacks_html = _build_attacks_html(df)
     fig_length_html, fig_avg_length_html = _build_length_charts_html(df)
@@ -379,14 +381,15 @@ def _explorer_row_html(r, display_columns):
     return f"<tr {attrs_str}>{tds}</tr>"
 
 
-def _explorer_table_html(df, display_columns):
+def _explorer_table_html(df, display_columns, ns=""):
+    sfx = f"_{ns}" if ns else ""
     explorer_table_rows = []
     if display_columns:
         for _, r in df[display_columns].fillna("").iterrows():
             explorer_table_rows.append(_explorer_row_html(r, display_columns))
     return f"""
     <div class="table-container">
-      <table id="explorer-table" class="dataframe compact">
+      <table id="explorer-table{sfx}" class="dataframe compact">
         <thead>
           <tr>{''.join(f'<th>{c}</th>' for c in display_columns)}</tr>
         </thead>
@@ -429,10 +432,10 @@ def _samples_html(df):
     return "\n".join(blocks)
 
 
-def generate_data_tables(df):
+def generate_data_tables(df, ns=""):
     attack_detailed_html = _attack_detailed_html(df)
     display_columns = [c for c in ["attack_name","attack_type","success","is_blocked"] if c in df.columns]
-    explorer_table_html = _explorer_table_html(df, display_columns)
+    explorer_table_html = _explorer_table_html(df, display_columns, ns=ns)
     samples_html = _samples_html(df)
 
     return {
@@ -443,22 +446,12 @@ def generate_data_tables(df):
     }
 
 
-def build_html_report(df, metrics, charts, data_tables):
-    """
-    Build complete HTML report from processed data.
+def _sanitize_ns(name):
+    """Turn a dataset name into a safe HTML id / JS identifier fragment."""
+    return re.sub(r"\W+", "_", str(name))
 
-    Args:
-        df: DataFrame with evaluation results
-        metrics: Dictionary of calculated metrics
-        charts: Dictionary of chart HTML strings
-        data_tables: Dictionary of data table HTML strings
 
-    Returns:
-        Complete HTML string for the report
-    """
-    generated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
-
-    styles = """
+_REPORT_STYLES = """
     <style>
     :root{
       --bg: #0e1117;
@@ -544,26 +537,111 @@ def build_html_report(df, metrics, charts, data_tables):
     </style>
     """
 
-    attack_types_unique = sorted(df["attack_type"].dropna().unique().tolist()) if "attack_type" in df.columns else []
-    controls_js = f"""
+def _build_report_js(namespaces, attack_types_by_ns, multi):
+    """Build the single <script> block driving tab switching, dataset
+    switching, and the Data Explorer filters.
+
+    Works for any number of namespaces; the single-dataset report passes one
+    namespace of ``""`` (empty), in which case element ids are unsuffixed and
+    the scope is the whole document.
+    """
+    show_first_dataset = (
+        "if (NAMESPACES.length) showDataset(NAMESPACES[0]);" if multi else ""
+    )
+    return f"""
     <script>
-    function showTab(id) {{
-      document.querySelectorAll('.section').forEach(s => s.style.display='none');
-      document.getElementById(id).style.display = 'block';
-      document.querySelectorAll('.tablink').forEach(b => b.classList.remove('active'));
-      document.querySelector('[data-target="'+id+'"]').classList.add('active');
-      // Trigger Plotly resize for responsive charts
+    const NAMESPACES = {json.dumps(namespaces)};
+    const ATTACK_TYPES = {json.dumps(attack_types_by_ns)};
+    function _sfx(ns) {{ return ns ? '_' + ns : ''; }}
+    function _scope(ns) {{ return ns ? document.getElementById('dataset-panel-' + ns) : document; }}
+
+    function showTab(ns, n) {{
+      const scope = _scope(ns);
+      if (!scope) return;
+      const sfx = _sfx(ns);
+      scope.querySelectorAll('.section').forEach(s => s.style.display='none');
+      const tab = document.getElementById('tab' + n + sfx);
+      if (tab) tab.style.display = 'block';
+      scope.querySelectorAll('.tablink').forEach(b => b.classList.remove('active'));
+      const btn = scope.querySelector('[data-target="tab' + n + sfx + '"]');
+      if (btn) btn.classList.add('active');
       setTimeout(function() {{
         if (window.Plotly) {{
-          document.querySelectorAll('#' + id + ' .plotly-graph-div').forEach(function(gd) {{
+          (tab || scope).querySelectorAll('.plotly-graph-div').forEach(function(gd) {{
             window.Plotly.Plots.resize(gd);
           }});
         }}
       }}, 100);
     }}
-    document.addEventListener('DOMContentLoaded', function(){{
-      showTab('tab1');
-      // Initialize responsive charts
+
+    function showDataset(ns) {{
+      document.querySelectorAll('.dataset-panel').forEach(p => p.style.display='none');
+      const panel = document.getElementById('dataset-panel-' + ns);
+      if (panel) panel.style.display = 'block';
+      document.querySelectorAll('.dataset-tablink').forEach(b => b.classList.remove('active'));
+      const btn = document.querySelector('.dataset-tablink[data-ds="' + ns + '"]');
+      if (btn) btn.classList.add('active');
+      setTimeout(function() {{
+        if (window.Plotly && panel) {{
+          panel.querySelectorAll('.plotly-graph-div').forEach(function(gd) {{
+            window.Plotly.Plots.resize(gd);
+          }});
+        }}
+      }}, 100);
+    }}
+
+    function filterTable(ns) {{
+      const sfx = _sfx(ns);
+      const table = document.getElementById('explorer-table' + sfx);
+      if (!table) return;
+      const rows = table.querySelectorAll('tbody tr');
+      const successEl = document.getElementById('filter-success' + sfx);
+      const blockedEl = document.getElementById('filter-blocked' + sfx);
+      const successSel = successEl ? successEl.value : 'all';
+      const blockedSel = blockedEl ? blockedEl.value : 'all';
+      const allowed = Array.from(
+        document.querySelectorAll('#attack-type-box' + sfx + ' input[type="checkbox"]')
+      ).filter(cb => cb.checked).map(cb => cb.value);
+      rows.forEach(r => {{
+        const at = r.getAttribute('data-attack-type');
+        const sc = r.getAttribute('data-success');
+        const bl = r.getAttribute('data-blocked');
+        let ok = true;
+        if (allowed.indexOf(at) === -1) ok = false;
+        if (successSel === 'success' && sc !== 'true') ok = false;
+        if (successSel === 'fail' && sc !== 'false') ok = false;
+        if (blockedSel === 'blocked' && bl !== 'true') ok = false;
+        if (blockedSel === 'not_blocked' && bl !== 'false') ok = false;
+        r.style.display = ok ? '' : 'none';
+      }});
+      const visible = Array.from(rows).filter(r => r.style.display !== 'none').length;
+      const counter = document.getElementById('filtered-count' + sfx);
+      if (counter) counter.innerText = visible + ' records';
+    }}
+
+    document.addEventListener('DOMContentLoaded', function() {{
+      NAMESPACES.forEach(function(ns) {{
+        const sfx = _sfx(ns);
+        const ctn = document.getElementById('attack-type-box' + sfx);
+        if (ctn) {{
+          (ATTACK_TYPES[ns] || []).forEach(function(t) {{
+            const wrap = document.createElement('label');
+            const cb = document.createElement('input');
+            cb.type = 'checkbox'; cb.checked = true; cb.value = t;
+            wrap.appendChild(cb);
+            wrap.appendChild(document.createTextNode(' ' + t));
+            ctn.appendChild(wrap);
+          }});
+          ctn.addEventListener('change', function() {{ filterTable(ns); }});
+        }}
+        const fs = document.getElementById('filter-success' + sfx);
+        const fb = document.getElementById('filter-blocked' + sfx);
+        if (fs) fs.addEventListener('change', function() {{ filterTable(ns); }});
+        if (fb) fb.addEventListener('change', function() {{ filterTable(ns); }});
+        showTab(ns, 1);
+        filterTable(ns);
+      }});
+      {show_first_dataset}
       setTimeout(function() {{
         if (window.Plotly) {{
           document.querySelectorAll('.plotly-graph-div').forEach(function(gd) {{
@@ -571,79 +649,20 @@ def build_html_report(df, metrics, charts, data_tables):
           }});
         }}
       }}, 500);
-      const ctn = document.getElementById('attack-type-box');
-      const types = {json.dumps(attack_types_unique)};
-      types.forEach(t => {{
-        const id = 'chk_' + t.replace(/\\W+/g,'_');
-        const wrap = document.createElement('label');
-        const cb = document.createElement('input');
-        cb.type = 'checkbox'; cb.checked = true; cb.id = id; cb.value = t;
-        wrap.appendChild(cb);
-        wrap.appendChild(document.createTextNode(' ' + t));
-        ctn.appendChild(wrap);
-      }});
-
-      document.getElementById('filter-success').addEventListener('change', filterTable);
-      document.getElementById('filter-blocked').addEventListener('change', filterTable);
-      ctn.addEventListener('change', filterTable);
-      filterTable();
     }});
-
-    function filterTable(){{
-      const rows = document.querySelectorAll('#explorer-table tbody tr');
-      const successSel = document.getElementById('filter-success').value;
-      const blockedSel = document.getElementById('filter-blocked').value;
-
-      const allowed = Array.from(document.querySelectorAll('#attack-type-box input[type="checkbox"]'))
-        .filter(cb => cb.checked).map(cb => cb.value);
-
-      rows.forEach(r => {{
-        const at = r.getAttribute('data-attack-type');
-        const sc = r.getAttribute('data-success');
-        const bl = r.getAttribute('data-blocked');
-
-        let ok = true;
-        if (allowed.indexOf(at) === -1) ok = false;
-        if (successSel === 'success' && sc !== 'true') ok = false;
-        if (successSel === 'fail' && sc !== 'false') ok = false;
-        if (blockedSel === 'blocked' && bl !== 'true') ok = false;
-        if (blockedSel === 'not_blocked' && bl !== 'false') ok = false;
-
-        r.style.display = ok ? '' : 'none';
-      }});
-
-      const visible = Array.from(rows).filter(r => r.style.display !== 'none').length;
-      document.getElementById('filtered-count').innerText = visible + ' records';
-    }}
     </script>
     """
 
-    controls_html = f"""
-    <div class="controls">
-      <div class="control">
-        <div style="font-size:12px; color: var(--muted); margin-bottom:6px;">Filter by Attack Type</div>
-        <div id="attack-type-box" class="checkbox-group"></div>
-      </div>
-      <div class="control">
-        <div style="font-size:12px; color: var(--muted); margin-bottom:6px;">Filter by Success</div>
-        <select id="filter-success" class="select">
-          <option value="all">All</option>
-          <option value="success">Successful Only</option>
-          <option value="fail">Failed Only</option>
-        </select>
-      </div>
-      <div class="control">
-        <div style="font-size:12px; color: var(--muted); margin-bottom:6px;">Filter by Blocked Status</div>
-        <select id="filter-blocked" class="select">
-          <option value="all">All</option>
-          <option value="blocked">Blocked Only</option>
-          <option value="not_blocked">Not Blocked Only</option>
-        </select>
-      </div>
-    </div>
-    """
 
-    # Build per-framework category badges HTML
+def _build_body_html(df, metrics, charts, data_tables, ns, generated_at):
+    """Build one report body — the five tabs plus the footer — for a single
+    dataset (or the whole df in single-dataset mode).
+
+    All element ids are suffixed with ``_<ns>`` when ``ns`` is non-empty, so
+    multiple bodies can coexist in one document without id collisions.
+    """
+    sfx = f"_{ns}" if ns else ""
+
     fw_short = {
         "OWASP_LLM_TOP_10": "OWASP LLM Top 10",
         "MITRE_ATLAS": "MITRE ATLAS",
@@ -677,13 +696,11 @@ def build_html_report(df, metrics, charts, data_tables):
           </div>
 """
 
-    # Build mitigations tab HTML
     mitigations_html = ""
     prioritized = metrics.get("prioritized_mitigations", [])
     if prioritized:
         items = []
         for m in prioritized:
-            pct = int(m["covers"] / m["total"] * 100) if m["total"] else 0
             items.append(
                 f'<div class="mitigation-item">'
                 f'<div class="mit-name">{m["mitigation"]}</div>'
@@ -693,30 +710,42 @@ def build_html_report(df, metrics, charts, data_tables):
     else:
         mitigations_html += '<p style="color:var(--muted);padding:20px;">No vulnerable attack types detected — no mitigations to recommend.</p>'
 
-    html = f"""
-    <!DOCTYPE html>
-    <html lang="en">
-    <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Static Report</title>
-    {styles}
-    </head>
-    <body>
-    <div class="wrapper">
-      <h1>🔍 Automated Report</h1>
-      <div style="color:var(--muted);">Comprehensive analysis of red teaming results</div>
+    controls_html = f"""
+    <div class="controls">
+      <div class="control">
+        <div style="font-size:12px; color: var(--muted); margin-bottom:6px;">Filter by Attack Type</div>
+        <div id="attack-type-box{sfx}" class="checkbox-group"></div>
+      </div>
+      <div class="control">
+        <div style="font-size:12px; color: var(--muted); margin-bottom:6px;">Filter by Success</div>
+        <select id="filter-success{sfx}" class="select">
+          <option value="all">All</option>
+          <option value="success">Successful Only</option>
+          <option value="fail">Failed Only</option>
+        </select>
+      </div>
+      <div class="control">
+        <div style="font-size:12px; color: var(--muted); margin-bottom:6px;">Filter by Blocked Status</div>
+        <select id="filter-blocked{sfx}" class="select">
+          <option value="all">All</option>
+          <option value="blocked">Blocked Only</option>
+          <option value="not_blocked">Not Blocked Only</option>
+        </select>
+      </div>
+    </div>
+    """
 
+    return f"""
       <div class="tabs">
-        <button class="tablink active" data-target="tab1" onclick="showTab('tab1')">📋 Executive Summary</button>
-        <button class="tablink" data-target="tab2" onclick="showTab('tab2')">⚔️ Attack Analysis</button>
-        <button class="tablink" data-target="tab3" onclick="showTab('tab3')">📝 Content Analysis</button>
-        <button class="tablink" data-target="tab4" onclick="showTab('tab4')">🔍 Data Explorer</button>
-        <button class="tablink" data-target="tab5" onclick="showTab('tab5')">🛡️ Mitigations</button>
+        <button class="tablink active" data-target="tab1{sfx}" onclick="showTab('{ns}',1)">📋 Executive Summary</button>
+        <button class="tablink" data-target="tab2{sfx}" onclick="showTab('{ns}',2)">⚔️ Attack Analysis</button>
+        <button class="tablink" data-target="tab3{sfx}" onclick="showTab('{ns}',3)">📝 Content Analysis</button>
+        <button class="tablink" data-target="tab4{sfx}" onclick="showTab('{ns}',4)">🔍 Data Explorer</button>
+        <button class="tablink" data-target="tab5{sfx}" onclick="showTab('{ns}',5)">🛡️ Mitigations</button>
       </div>
 
       <!-- Executive Summary -->
-      <div id="tab1" class="section">
+      <div id="tab1{sfx}" class="section">
         <h2>🎯 Executive Summary</h2>
         <div class="grid-4">
           <div class="metric">
@@ -773,7 +802,7 @@ def build_html_report(df, metrics, charts, data_tables):
       </div>
 
       <!-- Attack Analysis -->
-      <div id="tab2" class="section" style="display:none;">
+      <div id="tab2{sfx}" class="section" style="display:none;">
         <h2>⚔️ Attack Analysis</h2>
 
         <h3>Success Rate by Attack Type</h3>
@@ -792,7 +821,7 @@ def build_html_report(df, metrics, charts, data_tables):
       </div>
 
       <!-- Content Analysis -->
-      <div id="tab3" class="section" style="display:none;">
+      <div id="tab3{sfx}" class="section" style="display:none;">
         <h2>📝 Content Analysis</h2>
 
         <h3>Response Length Distribution by Attack Success</h3>
@@ -812,10 +841,10 @@ def build_html_report(df, metrics, charts, data_tables):
       </div>
 
       <!-- Data Explorer -->
-      <div id="tab4" class="section" style="display:none;">
+      <div id="tab4{sfx}" class="section" style="display:none;">
         <h2>🔍 Data Explorer</h2>
         {controls_html}
-        <div style="margin-bottom:8px; color: var(--muted);"><span id="filtered-count"></span></div>
+        <div style="margin-bottom:8px; color: var(--muted);"><span id="filtered-count{sfx}"></span></div>
         {data_tables['explorer_table_html']}
 
         <h3 style="margin-top:16px;">Sample Prompts & Responses (up to 5)</h3>
@@ -823,7 +852,7 @@ def build_html_report(df, metrics, charts, data_tables):
       </div>
 
       <!-- Mitigations -->
-      <div id="tab5" class="section" style="display:none;">
+      <div id="tab5{sfx}" class="section" style="display:none;">
         <h2>🛡️ Mitigation Recommendations</h2>
         <div style="background:#1a1a10; border:1px solid #3a351b; padding:14px 18px; border-radius:10px; margin-bottom:16px; color:#ffd29b; font-size:14px;">
           The mitigations listed below are general recommendations based on detected attack categories. A professional security audit is needed to determine the concrete mitigations applicable to your specific use case and environment.
@@ -836,14 +865,115 @@ def build_html_report(df, metrics, charts, data_tables):
         <div>✅ Loaded {len(df)} records • <strong>Model:</strong> {metrics['model_name']} • <strong>Attack Types:</strong> {metrics['n_attack_types']} • <strong>Total Attacks:</strong> {metrics['n_attacks']}</div>
         <div><strong>Report Generated:</strong> {generated_at}</div>
       </div>
-    </div>
-
-    {controls_js}
-    </body>
-    </html>
     """
 
-    return html
+
+def build_html_report(df, metrics, charts, data_tables):
+    """
+    Build complete HTML report from processed data.
+
+    Multi-dataset mode is used when ``metrics is None`` or ``df`` carries more
+    than one distinct ``dataset`` value. It renders a dataset selector at the
+    top; selecting a dataset shows that dataset's full report — the same five
+    tabs as the single-dataset report (Executive Summary, Attack Analysis,
+    Content Analysis, Data Explorer, Mitigations). ``charts`` and
+    ``data_tables`` are recomputed per dataset, so both may be ``None``. No
+    cross-dataset aggregate is shown.
+
+    Args:
+        df: DataFrame with evaluation results
+        metrics: Dictionary of calculated metrics, or ``None`` for multi-dataset
+        charts: Dictionary of chart HTML strings, or ``None`` for multi-dataset
+        data_tables: Dictionary of data table HTML strings, or ``None`` for multi-dataset
+
+    Returns:
+        Complete HTML string for the report
+    """
+    generated_at = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+    multi = (
+        "dataset" in df.columns
+        and not df.empty
+        and (metrics is None or df["dataset"].nunique() > 1)
+    )
+
+    if multi:
+        namespaces = []
+        attack_types_by_ns = {}
+        selector = []
+        panels = []
+        first = True
+        for ds_name, sub_df in df.groupby("dataset", sort=False):
+            ns = _sanitize_ns(ds_name)
+            namespaces.append(ns)
+            ds_metrics = calculate_metrics(sub_df)
+            ds_charts = create_charts(sub_df, include_plotlyjs=first)
+            ds_tables = generate_data_tables(sub_df, ns=ns)
+            attack_types_by_ns[ns] = (
+                sorted(sub_df["attack_type"].dropna().unique().tolist())
+                if "attack_type" in sub_df.columns else []
+            )
+            body = _build_body_html(sub_df, ds_metrics, ds_charts, ds_tables, ns, generated_at)
+            hidden = "" if first else ' style="display:none;"'
+            panels.append(f'<div id="dataset-panel-{ns}" class="dataset-panel"{hidden}>{body}</div>')
+            selector.append(
+                f'<button class="dataset-tablink{" active" if first else ""}" '
+                f'data-ds="{ns}" onclick="showDataset(\'{ns}\')">{ds_name}</button>'
+            )
+            first = False
+        js = _build_report_js(namespaces, attack_types_by_ns, multi=True)
+        return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Multi-Dataset Report</title>
+{_REPORT_STYLES}
+</head>
+<body>
+<div class="wrapper">
+  <h1>🔍 Automated Report — Multi-Dataset</h1>
+  <div style="color:var(--muted);">Per-dataset red teaming results — select a dataset to view its full report</div>
+  <div class="dataset-tabs">
+    {''.join(selector)}
+  </div>
+  {''.join(panels)}
+</div>
+{js}
+</body>
+</html>"""
+
+    # Single-dataset mode. Compute any artifacts the caller did not supply.
+    if metrics is None:
+        metrics = calculate_metrics(df)
+    if charts is None:
+        charts = create_charts(df)
+    if data_tables is None:
+        data_tables = generate_data_tables(df)
+
+    attack_types = (
+        sorted(df["attack_type"].dropna().unique().tolist())
+        if "attack_type" in df.columns else []
+    )
+    body = _build_body_html(df, metrics, charts, data_tables, "", generated_at)
+    js = _build_report_js([""], {"": attack_types}, multi=False)
+    return f"""<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Static Report</title>
+{_REPORT_STYLES}
+</head>
+<body>
+<div class="wrapper">
+  <h1>🔍 Automated Report</h1>
+  <div style="color:var(--muted);">Comprehensive analysis of red teaming results</div>
+  {body}
+</div>
+{js}
+</body>
+</html>"""
 
 def main():
     parser = argparse.ArgumentParser(description="Generate static HTML report for framework results")

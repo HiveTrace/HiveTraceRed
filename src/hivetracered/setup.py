@@ -9,7 +9,7 @@ and intermediate pipeline records.
 import json
 import logging
 import os
-from typing import Any
+from typing import Any, NamedTuple
 
 import pandas as pd
 
@@ -18,6 +18,25 @@ from hivetracered.models import Model
 from hivetracered.pipeline.constants import EVALUATOR_CLASSES, MODEL_CLASSES
 
 logger = logging.getLogger(__name__)
+
+
+class DatasetSpec(NamedTuple):
+    """Immutable specification for one dataset in a multi-dataset run.
+
+    Attributes:
+        name: Unique dataset identifier (validated to match ^[A-Za-z0-9_-]+$).
+              Used as the dataset column value in output files.
+        prompts: List of base prompts (strings or dicts) loaded from the dataset
+                 entry's base_prompts or base_prompts_file. Guaranteed non-empty.
+        evaluator: Evaluator instance (BaseEvaluator | None) for this dataset.
+                   None if setup_evaluator failed; the pipeline's preflight check
+                   raises ValueError if any dataset has evaluator=None when
+                   Stage 3 is enabled.
+    """
+
+    name: str
+    prompts: list
+    evaluator: BaseEvaluator | None
 
 _PROMPT_COLUMN_NAMES = (
     "Prompt", "Text", "Question", "Query", "Input",
@@ -149,6 +168,42 @@ def load_base_prompts(config: dict[str, Any]) -> list[str | dict[str, Any]]:
         f"No valid prompt column found in '{file_path}'. "
         f"Available columns: {df.columns.tolist()}"
     )
+
+
+def load_datasets(config: dict, evaluation_model: Model | None) -> list[DatasetSpec]:
+    """Build a list of DatasetSpec from ``config["datasets"]``.
+
+    Processes each entry in config["datasets"] by loading its base prompts
+    (via load_base_prompts) and instantiating its evaluator (via setup_evaluator).
+    Each dataset receives its own independent evaluator instance.
+
+    Args:
+        config: Configuration dict containing a "datasets" key (list of dicts).
+        evaluation_model: Shared evaluation model passed to setup_evaluator.
+                          Required for model-based evaluators (ModelEvaluator
+                          subclasses); may be None for standalone evaluators.
+
+    Returns:
+        List of DatasetSpec in config["datasets"] order. Empty list if config
+        has no "datasets" key.
+
+    Note:
+        The evaluator field may be None if setup_evaluator failed (it logs
+        a warning but does not raise). Callers must check before using specs
+        for Stage 3; the pipeline's preflight check raises ValueError if any
+        spec.evaluator is None when Stage 3 is enabled.
+
+    Raises:
+        FileNotFoundError: If a dataset's base_prompts_file path does not exist.
+        ValueError: If no valid prompt column is found in a tabular file.
+    """
+    specs: list[DatasetSpec] = []
+    for entry in config.get("datasets", []):
+        name = entry["name"]
+        prompts = load_base_prompts(entry)
+        evaluator = setup_evaluator(entry.get("evaluator", {}), evaluation_model)
+        specs.append(DatasetSpec(name=name, prompts=prompts, evaluator=evaluator))
+    return specs
 
 
 def load_records(file_path: str, label: str = "records") -> list[dict[str, Any]]:

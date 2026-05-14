@@ -16,13 +16,16 @@ from typing import Any
 
 import yaml
 
+from hivetracered.attacks.iterative_attack import IterativeAttack
 from hivetracered.pipeline import (
+    ATTACK_CLASSES,
     save_pipeline_results,
     setup_attacks,
     stream_attack_prompts,
     stream_evaluated_responses,
     stream_model_responses,
 )
+from hivetracered.pipeline.create_dataset import _parse_attack_config
 from hivetracered.report import (
     build_html_report,
     calculate_metrics,
@@ -31,7 +34,9 @@ from hivetracered.report import (
     load_data,
 )
 from hivetracered.setup import (
+    DatasetSpec,
     load_base_prompts,
+    load_datasets,
     load_records,
     setup_evaluator,
     setup_model,
@@ -165,8 +170,11 @@ def generate_report(
 ) -> str | None:
     """Stage 4: Generate HTML report from evaluation results.
 
-    Exceptions propagate to the top-level CLI handler, which logs them
-    uniformly. No local try/except wrapper.
+    When the loaded DataFrame has more than one distinct ``dataset`` value,
+    per-dataset metric blocks are rendered and the cross-dataset aggregate is
+    suppressed (FR-15).
+
+    Exceptions propagate to the top-level CLI handler. No local try/except.
     """
     logger.info("STAGE 4: Generating report...")
 
@@ -181,10 +189,6 @@ def generate_report(
 
     logger.info("Loaded %d evaluation results for report", len(df))
 
-    metrics = calculate_metrics(df)
-    charts = create_charts(df)
-    data_tables = generate_data_tables(df)
-
     report_config = config.get("report", {})
     output_filename = report_config.get("output_filename")
     if not output_filename:
@@ -196,18 +200,27 @@ def generate_report(
     else:
         report_path = os.path.join(config.get("output_dir", "results"), output_filename)
 
-    html = build_html_report(df, metrics, charts, data_tables)
+    if "dataset" in df.columns and df["dataset"].nunique() > 1:
+        for ds_name in df["dataset"].unique():
+            logger.info("Dataset '%s': %d records", ds_name, len(df[df["dataset"] == ds_name]))
+        html = build_html_report(df, metrics=None, charts=None, data_tables=None)
+    else:
+        metrics = calculate_metrics(df)
+        charts = create_charts(df)
+        data_tables = generate_data_tables(df)
+        html = build_html_report(df, metrics, charts, data_tables)
+        logger.info(
+            "  Total: %d | Success rate: %.1f%% | Best attack: %s (%.1f%%)",
+            metrics["total_tests"],
+            metrics["success_rate"],
+            metrics["best_attack_name"],
+            metrics["best_attack_rate"],
+        )
+
     with open(report_path, "w", encoding="utf-8") as f:
         f.write(html)
 
     logger.info("Report generated: %s", report_path)
-    logger.info(
-        "  Total: %d | Success rate: %.1f%% | Best attack: %s (%.1f%%)",
-        metrics["total_tests"],
-        metrics["success_rate"],
-        metrics["best_attack_name"],
-        metrics["best_attack_rate"],
-    )
     return report_path
 
 
@@ -216,20 +229,39 @@ def _preflight_config(
     enable_attacks: bool,
     enable_responses: bool,
     enable_eval: bool,
-) -> None:
+) -> list[DatasetSpec]:
     """Validate each enabled stage's required models up-front and raise if
-    any cannot be constructed. Prevents earlier stages from burning API
-    calls before a later stage is guaranteed to fail — typically caused by
-    a typo'd top-level key such as ``respons_model`` or ``evaluaton_model``.
-
-    Required resources per stage:
-      - Stage 1 (attacks):   ``attacker_model``
-      - Stage 2 (responses): ``response_model``
-      - Stage 3 (eval):      ``evaluator`` (plus ``evaluation_model`` if the
-                             evaluator is a ``ModelEvaluator`` subclass)
-
-    Instances built here are discarded; each stage constructs its own.
+    any cannot be constructed. Returns the materialised DatasetSpec list for
+    direct reuse by the caller (ADR-0008).
     """
+    evaluation_model = setup_model(config.get("evaluation_model", {}))
+
+    specs = load_datasets(config, evaluation_model)
+
+    for spec in specs:
+        if len(spec.prompts) == 0:
+            entry = next(e for e in config["datasets"] if e["name"] == spec.name)
+            source = "base_prompts_file" if "base_prompts_file" in entry else "base_prompts"
+            raise ValueError(
+                f"Dataset '{spec.name}' has no prompts in '{source}'. "
+                "Each dataset must have at least one prompt."
+            )
+
+    for attack_cfg in config.get("attacks", []):
+        _check_no_iterative_attack(attack_cfg)
+
+    if not enable_attacks and config.get("attack_prompts_file"):
+        rows = load_records(config["attack_prompts_file"], "attack prompts")
+        file_datasets: set[str] = {str(row["dataset"]) for row in rows if row.get("dataset")}
+        spec_names = {spec.name for spec in specs}
+        orphans = file_datasets - spec_names
+        if orphans:
+            raise ValueError(
+                f"attack_prompts_file contains records with dataset name(s) not "
+                f"found in the config: {', '.join(sorted(orphans))}. "
+                "Remove orphan records or add matching dataset entries."
+            )
+
     if enable_attacks and setup_model(config.get("attacker_model", {})) is None:
         raise ValueError(
             "Stage 1 (create_attack_prompts) is enabled but 'attacker_model' "
@@ -245,15 +277,170 @@ def _preflight_config(
         )
 
     if enable_eval:
-        evaluation_model = setup_model(config.get("evaluation_model", {}))
-        evaluator = setup_evaluator(config.get("evaluator", {}), evaluation_model)
-        if evaluator is None:
+        if specs:
+            for spec in specs:
+                if spec.evaluator is None:
+                    raise ValueError(
+                        f"Stage 3 (evaluate_responses) is enabled but the evaluator "
+                        f"for dataset '{spec.name}' could not be initialized. "
+                        "Check the 'evaluator' block for that dataset entry."
+                    )
+        else:
+            evaluator = setup_evaluator(config.get("evaluator", {}), evaluation_model)
+            if evaluator is None:
+                raise ValueError(
+                    "Stage 3 (evaluate_responses) is enabled but the evaluator "
+                    "could not be initialized. See previous log messages; "
+                    "typically a missing or misnamed 'evaluator' / "
+                    "'evaluation_model' config block."
+                )
+
+    return specs
+
+
+def _check_no_iterative_attack(attack_cfg: Any) -> None:
+    """Raise ValueError if attack_cfg (or any nested inner_attack) is iterative."""
+    attack_name, _params, inner_attack_cfg = _parse_attack_config(attack_cfg)
+    if attack_name and attack_name in ATTACK_CLASSES:
+        attack_class = ATTACK_CLASSES[attack_name]["attack_class"]
+        if issubclass(attack_class, IterativeAttack):
             raise ValueError(
-                "Stage 3 (evaluate_responses) is enabled but the evaluator "
-                "could not be initialized. See previous log messages; "
-                "typically a missing or misnamed 'evaluator' / "
-                "'evaluation_model' config block."
+                f"Iterative attack '{attack_name}' is not supported with the "
+                "'datasets:' schema (FR-13). Use non-iterative attacks instead."
             )
+    if inner_attack_cfg is not None:
+        _check_no_iterative_attack(inner_attack_cfg)
+
+
+async def _evaluate_dataset(
+    spec: DatasetSpec, responses: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Run Stage 3 for one dataset.
+
+    Evaluator exceptions are caught and converted to per-record failure dicts
+    so one dataset's evaluator failure does not abort the others (AC-10).
+    """
+    if spec.evaluator is None:
+        return []
+
+    evaluation_results: list[dict[str, Any]] = []
+    try:
+        prompts = [r.get("base_prompt", "") for r in responses]
+        async for batch_result in spec.evaluator.stream_abatch(prompts, responses):
+            idx = len(evaluation_results)
+            source = responses[idx] if idx < len(responses) else {}
+            evaluation_results.append({
+                **source,
+                "success": batch_result.get("success", False),
+                "evaluation": batch_result,
+                "evaluator": spec.evaluator.__class__.__name__,
+            })
+    except Exception as e:
+        logger.error("Stage 3 failed for dataset '%s': %s", spec.name, e, exc_info=True)
+        if len(responses) == 0:
+            evaluation_results.append({
+                "dataset": spec.name,
+                "success": False,
+                "error": str(e),
+                "evaluator": "",
+                "evaluation": {"success": False, "reason": "evaluator failure — empty response slice"},
+            })
+        else:
+            for resp in responses:
+                evaluation_results.append({
+                    **resp,
+                    "dataset": spec.name,
+                    "success": False,
+                    "evaluator": "",
+                    "evaluation": {"success": False, "reason": "evaluator failure"},
+                    "error": str(e),
+                })
+
+    return evaluation_results
+
+
+async def _run_pipeline_for_datasets(
+    config: dict[str, Any],
+    dataset_specs: list[DatasetSpec],
+    run_dir: str,
+    output_format: str,
+    enable_attacks: bool,
+    enable_responses: bool,
+    enable_eval: bool,
+) -> tuple[list[dict[str, Any]], str | None]:
+    """Run Stages 1-3 across all datasets, one stage at a time.
+
+    Each stage processes the datasets sequentially; the only concurrency is
+    each model's own internal request batching. Stage 1 and Stage 2 write one
+    file per dataset; Stage 3 results are combined into a single
+    ``evaluations`` file. Returns ``(all_evaluation_results,
+    evaluation_file_path)``. Stage-1/2 exceptions abort the run; Stage-3
+    exceptions are isolated per-dataset and converted to failure records.
+    """
+    system_prompt = config.get("system_prompt")
+
+    # Stage 1: attack prompts — one file per dataset.
+    attacks_by_dataset: dict[str, list[dict[str, Any]]] = {}
+    if enable_attacks:
+        attacker_model = setup_model(config.get("attacker_model", {}))
+        response_model_for_attacks = setup_model(config.get("response_model", {}))
+        attacks = setup_attacks(
+            config.get("attacks", []), attacker_model, target_model=response_model_for_attacks
+        )
+        for spec in dataset_specs:
+            records: list[dict[str, Any]] = []
+            async for record in stream_attack_prompts(attacks, spec.prompts, system_prompt):
+                record["dataset"] = spec.name
+                records.append(record)
+            save_pipeline_results(
+                records, run_dir, f"attack_prompts_{spec.name}", format=output_format
+            )
+            attacks_by_dataset[spec.name] = records
+    elif enable_responses:
+        all_attacks = load_records(config.get("attack_prompts_file"), "attack prompts")
+        for spec in dataset_specs:
+            attacks_by_dataset[spec.name] = [
+                r for r in all_attacks if r.get("dataset") == spec.name
+            ]
+
+    # Stage 2: model responses — one file per dataset, shared response model.
+    responses_by_dataset: dict[str, list[dict[str, Any]]] = {}
+    if enable_responses:
+        response_model = setup_model(config.get("response_model", {}))
+        for spec in dataset_specs:
+            records = []
+            if response_model is not None:
+                async for record in stream_model_responses(
+                    response_model, attacks_by_dataset.get(spec.name, [])
+                ):
+                    records.append(record)
+            save_pipeline_results(
+                records, run_dir, f"model_responses_{spec.name}", format=output_format
+            )
+            responses_by_dataset[spec.name] = records
+    elif enable_eval:
+        all_responses = load_records(config.get("model_responses_file"), "model responses")
+        for spec in dataset_specs:
+            responses_by_dataset[spec.name] = [
+                r for r in all_responses if r.get("dataset") == spec.name
+            ]
+
+    # Stage 3: evaluation — combined into a single file.
+    all_eval_results: list[dict[str, Any]] = []
+    if enable_eval:
+        for spec in dataset_specs:
+            all_eval_results.extend(
+                await _evaluate_dataset(spec, responses_by_dataset.get(spec.name, []))
+            )
+
+    evaluation_file: str | None = None
+    if enable_eval and all_eval_results:
+        output = save_pipeline_results(
+            all_eval_results, run_dir, "evaluations", format=output_format
+        )
+        evaluation_file = output.get("path")
+
+    return all_eval_results, evaluation_file
 
 
 def _dump_config_to_yaml(config: dict[str, Any], config_path: str) -> None:
@@ -368,21 +555,29 @@ async def run_pipeline(config: dict[str, Any]) -> None:
 
     # Fail fast on config errors (e.g. typo'd model keys) before any stage
     # burns time and API credits.
-    _preflight_config(config, enable_attacks, enable_responses, enable_eval)
+    dataset_specs = _preflight_config(config, enable_attacks, enable_responses, enable_eval)
 
-    attack_prompts, enable_responses = await _run_stage_attacks(
-        config, run_dir, output_format, enable_attacks, enable_responses,
-    )
+    if "datasets" in config:
+        evaluation_results, evaluation_file = await _run_pipeline_for_datasets(
+            config, dataset_specs, run_dir, output_format,
+            enable_attacks, enable_responses, enable_eval,
+        )
+        attack_prompts: list[dict[str, Any]] = []
+        model_responses: list[dict[str, Any]] = []
+    else:
+        attack_prompts, enable_responses = await _run_stage_attacks(
+            config, run_dir, output_format, enable_attacks, enable_responses,
+        )
 
-    model_responses, enable_eval = await _run_stage_responses(
-        config, attack_prompts, run_dir, output_format,
-        enable_responses, enable_eval,
-    )
+        model_responses, enable_eval = await _run_stage_responses(
+            config, attack_prompts, run_dir, output_format,
+            enable_responses, enable_eval,
+        )
 
-    evaluation_results, evaluation_file = await _run_stage_eval(
-        config, model_responses, run_dir, output_format,
-        enable_eval, enable_report,
-    )
+        evaluation_results, evaluation_file = await _run_stage_eval(
+            config, model_responses, run_dir, output_format,
+            enable_eval, enable_report,
+        )
 
     report_path = None
     if enable_report and evaluation_file:

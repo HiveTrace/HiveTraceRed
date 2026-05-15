@@ -268,18 +268,17 @@ class GeminiNativeModel(Model):
     async def ainvoke(self, prompt: str | list[dict[str, str]]) -> dict:
         """
         Send a single request to the model asynchronously.
-        
+
         Args:
             prompt: A string or list of messages to send to the model
-            
+
         Returns:
             The model's response
         """
-        
-        # Since the Google API doesn't have a native async interface,
-        # we'll run the synchronous method in an executor
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, self.invoke, prompt)
+        async with self._concurrency_slot():
+            # Google API has no native async interface; run sync invoke in an executor.
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(None, self.invoke, prompt)
     
     def batch(self, prompts: list[str | list[dict[str, str]]]) -> list[dict]:
         """

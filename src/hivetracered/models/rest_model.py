@@ -228,48 +228,49 @@ class RestModel(Model):
     # ── async invoke ─────────────────────────────────────────────────
 
     async def ainvoke(self, prompt: str | list[dict[str, str]]) -> dict:
-        prompt_text = self._extract_prompt_text(prompt)
-        url, hdrs, body = self._build_request(prompt_text)
+        async with self._concurrency_slot():
+            prompt_text = self._extract_prompt_text(prompt)
+            url, hdrs, body = self._build_request(prompt_text)
 
-        for attempt in range(self.max_retries + 1):
-            try:
-                connector = aiohttp.TCPConnector(ssl=self.verify_ssl)
-                timeout = aiohttp.ClientTimeout(total=self.request_timeout)
-                async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
-                    async with session.request(
-                        self.method,
-                        url,
-                        headers=hdrs,
-                        data=body,
-                        proxy=self._get_aiohttp_proxy(),
-                    ) as resp:
-                        text = await resp.text()
+            for attempt in range(self.max_retries + 1):
+                try:
+                    connector = aiohttp.TCPConnector(ssl=self.verify_ssl)
+                    timeout = aiohttp.ClientTimeout(total=self.request_timeout)
+                    async with aiohttp.ClientSession(connector=connector, timeout=timeout) as session:
+                        async with session.request(
+                            self.method,
+                            url,
+                            headers=hdrs,
+                            data=body,
+                            proxy=self._get_aiohttp_proxy(),
+                        ) as resp:
+                            text = await resp.text()
 
-                        if resp.status in self.skip_codes:
-                            return {"content": ""}
+                            if resp.status in self.skip_codes:
+                                return {"content": ""}
 
-                        if self._should_retry(resp.status) and attempt < self.max_retries:
-                            await asyncio.sleep(self._retry_delay(attempt))
-                            continue
+                            if self._should_retry(resp.status) and attempt < self.max_retries:
+                                await asyncio.sleep(self._retry_delay(attempt))
+                                continue
 
-                        if resp.status >= 400:
-                            raise aiohttp.ClientResponseError(
-                                resp.request_info,
-                                resp.history,
-                                status=resp.status,
-                                message=text,
-                            )
-                        return self._parse_response(text)
-            except Exception as e:
-                if attempt < self.max_retries:
-                    await asyncio.sleep(self._retry_delay(attempt))
-                    continue
-                logger.exception("RestModel.ainvoke failed")
-                return {
-                    "content": "",
-                    "error": str(e),
-                    "error_type": type(e).__name__,
-                }
+                            if resp.status >= 400:
+                                raise aiohttp.ClientResponseError(
+                                    resp.request_info,
+                                    resp.history,
+                                    status=resp.status,
+                                    message=text,
+                                )
+                            return self._parse_response(text)
+                except Exception as e:
+                    if attempt < self.max_retries:
+                        await asyncio.sleep(self._retry_delay(attempt))
+                        continue
+                    logger.exception("RestModel.ainvoke failed")
+                    return {
+                        "content": "",
+                        "error": str(e),
+                        "error_type": type(e).__name__,
+                    }
 
     # ── batch (sync, threaded) ───────────────────────────────────────
 
@@ -288,17 +289,14 @@ class RestModel(Model):
             ]
         return results
 
-    # ── abatch (async, semaphore) ────────────────────────────────────
+    # ── abatch ───────────────────────────────────────────────────────
 
     async def abatch(self, prompts: list[str | list[dict[str, str]]]) -> list[dict]:
-        semaphore = asyncio.Semaphore(self.max_concurrency or len(prompts))
+        # Concurrency is enforced inside ainvoke via self._concurrency_slot().
+        async def task(idx, prompt):
+            return idx, await self.ainvoke(prompt)
 
-        async def sem_task(idx, prompt):
-            async with semaphore:
-                result = await self.ainvoke(prompt)
-                return idx, result
-
-        tasks = [asyncio.create_task(sem_task(i, p)) for i, p in enumerate(prompts)]
+        tasks = [asyncio.create_task(task(i, p)) for i, p in enumerate(prompts)]
         ordered = [None] * len(prompts)
 
         with tqdm(total=len(tasks), desc=f"Processing requests with {self.model_name}", unit="request") as pbar:
@@ -312,17 +310,15 @@ class RestModel(Model):
     # ── stream_abatch ────────────────────────────────────────────────
 
     async def stream_abatch(self, prompts: list[str | list[dict[str, str]]]) -> AsyncGenerator[dict]:
-        semaphore = asyncio.Semaphore(self.max_concurrency or len(prompts))
+        async def task(idx, prompt):
+            # Concurrency is enforced inside ainvoke via self._concurrency_slot().
+            try:
+                result = await self.ainvoke(prompt)
+                return idx, result, None
+            except Exception as e:
+                return idx, {"content": "", "error": str(e), "error_type": type(e).__name__}, e
 
-        async def sem_task(idx, prompt):
-            async with semaphore:
-                try:
-                    result = await self.ainvoke(prompt)
-                    return idx, result, None
-                except Exception as e:
-                    return idx, {"content": "", "error": str(e), "error_type": type(e).__name__}, e
-
-        tasks = [asyncio.create_task(sem_task(i, p)) for i, p in enumerate(prompts)]
+        tasks = [asyncio.create_task(task(i, p)) for i, p in enumerate(prompts)]
 
         results = {}
         cur_result_idx = 0

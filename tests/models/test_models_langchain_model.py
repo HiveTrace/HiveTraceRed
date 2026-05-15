@@ -170,33 +170,40 @@ def test_batch_zero_concurrency_omits_config_nonzero_passes_max_concurrency():
 # ── abatch (async) ──────────────────────────────────────────────────
 
 
-def test_abatch_with_max_concurrency_zero_passes_only_callbacks():
+def test_abatch_fans_out_via_ainvoke_and_preserves_order():
+    # abatch composes via ainvoke (which enforces the per-instance concurrency
+    # cap), rather than calling client.abatch. The contract is: one ainvoke per
+    # prompt, results returned in input order.
     client = MagicMock()
-    client.abatch = AsyncMock(return_value=[_msg("a"), _msg("b")])
+    client.ainvoke = AsyncMock(side_effect=[_msg("a"), _msg("b"), _msg("c")])
     model = _ConcreteLangchainModel(client=client, max_concurrency=0)
 
-    out = _run(model.abatch(["p0", "p1"]))
+    out = _run(model.abatch(["p0", "p1", "p2"]))
 
-    assert client.abatch.await_count == 1
-    args, kwargs = client.abatch.call_args
-    assert args == (["p0", "p1"],)
-    assert "config" in kwargs
-    assert "callbacks" in kwargs["config"]
-    assert "max_concurrency" not in kwargs["config"]
-    assert isinstance(kwargs["config"]["callbacks"][0], BatchCallback)
-    assert [r["content"] for r in out] == ["a", "b"]
+    assert client.ainvoke.await_count == 3
+    assert [r["content"] for r in out] == ["a", "b", "c"]
 
 
-def test_abatch_with_nonzero_concurrency_passes_max_concurrency_and_callbacks():
+def test_abatch_respects_max_concurrency_cap():
+    # With max_concurrency=2, peak in-flight ainvoke calls must not exceed 2.
+    inflight = 0
+    peak = 0
+
+    async def slow_ainvoke(prompt):
+        nonlocal inflight, peak
+        inflight += 1
+        peak = max(peak, inflight)
+        await asyncio.sleep(0.01)
+        inflight -= 1
+        return _msg(str(prompt))
+
     client = MagicMock()
-    client.abatch = AsyncMock(return_value=[_msg("a"), _msg("b"), _msg("c")])
-    model = _ConcreteLangchainModel(client=client, max_concurrency=3)
+    client.ainvoke = slow_ainvoke
+    model = _ConcreteLangchainModel(client=client, max_concurrency=2)
 
-    _run(model.abatch(["x", "y", "z"]))
+    _run(model.abatch([f"p{i}" for i in range(10)]))
 
-    kwargs = client.abatch.call_args.kwargs
-    assert kwargs["config"]["max_concurrency"] == 3
-    assert isinstance(kwargs["config"]["callbacks"][0], BatchCallback)
+    assert peak <= 2
 
 
 # ── is_answer_blocked ───────────────────────────────────────────────

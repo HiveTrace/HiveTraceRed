@@ -111,14 +111,15 @@ class LangchainModel(Model):
     async def ainvoke(self, prompt: str | list[dict[str, str]]) -> dict:
         """
         Send a single request to the model asynchronously.
-        
+
         Args:
             prompt: A string or list of messages to send to the model
-            
+
         Returns:
             The model's response
         """
-        return dict(await self.client.ainvoke(prompt))
+        async with self._concurrency_slot():
+            return dict(await self.client.ainvoke(prompt))
     
     def batch(self, prompts: list[str | list[dict[str, str]]]) -> list[dict]:
         """
@@ -145,12 +146,10 @@ class LangchainModel(Model):
         Returns:
             A list of model responses
         """
-        if self.max_concurrency == 0:
-            async with BatchCallback(len(prompts)) as cb:
-                return [dict(response) for response in await self.client.abatch(prompts, config={"callbacks": [cb]})]
-        else:
-            async with BatchCallback(len(prompts)) as cb:
-                return [dict(response) for response in await self.client.abatch(prompts, config={"max_concurrency": self.max_concurrency, "callbacks": [cb]})]
+        # Concurrency is enforced inside ainvoke via self._concurrency_slot();
+        # asyncio.gather lets every prompt acquire a slot independently and
+        # the cap holds whether or not other batches are running concurrently.
+        return list(await asyncio.gather(*(self.ainvoke(p) for p in prompts)))
 
     def is_answer_blocked(self, answer: dict) -> bool:
         """
@@ -187,22 +186,20 @@ class LangchainModel(Model):
         Returns:
             An async generator of model responses in order of completion
         """
-        semaphore = asyncio.Semaphore(self.max_concurrency)
-        async def sem_task(idx, prompt):
-            async with semaphore:
-                try:
-                    result = await self.ainvoke(prompt)
-                    return idx, result, None
-                except Exception as e:
-                    # Return error response instead of crashing entire batch
-                    error_response = {
-                        "content": "",
-                        "error": str(e),
-                        "error_type": type(e).__name__
-                    }
-                    return idx, error_response, e
+        async def task(idx, prompt):
+            # Concurrency is enforced inside ainvoke via self._concurrency_slot().
+            try:
+                result = await self.ainvoke(prompt)
+                return idx, result, None
+            except Exception as e:
+                error_response = {
+                    "content": "",
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                }
+                return idx, error_response, e
 
-        tasks = [asyncio.create_task(sem_task(i, inp)) for i, inp in enumerate(prompts)]
+        tasks = [asyncio.create_task(task(i, inp)) for i, inp in enumerate(prompts)]
         total_tasks = len(tasks)
 
         results = dict()

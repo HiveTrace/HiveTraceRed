@@ -135,28 +135,29 @@ class YandexGPTModel(Model):
     async def ainvoke(self, prompt: str | list[dict[str, str]]) -> dict:
         """
         Send a single request to the model asynchronously.
-        
+
         Args:
             prompt: A string or list of messages to send to the model
-            
+
         Returns:
             Dictionary containing the model's response with content and metadata
-            
+
         Note:
             Returns a fallback response if the API request fails
         """
-        try:
-            operation = await asyncio.to_thread(
-                self.client.run_deferred, self._format_prompt(prompt)
-            )
-            response = await asyncio.to_thread(operation.wait)
-            return self._format_response(response)
-        except AioRpcError as e:
-            return {
-                'content': YANDEX_INTERNET_SEARCH_NOTICE,
-                'role': 'assistant',
-                'status': 4
-            }
+        async with self._concurrency_slot():
+            try:
+                operation = await asyncio.to_thread(
+                    self.client.run_deferred, self._format_prompt(prompt)
+                )
+                response = await asyncio.to_thread(operation.wait)
+                return self._format_response(response)
+            except AioRpcError:
+                return {
+                    'content': YANDEX_INTERNET_SEARCH_NOTICE,
+                    'role': 'assistant',
+                    'status': 4
+                }
     
     def batch(self, prompts: list[str | list[dict[str, str]]]) -> list[dict]:
         """

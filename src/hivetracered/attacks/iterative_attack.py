@@ -69,42 +69,18 @@ ENGLISH_LANGUAGE_CONFIG = LanguageConfig(
 
 @dataclass
 class IterationResult:
-    """
-    Result of a single iteration in an iterative attack.
-
-    Attributes:
-        iteration: The iteration number (0-indexed)
-        attack_prompt: The jailbreak prompt generated in this iteration
-        target_response: The target model's response to the attack prompt
-        success: Whether the attack was successful (jailbreak detected)
-        score: Evaluation score from the evaluator (0-1 scale)
-        conversation: Full conversation history up to this point
-        metadata: Additional metadata from the iteration
-    """
+    """Result of a single iteration in an iterative attack."""
     iteration: int
     attack_prompt: str
     target_response: str
     success: bool
     score: float = 0.0
-    conversation: list[dict[str, str]] = field(default_factory=list)
     metadata: dict[str, Any] = field(default_factory=dict)
 
 
 @dataclass
 class IterativeAttackResult:
-    """
-    Final result of an iterative attack containing all iterations and the best attack.
-
-    Attributes:
-        goal: The original malicious goal/prompt
-        success: Whether any iteration achieved a successful jailbreak
-        best_attack_prompt: The most effective attack prompt found
-        best_score: Score of the best attack
-        iterations: List of all iteration results
-        total_iterations: Total number of iterations performed
-        metadata: Additional metadata about the attack run
-    """
-    goal: str
+    """Final result of an iterative attack containing all iterations and the best attack."""
     success: bool
     best_attack_prompt: str
     best_score: float
@@ -114,14 +90,7 @@ class IterativeAttackResult:
 
 
 class IterativeAttack(BaseAttack):
-    """
-    Abstract base class for iterative attacks that refine prompts through multiple rounds.
-
-    Provides shared utilities for JSON extraction, score scaling, and response evaluation.
-    Subclasses implement specific strategies via run_attack/run_attack_async:
-    - PAIRAttack: Single-path iterative refinement
-    - TAPAttack: Tree-based exploration with pruning
-    """
+    """Abstract base for iterative attacks that refine a jailbreak prompt across multiple rounds."""
 
     def __init__(
         self,
@@ -140,8 +109,6 @@ class IterativeAttack(BaseAttack):
         self.language_config = language_config or RUSSIAN_LANGUAGE_CONFIG
         self._name = name
         self._description = description
-
-    # --- Shared utilities ---
 
     def _strip_markdown_json(self, response: str) -> str:
         """Strip markdown code block wrappers from JSON response."""
@@ -169,54 +136,30 @@ class IterativeAttack(BaseAttack):
         return None
 
     def _extract_attack(self, attacker_response: str) -> str:
-        """Extract the 'prompt' field from the attacker's JSON response, falling back to raw text."""
+        """Extract the 'prompt' field from attacker JSON, falling back to raw text on parse failure."""
         result = self._extract_json_field(attacker_response, "prompt")
         return result if result is not None else attacker_response
 
     def _scale_score(self, score: float) -> int:
-        """Scale a 0-1 score to 1-10 range, clamping to [1, 10]."""
+        """Scale a 0-1 score to 1-10 and clamp to [1, 10]."""
         scaled = int(score * 10) if score <= 1 else int(score)
         return max(1, min(10, scaled))
-
-    # --- Subclass interface ---
-
-    @abstractmethod
-    def _create_initial_prompt(self, goal: str) -> str:
-        """Create the initial prompt for the attacker model to generate a jailbreak attempt."""
-        pass
-
-    def _should_stop(self, result: IterationResult, iteration: int) -> bool:
-        """Determine if the attack loop should stop (success or max iterations reached)."""
-        return result.success or iteration >= self.max_iterations - 1
 
     @abstractmethod
     def run_attack(self, goal: str) -> IterativeAttackResult:
         """Run the iterative attack synchronously."""
-        pass
 
     @abstractmethod
     async def run_attack_async(self, goal: str) -> IterativeAttackResult:
         """Run the iterative attack asynchronously."""
-        pass
-
-    # --- Shared evaluation ---
-
-    def _evaluate_response(self, goal: str, target_response: str) -> dict[str, Any]:
-        """Evaluate the target's response and return success, score, and raw result."""
-        eval_result = self.evaluator.evaluate(goal, target_response)
-        success = eval_result.get("success", False)
-        score = eval_result.get("score", 1.0 if success else 0.0)
-        return {"success": success, "score": score, "raw": eval_result}
 
     async def _evaluate_response_async(self, goal: str, target_response: str) -> dict[str, Any]:
-        """Async version of _evaluate_response using the evaluator's stream_abatch."""
+        """Evaluate the target's response via the evaluator and return success, score, and raw result."""
         async for eval_result in self.evaluator.stream_abatch([goal], [target_response]):
             success = eval_result.get("success", False)
             score = eval_result.get("score", 1.0 if success else 0.0)
             return {"success": success, "score": score, "raw": eval_result}
         return {"success": False, "score": 0.0, "raw": {}}
-
-    # --- BaseAttack interface ---
 
     def _extract_goal(self, prompt: str | list[dict[str, str]]) -> str:
         """Extract the goal string from a prompt (string or message list)."""
@@ -234,7 +177,7 @@ class IterativeAttack(BaseAttack):
         prompt: str | list[dict[str, str]],
         best_attack_prompt: str
     ) -> str | list[dict[str, str]]:
-        """Format the best attack prompt to match the original prompt's type."""
+        """Return best_attack_prompt in the same shape as prompt (str or message list)."""
         if isinstance(prompt, str):
             return best_attack_prompt
         messages = prompt[:-1]
@@ -242,12 +185,7 @@ class IterativeAttack(BaseAttack):
         return messages
 
     def apply(self, prompt: str | list[dict[str, str]]) -> str | list[dict[str, str]]:
-        """
-        Apply the iterative attack to generate the best jailbreak prompt.
-
-        Provides compatibility with the BaseAttack interface by running the full
-        attack loop and returning the best attack prompt found.
-        """
+        """Run the attack and return the best jailbreak prompt found."""
         goal = self._extract_goal(prompt)
         result = self.run_attack(goal)
         return self._format_result(prompt, result.best_attack_prompt)
@@ -256,12 +194,7 @@ class IterativeAttack(BaseAttack):
         self,
         prompts: list[str | list[dict[str, str]]]
     ) -> AsyncGenerator[str | list[dict[str, str]], None]:
-        """
-        Apply the iterative attack to a batch of prompts asynchronously.
-
-        Launches all prompts as concurrent tasks and yields results
-        in the original input order as they complete.
-        """
+        """Run the attack on each prompt concurrently; yield best-attack outputs in input order."""
         if not prompts:
             return
 
@@ -282,18 +215,15 @@ class IterativeAttack(BaseAttack):
                 cur_idx += 1
 
     def get_name(self) -> str:
-        """Get the name of the attack."""
         return self._name or self.__class__.__name__
 
     def get_description(self) -> str:
-        """Get the description of the attack."""
         return self._description or (
             f"Iterative attack using {self.attacker_model.__class__.__name__}"
             f" against {self.target_model.__class__.__name__}"
         )
 
     def get_params(self) -> dict[str, Any]:
-        """Get the parameters of the attack."""
         return {
             "max_iterations": self.max_iterations,
             "attacker_model": self.attacker_model.__class__.__name__,

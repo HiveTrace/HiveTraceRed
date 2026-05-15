@@ -64,16 +64,13 @@ def _make_tap(**kwargs) -> TAPAttack:
 
 
 def test_language_config_defaults_to_russian():
-    # IterativeAttack.__init__ line 139: `self.language_config = language_config or RUSSIAN_LANGUAGE_CONFIG`
-    # Absence of an explicit language_config must yield RUSSIAN_LANGUAGE_CONFIG.
     attack = _make_tap()
     assert attack.language_config is RUSSIAN_LANGUAGE_CONFIG
     assert attack.language_config.code == "ru"
 
 
 def test_apply_string_returns_best_attack_prompt():
-    # IterativeAttack.apply calls _format_result(str_prompt, best_attack) → str.
-    # Root score > 0 so best_attack is recorded (best_score starts at 0.0).
+    # Root score 0.1 > best_score's initial 0.0 → best_attack is set.
     attacker = MockModel(response=_atk_json("the best attack"))
     attack = TAPAttack(
         attacker_model=attacker,
@@ -90,8 +87,6 @@ def test_apply_string_returns_best_attack_prompt():
 
 
 def test_apply_message_list_appends_best_attack_as_human_message():
-    # IterativeAttack.apply calls _format_result(list_prompt, best_attack) →
-    # same list with last message replaced by {"role": "human", "content": best_attack}.
     attacker = MockModel(response=_atk_json("payload"))
     attack = TAPAttack(
         attacker_model=attacker,

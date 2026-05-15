@@ -163,11 +163,8 @@ def test_tap_attack_init_stores_params_and_attacker_prompt(kwargs, expected, exp
 
 
 def test_create_initial_prompt_handles_language_config():
-    # Only the Russian case is tested here because the English config has an
-    # empty attacker_suffix (""), so asserting "ВАЖНОЕ ДОПОЛНЕНИЕ" not in prompt
-    # is vacuous — appending "" cannot introduce that string regardless of the
-    # if-guard. Russian config has a non-empty suffix, so both the presence of
-    # "OBJECTIVE:" and the suffix addition are truly exercised.
+    # Russian config has non-empty attacker_suffix; English's "" makes
+    # the suffix-addition assertion vacuous, so we exercise Russian here.
     config = RUSSIAN_LANGUAGE_CONFIG
     goal = "цель"
     attack = _make_attack(language_config=config)
@@ -179,10 +176,7 @@ def test_create_initial_prompt_handles_language_config():
 
 
 def test_create_branch_prompt_includes_parent_context_and_optional_suffix():
-    # Only the Russian case is tested here. The English config has attacker_suffix=""
-    # so asserting "ВАЖНОЕ ДОПОЛНЕНИЕ" not in prompt is vacuous (appending "" cannot
-    # introduce that string). The Russian config has a non-empty suffix, so both the
-    # parent-context strings and the suffix addition are genuinely exercised.
+    # Russian config has non-empty attacker_suffix; see sibling test above.
     config = RUSSIAN_LANGUAGE_CONFIG
     attack = _make_attack(language_config=config)
 
@@ -275,8 +269,7 @@ def _run(attack: TAPAttack, goal: str, use_async: bool) -> IterativeAttackResult
 
 @pytest.mark.parametrize("use_async", [False, True], ids=["sync", "async"])
 def test_run_attack_returns_immediately_when_root_succeeds(use_async):
-    # Evaluator declares root attempt a success; we should bail out at depth 0.
-    # Both sync and async paths share _record_root, so both must short-circuit.
+    # Evaluator declares root attempt a success; both paths bail out at depth 0.
     attacker = MockModel(response=_atk_json("root attack"))
     target = MockModel(response={"content": "Sure, here is the answer"})
     evaluator = _MockEvaluator(results=[{"success": True, "score": 1.0}])
@@ -301,7 +294,6 @@ def test_run_attack_returns_immediately_when_root_succeeds(use_async):
 @pytest.mark.parametrize("use_async", [False, True], ids=["sync", "async"])
 def test_run_attack_prunes_low_scoring_children_and_does_not_expand_them(use_async):
     # All children of root score below prune_threshold → next_level empty.
-    # Sync prune in _record_child; async prune in _record_async_result — same contract.
     attacker = MockModel(side_effect=lambda p: _atk_json("atk"))
     target = MockModel(response={"content": "still refusing"})
     evaluator = _MockEvaluator(default={"success": False, "score": 0.1})
@@ -322,7 +314,7 @@ def test_run_attack_prunes_low_scoring_children_and_does_not_expand_them(use_asy
 
 @pytest.mark.parametrize("use_async", [False, True], ids=["sync", "async"])
 def test_run_attack_respects_max_iterations_cap(use_async):
-    # Sync caps in _expand_parent_sync; async caps in _launch_depth_tasks.
+    # _launch_depth_tasks enforces the max_iterations cap.
     attacker = MockModel(side_effect=lambda p: _atk_json("a"))
     target = MockModel(response={"content": "no"})
     # All scores high enough to survive pruning, so the only stopping criterion
@@ -343,10 +335,7 @@ def test_run_attack_respects_max_iterations_cap(use_async):
 
 @pytest.mark.parametrize("use_async", [False, True], ids=["sync", "async"])
 def test_run_attack_tracks_best_attack_and_score_by_highest(use_async):
-    # Sequence: root score 0.5 → two children (0.6, 0.8). Best is the second
-    # child with score 0.8 and prompt "winner".
-    # Sync best-tracking lives in _record_child; async best-tracking lives in
-    # _record_async_result — both must select the highest-scoring branch.
+    # Sequence: root score 0.5 → two children (0.6, 0.8). Best is "winner" at 0.8.
     attacker = MockModel(side_effect=[
         _atk_json("root_attack"),
         _atk_json("loser"),
@@ -412,6 +401,39 @@ def test_run_attack_success_at_depth_one_records_success_depth():
 
 
 # ── async path ──────────────────────────────────────────────────────
+
+
+@pytest.mark.parametrize("use_async", [False, True], ids=["sync", "async"])
+def test_run_attack_stops_within_depth_at_first_success(use_async):
+    # Regression: previously the async path kept recording every already-awaited
+    # branch task after one succeeded, while sync stopped at the first success.
+    # Both paths must now record exactly the iterations up to and including the
+    # winning branch — no later siblings at the same depth.
+    # Setup: root scores 0.5 (survives prune), branching_factor=3, first child
+    # is the winner. Expected total_iterations: 1 (root) + 1 (winning child) = 2.
+    attacker = MockModel(side_effect=[
+        _atk_json("root"),
+        _atk_json("winner"),
+        _atk_json("would-be-sibling-1"),
+        _atk_json("would-be-sibling-2"),
+    ])
+    target = MockModel(response={"content": "no"})
+    evaluator = _MockEvaluator(results=[
+        {"success": False, "score": 0.5},  # root
+        {"success": True, "score": 1.0},   # first child wins
+        {"success": False, "score": 0.5},  # never reached under sync contract
+        {"success": False, "score": 0.5},  # never reached under sync contract
+    ])
+    attack = _make_attack(
+        attacker=attacker, target=target, evaluator=evaluator,
+        max_depth=2, branching_factor=3, prune_threshold=0.4,
+    )
+
+    result = _run(attack, "g", use_async)
+
+    assert result.success is True
+    assert result.best_attack_prompt == "winner"
+    assert result.total_iterations == 2  # = 1 root + 1 winning child
 
 
 def test_run_attack_async_iterations_are_numbered_contiguously():

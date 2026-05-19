@@ -550,8 +550,8 @@ def _build_report_js(namespaces, attack_types_by_ns, multi):
     )
     return f"""
     <script>
-    const NAMESPACES = {json.dumps(namespaces)};
-    const ATTACK_TYPES = {json.dumps(attack_types_by_ns)};
+    const NAMESPACES = {json.dumps(namespaces, ensure_ascii=False)};
+    const ATTACK_TYPES = {json.dumps(attack_types_by_ns, ensure_ascii=False)};
     function _sfx(ns) {{ return ns ? '_' + ns : ''; }}
     function _scope(ns) {{ return ns ? document.getElementById('dataset-panel-' + ns) : document; }}
 

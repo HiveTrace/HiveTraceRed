@@ -608,8 +608,8 @@ class WebActionRecorder:
         filepath = Path(filepath)
         filepath.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(filepath, 'w') as f:
-            json.dump(self.events, f, indent=2)
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(self.events, f, indent=2, ensure_ascii=False)
 
         if self.verbose:
             print(f'\nEvent log saved to {filepath}')

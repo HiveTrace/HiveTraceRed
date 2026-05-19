@@ -207,7 +207,7 @@ class CrescendoAttack(BaseAttack):
         if not H_A:
             history_block = "PREVIOUS_TURNS: []"
         else:
-            history_block = "PREVIOUS_TURNS:\n" + json.dumps(H_A, indent=2)
+            history_block = "PREVIOUS_TURNS:\n" + json.dumps(H_A, indent=2, ensure_ascii=False)
         return f"{history_block}\n\nOutput the next JSON object now."
 
     # ── BaseAttack contract ───────────────────────────────────────────────
@@ -216,7 +216,7 @@ class CrescendoAttack(BaseAttack):
         """Apply the attack to a single prompt and return (transcript_json, metadata)."""
         goal = self._extract_goal(prompt)
         result = self.run_attack(goal)
-        return json.dumps(result.final_transcript), self._build_metadata(result)
+        return json.dumps(result.final_transcript, ensure_ascii=False), self._build_metadata(result)
 
     async def stream_abatch(
         self,
@@ -230,7 +230,7 @@ class CrescendoAttack(BaseAttack):
         async def _run_task(idx: int, prompt):
             goal = self._extract_goal(prompt)
             result = await self.run_attack_async(goal)
-            return idx, json.dumps(result.final_transcript)
+            return idx, json.dumps(result.final_transcript, ensure_ascii=False)
 
         tasks = [asyncio.create_task(_run_task(i, p)) for i, p in enumerate(prompts)]
         results: dict[int, str] = {}

@@ -12,7 +12,7 @@ from __future__ import annotations
 
 import pytest
 
-from hivetracered.attacks.types.text_structure_modification.vertical_text_attack import (
+from hivetracered.attacks.types.single_turn.text_structure_modification.vertical_text_attack import (
     VerticalTextAttack,
 )
 

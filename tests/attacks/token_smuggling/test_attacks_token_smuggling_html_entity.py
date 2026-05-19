@@ -8,7 +8,7 @@ from __future__ import annotations
 
 import html
 
-from hivetracered.attacks.types.token_smuggling.html_entity_attack import HtmlEntityAttack
+from hivetracered.attacks.types.single_turn.token_smuggling.html_entity_attack import HtmlEntityAttack
 
 
 def test_transform_round_trip_via_html_unescape_recovers_original():

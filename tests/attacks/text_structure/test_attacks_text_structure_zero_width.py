@@ -15,7 +15,7 @@ import random
 
 import pytest
 
-from hivetracered.attacks.types.text_structure_modification.zero_width_attack import (
+from hivetracered.attacks.types.single_turn.text_structure_modification.zero_width_attack import (
     ZeroWidthAttack,
 )
 

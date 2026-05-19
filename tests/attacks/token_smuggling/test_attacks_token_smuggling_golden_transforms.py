@@ -14,14 +14,14 @@ import codecs
 
 import pytest
 
-from hivetracered.attacks.types.token_smuggling.atbash_attack import AtbashCipherAttack
-from hivetracered.attacks.types.token_smuggling.base64_attack import Base64InputOnlyAttack
-from hivetracered.attacks.types.token_smuggling.binary_encoding_attack import BinaryEncodingAttack
-from hivetracered.attacks.types.token_smuggling.hex_encoding_attack import HexEncodingAttack
-from hivetracered.attacks.types.token_smuggling.html_entity_attack import HtmlEntityAttack
-from hivetracered.attacks.types.token_smuggling.leetspeak_attack import LeetspeakAttack
-from hivetracered.attacks.types.token_smuggling.morse_code_attack import MorseCodeAttack
-from hivetracered.attacks.types.token_smuggling.rot_attack import RotCipherAttack
+from hivetracered.attacks.types.single_turn.token_smuggling.atbash_attack import AtbashCipherAttack
+from hivetracered.attacks.types.single_turn.token_smuggling.base64_attack import Base64InputOnlyAttack
+from hivetracered.attacks.types.single_turn.token_smuggling.binary_encoding_attack import BinaryEncodingAttack
+from hivetracered.attacks.types.single_turn.token_smuggling.hex_encoding_attack import HexEncodingAttack
+from hivetracered.attacks.types.single_turn.token_smuggling.html_entity_attack import HtmlEntityAttack
+from hivetracered.attacks.types.single_turn.token_smuggling.leetspeak_attack import LeetspeakAttack
+from hivetracered.attacks.types.single_turn.token_smuggling.morse_code_attack import MorseCodeAttack
+from hivetracered.attacks.types.single_turn.token_smuggling.rot_attack import RotCipherAttack
 
 
 def _b64(text: str) -> str:

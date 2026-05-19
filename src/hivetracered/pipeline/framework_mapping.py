@@ -185,7 +185,8 @@ ATTACK_TYPE_FRAMEWORK_MAP: dict[str, dict[str, list[str]]] = {
     for atype in [
         "simple_instructions", "roleplay", "persuasion", "output_formatting",
         "context_switching", "token_smuggling", "text_structure_modification",
-        "task_deflection", "irrelevant_information", "in_context_learning", "iterative",
+        "task_deflection", "irrelevant_information", "in_context_learning",
+        "iterative", "conversational",
     ]
 }
 

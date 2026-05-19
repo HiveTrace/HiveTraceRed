@@ -12,7 +12,7 @@ import json
 
 import pytest
 
-from hivetracered.attacks.types.text_structure_modification.json_transform_attack import (
+from hivetracered.attacks.types.single_turn.text_structure_modification.json_transform_attack import (
     JSONTransformAttack,
 )
 

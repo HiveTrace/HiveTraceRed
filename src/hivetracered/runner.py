@@ -384,10 +384,20 @@ async def _run_pipeline_for_datasets(
     if enable_attacks:
         attacker_model = setup_model(config.get("attacker_model", {}))
         response_model_for_attacks = setup_model(config.get("response_model", {}))
-        attacks = setup_attacks(
-            config.get("attacks", []), attacker_model, target_model=response_model_for_attacks
-        )
+        evaluation_model = setup_model(config.get("evaluation_model", {}))
         for spec in dataset_specs:
+            # Attacks are re-built per dataset so that each dataset's own
+            # evaluator (spec.evaluator) flows into attack-internal judge
+            # slots — e.g. CrescendoAttack.success_judge uses the per-dataset
+            # WildGuardGPTEvaluator instead of a generic ScoringJudgeEvaluator.
+            attacks = setup_attacks(
+                config.get("attacks", []),
+                attacker_model,
+                target_model=response_model_for_attacks,
+                evaluator=spec.evaluator,
+                evaluation_model=evaluation_model,
+                setup_evaluator_fn=setup_evaluator,
+            )
             records: list[dict[str, Any]] = []
             async for record in stream_attack_prompts(attacks, spec.prompts, system_prompt):
                 record["dataset"] = spec.name

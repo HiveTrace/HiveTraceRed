@@ -1,4 +1,4 @@
-"""Unit tests for hivetracered.attacks.types.iterative.tap_attack.TAPAttack.
+"""Unit tests for hivetracered.attacks.types.single_turn.iterative.tap_attack.TAPAttack.
 
 Covers TAP-specific behavior: tree branching, pruning, language-config switching,
 metadata construction, sync + async run paths, and the JSON extraction fallback
@@ -23,7 +23,7 @@ from hivetracered.attacks.iterative_attack import (
     IterativeAttackResult,
     LanguageConfig,
 )
-from hivetracered.attacks.types.iterative.tap_attack import (
+from hivetracered.attacks.types.single_turn.iterative.tap_attack import (
     DEFAULT_TAP_ATTACKER_PROMPT,
     TAPAttack,
     TreeNode,

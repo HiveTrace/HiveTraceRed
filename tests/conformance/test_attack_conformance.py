@@ -26,7 +26,10 @@ from tests.conftest import MockModel, async_collect
 
 
 def classify(attack_class):
-    """Return the attack family: 'iterative', 'model', 'algo', or 'template'."""
+    """Return the attack family: 'conversational', 'iterative', 'model', 'algo', or 'template'."""
+    info = ATTACK_CLASSES.get(attack_class.__name__, {})
+    if info.get("attack_type") == "conversational":
+        return "conversational"
     if issubclass(attack_class, IterativeAttack):
         return "iterative"
     if issubclass(attack_class, ModelAttack):
@@ -38,6 +41,20 @@ def classify(attack_class):
 
 def make_instance(attack_class, family):
     """Instantiate an attack with appropriate mocks."""
+    if family == "conversational":
+        attacker = MockModel(response={"content": '{"q": "question", "summary": "summary"}'})
+        target = MockModel(response={"content": "target response"})
+        refusal_judge = KeywordEvaluator(keywords=["refused", "cannot"])
+        success_judge = KeywordEvaluator(keywords=["refused", "cannot"])
+        return attack_class(
+            attacker_model=attacker,
+            target_model=target,
+            refusal_judge=refusal_judge,
+            success_judge=success_judge,
+            max_rounds=2,
+            max_iterations=2,
+            refusal_cap=2,
+        )
     if family == "iterative":
         attacker = MockModel(response={"content": '{"improvement": "test", "prompt": "attack prompt"}'})
         target = MockModel(response={"content": "target response"})
@@ -86,8 +103,8 @@ class TestAttackConformance:
         # The regex r'\{prompt[^}]*\}' matches the standard {prompt} and
         # legitimate split-prompt variants ({prompt_first_half}, etc.)
         # without accepting any other curly-braced identifier.
-        if family == "iterative":
-            pytest.skip("Iterative attacks use system prompts, not {prompt} templates")
+        if family in ("iterative", "conversational"):
+            pytest.skip(f"{family} attacks use system prompts, not {{prompt}} templates")
         attack = make_instance(attack_class, family)
         if family == "model":
             assert re.search(r'\{prompt[^}]*\}', attack.attacker_prompt), (
@@ -107,6 +124,14 @@ class TestAttackConformance:
             {"role": "human", "content": "test prompt"},
         ]
         result = attack.apply(msgs)
+        if family == "conversational":
+            # Conversational attacks return (prompt_str, metadata) per ADR-0001:
+            # the apply result is a fresh attack transcript, not an enrichment of
+            # the input message history, so the system-preservation invariant
+            # used by single-turn attacks does not apply.
+            assert isinstance(result, tuple) and len(result) == 2
+            assert isinstance(result[0], str) and isinstance(result[1], dict)
+            return
         assert isinstance(result, list)
         assert len(result) >= 2
         assert result[0]["role"] == "system"
@@ -126,9 +151,9 @@ class TestAttackConformance:
         assert len(results) == 5, (
             f"{attack_name}.stream_abatch returned {len(results)} results, expected 5"
         )
-        if family == "iterative":
-            # Iterative attacks use multi-step loops; the per-prompt
-            # ordering invariant is not meaningful — length contract only.
+        if family in ("iterative", "conversational"):
+            # Iterative and conversational attacks use multi-step loops;
+            # the per-prompt content-ordering invariant is not meaningful — length contract only.
             return
         for i, result in enumerate(results):
             if family == "model":
@@ -145,7 +170,16 @@ class TestAttackConformance:
 
     def test_pipeline_wiring(self, attack_name, attack_class, family):
         mock = MockModel(response={"content": "transformed prompt"})
-        if family == "iterative":
+        if family == "conversational":
+            attacker = MockModel(response={"content": '{"q": "question", "summary": "summary"}'})
+            target = MockModel(response={"content": "target response"})
+            attack = build_attack_from_config(
+                attack_name,
+                attacker_model=attacker,
+                target_model=target,
+                evaluation_model=mock,
+            )
+        elif family == "iterative":
             attacker = MockModel(response={"content": '{"improvement": "test", "prompt": "attack prompt"}'})
             target = MockModel(response={"content": "target response"})
             attack = build_attack_from_config(

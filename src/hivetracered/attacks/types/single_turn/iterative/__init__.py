@@ -11,8 +11,8 @@ References:
 """
 
 from hivetracered.attacks.iterative_attack import LanguageConfig, RUSSIAN_LANGUAGE_CONFIG, ENGLISH_LANGUAGE_CONFIG
-from hivetracered.attacks.types.iterative.pair_attack import PAIRAttack
-from hivetracered.attacks.types.iterative.tap_attack import TAPAttack
+from hivetracered.attacks.types.single_turn.iterative.pair_attack import PAIRAttack
+from hivetracered.attacks.types.single_turn.iterative.tap_attack import TAPAttack
 
 __all__ = [
     "PAIRAttack",

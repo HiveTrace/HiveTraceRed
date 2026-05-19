@@ -16,7 +16,7 @@ import random
 
 import pytest
 
-from hivetracered.attacks.types.text_structure_modification.word_divider_attack import (
+from hivetracered.attacks.types.single_turn.text_structure_modification.word_divider_attack import (
     WordDividerAttack,
 )
 

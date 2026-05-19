@@ -10,7 +10,7 @@ from __future__ import annotations
 import cyrtranslit
 import pytest
 
-from hivetracered.attacks.types.token_smuggling.transliteration_attack import (
+from hivetracered.attacks.types.single_turn.token_smuggling.transliteration_attack import (
     TransliterationAttack,
 )
 

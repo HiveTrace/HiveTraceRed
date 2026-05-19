@@ -7,7 +7,7 @@ the unsupported-char passthrough.
 
 from __future__ import annotations
 
-from hivetracered.attacks.types.token_smuggling.morse_code_attack import MorseCodeAttack
+from hivetracered.attacks.types.single_turn.token_smuggling.morse_code_attack import MorseCodeAttack
 
 
 def test_transform_lowercase_input_uppercased_then_encoded():

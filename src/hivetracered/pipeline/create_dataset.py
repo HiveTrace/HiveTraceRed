@@ -71,6 +71,78 @@ def _build_iterative_attack(attack_class, attack_config, attack_name, params,
     )
 
 
+def _build_conversational_attack(attack_class, attack_name, params,
+                                 attacker_model, target_model, evaluator,
+                                 evaluation_model, setup_evaluator_fn=None):
+    """Build a multi-turn conversational attack (CrescendoAttack).
+
+    Judge resolution, in priority order:
+      1. ``params["refusal_judge"]`` / ``params["success_judge"]`` — if either
+         is a dict, it is treated as an evaluator config and resolved via
+         ``setup_evaluator_fn`` (``evaluation_model`` is injected for
+         ``ModelEvaluator`` subclasses). Already-instantiated evaluators are
+         passed through unchanged. This lets YAML configure each judge with
+         its own threshold/model.
+      2. ``success_judge`` only — falls back to the supplied ``evaluator``
+         (any subclass; Crescendo reads only ``success`` from its verdict),
+         else to ``ScoringJudgeEvaluator(evaluation_model)`` with default
+         threshold. In the multi-dataset runner, ``evaluator`` is the per-
+         dataset evaluator (e.g. ``WildGuardGPTEvaluator``), so each dataset
+         drives Crescendo's success criterion with its own grader.
+      3. ``refusal_judge`` — left at ``None`` so ``CrescendoAttack.__init__``
+         applies its own ``KeywordEvaluator()`` default (offline, no per-turn
+         LLM call). The top-level ``evaluator`` is never auto-promoted into
+         the refusal slot; configure it explicitly via ``params.refusal_judge``
+         if you want LLM-graded refusal detection.
+    """
+    if not attacker_model:
+        raise ValueError(f"Attacker model is required for conversational attack '{attack_name}'")
+    if not target_model:
+        raise ValueError(f"Target model is required for conversational attack '{attack_name}'")
+
+    # Resolve dict-shaped judge configs in params into evaluator instances.
+    params = dict(params)
+    for key in ("refusal_judge", "success_judge"):
+        value = params.get(key)
+        if isinstance(value, dict):
+            if not setup_evaluator_fn:
+                raise ValueError(
+                    f"Per-judge config for '{key}' in attack '{attack_name}' requires "
+                    f"setup_evaluator_fn; pass it through build_attack_from_config."
+                )
+            resolved = setup_evaluator_fn(value, evaluation_model)
+            if resolved is None:
+                raise ValueError(
+                    f"Failed to build '{key}' for conversational attack '{attack_name}' "
+                    f"from config {value!r}"
+                )
+            params[key] = resolved
+
+    refusal_judge = params.pop("refusal_judge", None)
+    success_judge = params.pop("success_judge", None)
+
+    if success_judge is None:
+        if evaluator is not None:
+            success_judge = evaluator
+        elif evaluation_model:
+            success_judge = ScoringJudgeEvaluator(model=evaluation_model)
+        else:
+            raise ValueError(
+                f"Evaluator or evaluation_model is required for conversational attack '{attack_name}' "
+                f"(success judge cannot be defaulted)"
+            )
+
+    kwargs = {"success_judge": success_judge, **params}
+    if refusal_judge is not None:
+        kwargs["refusal_judge"] = refusal_judge
+
+    return attack_class(
+        attacker_model=attacker_model,
+        target_model=target_model,
+        **kwargs,
+    )
+
+
 def build_attack_from_config(attack_config, attacker_model=None, target_model=None,
                              evaluator=None, evaluation_model=None, setup_evaluator_fn=None):
     """
@@ -94,7 +166,13 @@ def build_attack_from_config(attack_config, attacker_model=None, target_model=No
         raise ValueError(f"Unknown attack '{attack_name}'")
     attack_class = ATTACK_CLASSES[attack_name]["attack_class"]
 
-    if issubclass(attack_class, IterativeAttack):
+    if ATTACK_CLASSES[attack_name]["attack_type"] == "conversational":
+        attack = _build_conversational_attack(
+            attack_class, attack_name, params,
+            attacker_model, target_model, evaluator, evaluation_model,
+            setup_evaluator_fn=setup_evaluator_fn,
+        )
+    elif issubclass(attack_class, IterativeAttack):
         attack = _build_iterative_attack(
             attack_class, attack_config, attack_name, params,
             attacker_model, target_model, evaluator,
@@ -207,6 +285,13 @@ async def stream_attack(attack: BaseAttack,
         # Apply the attack to all prompts at once
         i = 0
         async for attack_prompt in attack.stream_abatch(formatted_prompts):
+            # Multi-turn attacks (e.g. CrescendoAttack) yield (prompt_str, metadata_dict);
+            # single-turn attacks yield just the prompt. Split here so the row schema is uniform.
+            if isinstance(attack_prompt, tuple) and len(attack_prompt) == 2:
+                prompt_value, prompt_metadata = attack_prompt
+            else:
+                prompt_value, prompt_metadata = attack_prompt, {}
+
             # Extract base fields if base_prompt is a dict
             base_fields = {}
             if isinstance(base_prompts[i], dict):
@@ -215,7 +300,8 @@ async def stream_attack(attack: BaseAttack,
             yield {
                     **base_fields,  # Preserve all original columns
                     "base_prompt": extract_prompt_text(base_prompts[i]),
-                    "prompt": attack_prompt,
+                    "prompt": prompt_value,
+                    "metadata": prompt_metadata,
                     "attack_name": attack_name,
                     "attack_type": ATTACK_CLASSES[attack_name]["attack_type"],
                     "attack_params": attack.get_params(),
@@ -234,6 +320,7 @@ async def stream_attack(attack: BaseAttack,
                 **base_fields,  # Preserve all original columns
                 "base_prompt": extract_prompt_text(base_prompt),
                 "prompt": "",
+                "metadata": {},
                 "attack_name": attack_name,
                 "attack_type": ATTACK_CLASSES[attack_name]["attack_type"],
                 "attack_params": attack.get_params(),

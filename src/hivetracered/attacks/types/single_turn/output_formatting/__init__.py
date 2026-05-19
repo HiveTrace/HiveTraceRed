@@ -4,8 +4,8 @@ templates."""
 from pathlib import Path
 
 from hivetracered.attacks.yaml_loader import load_attacks_from_dir
-from hivetracered.attacks.types.output_formatting.language_output_attack import LanguageOutputAttack  # noqa: F401
-from hivetracered.attacks.types.output_formatting.gradient_methods import (  # noqa: F401
+from hivetracered.attacks.types.single_turn.output_formatting.language_output_attack import LanguageOutputAttack  # noqa: F401
+from hivetracered.attacks.types.single_turn.output_formatting.gradient_methods import (  # noqa: F401
     GCGTransferHarmbenchAttack,
     GCGTransferUniversalAttack,
 )

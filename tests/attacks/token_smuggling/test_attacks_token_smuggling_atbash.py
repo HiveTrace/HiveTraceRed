@@ -7,7 +7,7 @@ non-letter passthrough, and the self-inverse round-trip property.
 
 from __future__ import annotations
 
-from hivetracered.attacks.types.token_smuggling.atbash_attack import AtbashCipherAttack
+from hivetracered.attacks.types.single_turn.token_smuggling.atbash_attack import AtbashCipherAttack
 
 
 EN_LOWER = "abcdefghijklmnopqrstuvwxyz"

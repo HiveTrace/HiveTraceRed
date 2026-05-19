@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import pytest
 
-from hivetracered.attacks.types.text_structure_modification.back_to_front_attack import (
+from hivetracered.attacks.types.single_turn.text_structure_modification.back_to_front_attack import (
     BackToFrontAttack,
 )
 

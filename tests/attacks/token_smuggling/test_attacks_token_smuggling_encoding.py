@@ -8,7 +8,7 @@ errors='replace' (matches the documented contract via stdlib codec semantics).
 from __future__ import annotations
 
 
-from hivetracered.attacks.types.token_smuggling.encoding_attack import EncodingAttack
+from hivetracered.attacks.types.single_turn.token_smuggling.encoding_attack import EncodingAttack
 
 
 def _encode_reference(text: str, source: str, target: str) -> str:

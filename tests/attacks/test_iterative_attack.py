@@ -15,7 +15,7 @@ import json
 from typing import Any, AsyncGenerator, Dict, Optional
 
 from hivetracered.attacks.iterative_attack import RUSSIAN_LANGUAGE_CONFIG
-from hivetracered.attacks.types.iterative.tap_attack import TAPAttack
+from hivetracered.attacks.types.single_turn.iterative.tap_attack import TAPAttack
 from hivetracered.evaluators.base_evaluator import BaseEvaluator
 from tests.conftest import MockModel
 

@@ -1,0 +1,43 @@
+"""
+Single-turn attack types: each attack produces exactly one attack prompt per
+invocation. Includes the eleven existing categories. PAIR and TAP live under
+`iterative/` because they emit one final attack prompt per call, even though
+they loop internally to refine it.
+"""
+
+from hivetracered.attacks.types.single_turn.simple_instructions import *
+from hivetracered.attacks.types.single_turn.roleplay import *
+from hivetracered.attacks.types.single_turn.persuasion import *
+from hivetracered.attacks.types.single_turn.output_formatting import *
+from hivetracered.attacks.types.single_turn.context_switching import *
+from hivetracered.attacks.types.single_turn.token_smuggling import *
+from hivetracered.attacks.types.single_turn.text_structure_modification import *
+from hivetracered.attacks.types.single_turn.task_deflection import *
+from hivetracered.attacks.types.single_turn.irrelevant_information import *
+from hivetracered.attacks.types.single_turn.in_context_learning import *
+from hivetracered.attacks.types.single_turn.iterative import *
+
+from hivetracered.attacks.types.single_turn.simple_instructions import __all__ as simple_instructions_all
+from hivetracered.attacks.types.single_turn.roleplay import __all__ as roleplay_all
+from hivetracered.attacks.types.single_turn.persuasion import __all__ as persuasion_all
+from hivetracered.attacks.types.single_turn.output_formatting import __all__ as output_formatting_all
+from hivetracered.attacks.types.single_turn.context_switching import __all__ as context_switching_all
+from hivetracered.attacks.types.single_turn.token_smuggling import __all__ as token_smuggling_all
+from hivetracered.attacks.types.single_turn.text_structure_modification import __all__ as text_structure_modification_all
+from hivetracered.attacks.types.single_turn.task_deflection import __all__ as task_deflection_all
+from hivetracered.attacks.types.single_turn.irrelevant_information import __all__ as irrelevant_information_all
+from hivetracered.attacks.types.single_turn.in_context_learning import __all__ as in_context_learning_all
+from hivetracered.attacks.types.single_turn.iterative import __all__ as iterative_all
+
+__all__ = []
+__all__.extend(simple_instructions_all)
+__all__.extend(roleplay_all)
+__all__.extend(persuasion_all)
+__all__.extend(output_formatting_all)
+__all__.extend(context_switching_all)
+__all__.extend(token_smuggling_all)
+__all__.extend(text_structure_modification_all)
+__all__.extend(task_deflection_all)
+__all__.extend(irrelevant_information_all)
+__all__.extend(in_context_learning_all)
+__all__.extend(iterative_all)

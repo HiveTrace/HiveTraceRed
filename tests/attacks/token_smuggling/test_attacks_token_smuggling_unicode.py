@@ -14,7 +14,7 @@ from __future__ import annotations
 
 import pytest
 
-from hivetracered.attacks.types.token_smuggling.unicode_attack import (
+from hivetracered.attacks.types.single_turn.token_smuggling.unicode_attack import (
     UnicodeRussianStyleAttack,
     UnicodeStyleAttack,
 )

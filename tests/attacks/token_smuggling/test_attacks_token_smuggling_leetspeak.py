@@ -6,7 +6,7 @@ This file pins the unmapped-character passthrough branch.
 
 from __future__ import annotations
 
-from hivetracered.attacks.types.token_smuggling.leetspeak_attack import LeetspeakAttack
+from hivetracered.attacks.types.single_turn.token_smuggling.leetspeak_attack import LeetspeakAttack
 
 
 def test_transform_unmapped_chars_pass_through():

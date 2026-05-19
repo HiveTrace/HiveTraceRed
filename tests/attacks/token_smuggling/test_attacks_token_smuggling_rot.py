@@ -10,7 +10,7 @@ from __future__ import annotations
 
 import pytest
 
-from hivetracered.attacks.types.token_smuggling.rot_attack import RotCipherAttack
+from hivetracered.attacks.types.single_turn.token_smuggling.rot_attack import RotCipherAttack
 
 
 @pytest.mark.parametrize(

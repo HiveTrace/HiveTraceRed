@@ -15,7 +15,7 @@ import random
 
 import pytest
 
-from hivetracered.attacks.types.text_structure_modification.typo_attack import TypoAttack
+from hivetracered.attacks.types.single_turn.text_structure_modification.typo_attack import TypoAttack
 
 
 # ── per-mode behavior (each row enables exactly one mode) ───────────

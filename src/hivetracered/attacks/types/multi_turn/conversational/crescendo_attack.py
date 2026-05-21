@@ -103,7 +103,9 @@ class ConversationAttackResult:
         success: Whether any iteration achieved a successful jailbreak.
         iterations: All iteration results including failed/partial ones.
         final_transcript: First-success iteration H_T; last-attempted H_T if
-                          no success.
+                          no success. The trailing target (ai) answer is
+                          dropped so the transcript ends on the final human
+                          turn and can be replayed to elicit a fresh response.
     """
 
     goal: str
@@ -306,6 +308,23 @@ class CrescendoAttack(BaseAttack):
             ],
         }
 
+    @staticmethod
+    def _drop_trailing_target_answer(
+        transcript: list[dict[str, str]],
+    ) -> list[dict[str, str]]:
+        """Return a copy of the transcript with a trailing target (ai) turn removed.
+
+        ``final_transcript`` is replayed against the response-stage model to
+        obtain a fresh answer to the final escalated question, so the recorded
+        target answer must not be the last turn. All prior human/ai turns are
+        kept as conversational context. A committed transcript always ends with
+        an ``ai`` turn (see the H_T append/pop discipline); the role guard makes
+        the helper a no-op for an empty or already-trimmed transcript.
+        """
+        if transcript and transcript[-1].get("role") == "ai":
+            return transcript[:-1]
+        return list(transcript)
+
     # ── Core algorithm ────────────────────────────────────────────────────
 
     def run_attack(self, goal: str) -> ConversationAttackResult:
@@ -467,7 +486,7 @@ class CrescendoAttack(BaseAttack):
             goal=goal,
             success=overall_success,
             iterations=iterations,
-            final_transcript=final_transcript,
+            final_transcript=self._drop_trailing_target_answer(final_transcript),
         )
 
     async def run_attack_async(self, goal: str) -> ConversationAttackResult:
@@ -627,5 +646,5 @@ class CrescendoAttack(BaseAttack):
             goal=goal,
             success=overall_success,
             iterations=iterations,
-            final_transcript=final_transcript,
+            final_transcript=self._drop_trailing_target_answer(final_transcript),
         )

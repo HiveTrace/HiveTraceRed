@@ -8,7 +8,7 @@ through browser automation when no official API is available.
 from __future__ import annotations
 
 from abc import abstractmethod
-from typing import AsyncGenerator, Dict, List, Optional, Tuple, Union
+from collections.abc import AsyncGenerator
 
 import asyncio
 
@@ -44,6 +44,10 @@ class WebModel(Model):
     - `_create_browser()`: custom browser launch settings (args, proxy, browser type).
     """
 
+    # Class-level set keeps fire-and-forget cleanup tasks (scheduled from
+    # __del__) alive until they finish, so the event loop does not GC them.
+    _pending_finalizer_tasks: set = set()
+
     def __init__(
         self,
         model: str,
@@ -70,8 +74,8 @@ class WebModel(Model):
         self._init_lock = asyncio.Lock()
 
         self.playwright = None
-        self.browser: Optional[Browser] = None
-        self._semaphore: Optional[asyncio.Semaphore] = None
+        self.browser: Browser | None = None
+        self._semaphore: asyncio.Semaphore | None = None
 
     async def _initialize_browser(self) -> None:
         # Fast path: if already initialized, return immediately
@@ -105,7 +109,7 @@ class WebModel(Model):
 
         return await self.playwright.chromium.launch(headless=self.headless)
 
-    async def _setup_context_and_page(self) -> Tuple[BrowserContext, Page]:
+    async def _setup_context_and_page(self) -> tuple[BrowserContext, Page]:
         """
         Create and configure a (context, page) pair.
         """
@@ -166,7 +170,7 @@ class WebModel(Model):
         """
         pass
 
-    def _prompt_to_message(self, prompt: Union[str, List[Dict[str, str]]]) -> str:
+    def _prompt_to_message(self, prompt: str | list[dict[str, str]]) -> str:
         if isinstance(prompt, list):
             return prompt[-1].get("content", "") if prompt else ""
         return prompt
@@ -176,7 +180,7 @@ class WebModel(Model):
         raise NotImplementedError
 
     async def _process_single_prompt(
-        self, page: Page, prompt: Union[str, List[Dict[str, str]]]
+        self, page: Page, prompt: str | list[dict[str, str]]
     ) -> dict:
         message = self._prompt_to_message(prompt)
         try:
@@ -185,7 +189,7 @@ class WebModel(Model):
         except Exception as exc:
             return {"content": "", "error": str(exc), "error_type": type(exc).__name__}
 
-    async def _run_in_new_context(self, prompt: Union[str, List[Dict[str, str]]]) -> dict:
+    async def _run_in_new_context(self, prompt: str | list[dict[str, str]]) -> dict:
         """
         Run a prompt in a new (context, page) pair and dispose it afterwards.
 
@@ -196,8 +200,8 @@ class WebModel(Model):
             raise RuntimeError("Concurrency semaphore is not initialized.")
 
         async with self._semaphore:
-            context: Optional[BrowserContext] = None
-            page: Optional[Page] = None
+            context: BrowserContext | None = None
+            page: Page | None = None
             try:
                 context, page = await self._setup_context_and_page()
                 return await self._process_single_prompt(page, prompt)
@@ -213,10 +217,10 @@ class WebModel(Model):
                     except Exception:
                         pass
 
-    async def ainvoke(self, prompt: Union[str, List[Dict[str, str]]]) -> dict:
+    async def ainvoke(self, prompt: str | list[dict[str, str]]) -> dict:
         return await self._run_in_new_context(prompt)
 
-    def invoke(self, prompt: Union[str, List[Dict[str, str]]]) -> dict:
+    def invoke(self, prompt: str | list[dict[str, str]]) -> dict:
         try:
             loop = asyncio.get_event_loop()
             if loop.is_running():
@@ -232,11 +236,11 @@ class WebModel(Model):
 
         return loop.run_until_complete(self.ainvoke(prompt))
 
-    async def abatch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> List[dict]:
+    async def abatch(self, prompts: list[str | list[dict[str, str]]]) -> list[dict]:
         tasks = [self._run_in_new_context(prompt) for prompt in prompts]
         return await asyncio.gather(*tasks)
 
-    def batch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> List[dict]:
+    def batch(self, prompts: list[str | list[dict[str, str]]]) -> list[dict]:
         try:
             loop = asyncio.get_event_loop()
             if loop.is_running():
@@ -253,21 +257,21 @@ class WebModel(Model):
         return loop.run_until_complete(self.abatch(prompts))
 
     async def stream_abatch(
-        self, prompts: List[Union[str, List[Dict[str, str]]]]
-    ) -> AsyncGenerator[dict, None]:
+        self, prompts: list[str | list[dict[str, str]]]
+    ) -> AsyncGenerator[dict]:
         await self._initialize_browser()
         if self._semaphore is None:
             raise RuntimeError("Concurrency semaphore is not initialized.")
 
         async def sem_task(
-            idx: int, prompt: Union[str, List[Dict[str, str]]]
-        ) -> Tuple[int, dict]:
+            idx: int, prompt: str | list[dict[str, str]]
+        ) -> tuple[int, dict]:
             result = await self._run_in_new_context(prompt)
             return idx, result
 
         tasks = [asyncio.create_task(sem_task(i, p)) for i, p in enumerate(prompts)]
         total_tasks = len(tasks)
-        results: Dict[int, dict] = {}
+        results: dict[int, dict] = {}
         cur_idx = 0
 
         with tqdm(
@@ -283,23 +287,67 @@ class WebModel(Model):
                     yield results.pop(cur_idx)
                     cur_idx += 1
 
+    async def _handle_stable_response_timeout(
+        self,
+        page: Page,
+        selector: str,
+        last_content: str | None,
+        fallback_to_last: bool,
+    ) -> str:
+        if fallback_to_last and last_content:
+            return last_content
+        # Try fallback to last element if available
+        if fallback_to_last:
+            try:
+                elements = await page.query_selector_all(selector)
+                if elements:
+                    return await elements[-1].inner_text()
+            except Exception:
+                pass
+        if last_content:
+            return last_content
+        raise RuntimeError(f"No response received: timeout waiting for {selector}")
+
+    async def _check_response_stability(
+        self,
+        page: Page,
+        selector: str,
+        last_content: str | None,
+        last_change_time: float,
+        now: float,
+        stable_time: float,
+    ) -> tuple[str | None, str | None, float]:
+        try:
+            elements = await page.locator(selector).all()
+            if not elements:
+                return None, last_content, last_change_time
+            current_content = await elements[-1].inner_text()
+            if current_content != last_content:
+                return None, current_content, now
+            if now - last_change_time >= stable_time:
+                return current_content, last_content, last_change_time
+        except Exception:
+            pass
+        return None, last_content, last_change_time
+
     async def _wait_for_stable_response(
         self,
         page: Page,
         selector: str,
-        timeout: Optional[int] = None,
-        stable_time: Optional[float] = None,
+        stable_time: float | None = None,
         fallback_to_last: bool = True,
     ) -> str:
         """
         Wait until the matched element(s) text content stops changing.
 
         Useful for streaming UIs where the assistant response is progressively rendered.
+        The wall-clock deadline is ``self.response_wait_time`` seconds; callers that need
+        a different deadline should adjust that attribute or wrap the call in their own
+        ``async with asyncio.timeout(...):`` block.
 
         Args:
             page: Playwright page object
             selector: CSS selector for response element(s)
-            timeout: Maximum time to wait in seconds
             stable_time: Time content must be stable to consider complete
             fallback_to_last: If True, return last element's text on timeout/error
 
@@ -309,61 +357,50 @@ class WebModel(Model):
         Raises:
             RuntimeError: If no response found and fallback_to_last is False
         """
-        timeout = self.response_wait_time if timeout is None else timeout
         stable_time = self.stability_check_time if stable_time is None else stable_time
 
-        start_time = asyncio.get_event_loop().time()
         last_content = None
-        last_change_time = start_time
+        last_change_time = asyncio.get_event_loop().time()
 
-        while True:
-            now = asyncio.get_event_loop().time()
-            if now - start_time > timeout:
-                if fallback_to_last and last_content:
-                    return last_content
-                # Try fallback to last element if available
-                if fallback_to_last:
-                    try:
-                        elements = await page.query_selector_all(selector)
-                        if elements:
-                            return await elements[-1].inner_text()
-                    except Exception:
-                        pass
-                if last_content:
-                    return last_content
-                raise RuntimeError(f"No response received: timeout waiting for {selector}")
+        try:
+            async with asyncio.timeout(self.response_wait_time):
+                while True:
+                    now = asyncio.get_event_loop().time()
+                    stable_result, last_content, last_change_time = await self._check_response_stability(
+                        page, selector, last_content, last_change_time, now, stable_time
+                    )
+                    if stable_result is not None:
+                        return stable_result
 
-            try:
-                elements = await page.locator(selector).all()
-                if elements:
-                    current_content = await elements[-1].inner_text()
-                    if current_content != last_content:
-                        last_content = current_content
-                        last_change_time = now
-                    elif now - last_change_time >= stable_time:
-                        return current_content
-            except Exception:
-                pass
+                    await asyncio.sleep(0.5)
+        except TimeoutError:
+            return await self._handle_stable_response_timeout(
+                page, selector, last_content, fallback_to_last
+            )
 
-            await asyncio.sleep(0.5)
+    # Per-selector budget passed to Playwright's wait_for_selector. Playwright's
+    # API exposes the deadline as a kwarg (in milliseconds), so the call still
+    # uses ``timeout=``; only our function's signature drops the parameter.
+    _FALLBACK_SELECTOR_TIMEOUT_MS: int = 3000
 
     async def _find_element_with_fallbacks(
-        self, page: Page, selectors: List[str], timeout: int = 3000
-    ) -> Optional[object]:
+        self, page: Page, selectors: list[str]
+    ) -> object | None:
         """
         Try multiple selectors in order until one is found.
 
         Args:
             page: Playwright page object
             selectors: List of CSS selectors to try in order
-            timeout: Timeout per selector in milliseconds
 
         Returns:
             First matching element or None if none found
         """
         for selector in selectors:
             try:
-                element = await page.wait_for_selector(selector, timeout=timeout)
+                element = await page.wait_for_selector(
+                    selector, timeout=self._FALLBACK_SELECTOR_TIMEOUT_MS
+                )
                 if element:
                     return element
             except PlaywrightTimeoutError:
@@ -428,7 +465,9 @@ class WebModel(Model):
             try:
                 loop = asyncio.get_event_loop()
                 if loop.is_running():
-                    asyncio.create_task(self.aclose())
+                    task = asyncio.create_task(self.aclose())
+                    WebModel._pending_finalizer_tasks.add(task)
+                    task.add_done_callback(WebModel._pending_finalizer_tasks.discard)
                 else:
                     loop.run_until_complete(self.aclose())
             except Exception:

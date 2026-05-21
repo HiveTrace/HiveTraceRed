@@ -1,4 +1,4 @@
-from typing import Union, List, Any, Dict, AsyncGenerator
+from collections.abc import AsyncGenerator
 from abc import ABC, abstractmethod
 
 class BaseAttack(ABC):
@@ -8,7 +8,7 @@ class BaseAttack(ABC):
     """
     
     @abstractmethod
-    def apply(self, prompt: Union[str, List[Dict[str, str]]]) -> Union[str, List[Dict[str, str]]]:
+    def apply(self, prompt: str | list[dict[str, str]]) -> str | list[dict[str, str]]:
         """
         Apply the attack to the given prompt.
         
@@ -21,7 +21,7 @@ class BaseAttack(ABC):
         pass
     
     @abstractmethod
-    async def stream_abatch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> AsyncGenerator[List[Union[str, List[Dict[str, str]]]], None]:
+    async def stream_abatch(self, prompts: list[str | list[dict[str, str]]]) -> AsyncGenerator[list[str | list[dict[str, str]]], None]:
         """
         Apply the attack asynchronously to a batch of prompts.
         

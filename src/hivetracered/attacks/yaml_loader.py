@@ -11,7 +11,6 @@ Each YAML declares one attack:
 """
 
 from pathlib import Path
-from typing import Dict, Type
 
 import yaml
 
@@ -43,10 +42,10 @@ def _make_model(spec):
     return type(spec["class_name"], (ModelAttack,), {"__init__": __init__})
 
 
-def load_attacks_from_dir(dir_path: Path, category: str) -> Dict[str, Type]:
+def load_attacks_from_dir(dir_path: Path, category: str) -> dict[str, type]:
     """Scan dir_path for *.yaml files, mint one attack class per file, register
     with Registry.attack(category=...), return {class_name: class}."""
-    loaded: Dict[str, Type] = {}
+    loaded: dict[str, type] = {}
     for yaml_path in sorted(dir_path.glob("*.yaml")):
         spec = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
         if spec["base"] == "template":

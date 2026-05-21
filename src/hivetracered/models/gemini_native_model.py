@@ -1,4 +1,6 @@
-from typing import List, Any, Optional, Union, Dict, AsyncGenerator
+import logging
+from typing import Any
+from collections.abc import AsyncGenerator
 from hivetracered.models.base_model import Model
 from google import genai
 from google.genai import types
@@ -8,15 +10,15 @@ import asyncio
 from tqdm import tqdm
 import time
 import json
-import warnings
 from tenacity import (
     retry,
     stop_after_attempt,
     wait_exponential_jitter,
     retry_if_exception_type,
-    RetryError,
 )
 from hivetracered.registry import Registry
+
+logger = logging.getLogger(__name__)
 
 
 
@@ -28,7 +30,7 @@ class GeminiNativeModel(Model):
     thinking budget, and rate limiting with both synchronous and asynchronous interfaces.
     """
     
-    def __init__(self, model: str = "gemini-2.5-flash-preview-04-17", max_concurrency: Optional[int] = None, batch_size: Optional[int] = None, thinking_budget: int = 0, rpm: int = 10, max_retries: int = 3, **kwargs):
+    def __init__(self, model: str = "gemini-2.5-flash-preview-04-17", max_concurrency: int | None = None, batch_size: int | None = None, thinking_budget: int = 0, rpm: int = 10, max_retries: int = 3, **kwargs):
         """
         Initialize the Gemini model with the specified configuration.
 
@@ -50,22 +52,7 @@ class GeminiNativeModel(Model):
         self.rpm = rpm
         self.max_retries = max_retries
 
-        # Handle deprecation
-        if batch_size is not None:
-            warnings.warn(
-                "The 'batch_size' parameter is deprecated and will be removed in v2.0.0. "
-                "Use 'max_concurrency' instead.",
-                DeprecationWarning,
-                stacklevel=2
-            )
-            if max_concurrency is None:
-                max_concurrency = batch_size
-
-        # Set default if neither provided
-        if max_concurrency is None:
-            max_concurrency = 0
-
-        self.max_concurrency = max_concurrency
+        self.max_concurrency = self._resolve_concurrency(max_concurrency, batch_size, default=0)
         # Keep for backward compatibility in get_params()
         self.batch_size = self.max_concurrency
 
@@ -199,7 +186,7 @@ class GeminiNativeModel(Model):
             parsed_content = structured_content["response"]
         except Exception as e:
             # If parsing fails, fall back to text response
-            print(f"Warning: Failed to parse structured response: {str(e)}")
+            logger.warning(f"Failed to parse structured response: {str(e)}")
         
         return {
             "content": parsed_content,
@@ -207,7 +194,7 @@ class GeminiNativeModel(Model):
             "raw_response": response
         }
     
-    def invoke(self, prompt: Union[str, List[Dict[str, str]]]) -> dict:
+    def invoke(self, prompt: str | list[dict[str, str]]) -> dict:
         """
         Send a single request to the model synchronously with automatic retries.
 
@@ -230,7 +217,7 @@ class GeminiNativeModel(Model):
                 "error": str(e)
             }
 
-    def _invoke_internal(self, prompt: Union[str, List[Dict[str, str]]]) -> dict:
+    def _invoke_internal(self, prompt: str | list[dict[str, str]]) -> dict:
         """
         Internal method that performs the actual API call (wrapped by retry logic).
         Raises exceptions for retry logic to handle.
@@ -278,23 +265,22 @@ class GeminiNativeModel(Model):
             "raw_response": response
         }
     
-    async def ainvoke(self, prompt: Union[str, List[Dict[str, str]]]) -> dict:
+    async def ainvoke(self, prompt: str | list[dict[str, str]]) -> dict:
         """
         Send a single request to the model asynchronously.
-        
+
         Args:
             prompt: A string or list of messages to send to the model
-            
+
         Returns:
             The model's response
         """
-        
-        # Since the Google API doesn't have a native async interface,
-        # we'll run the synchronous method in an executor
-        loop = asyncio.get_event_loop()
-        return await loop.run_in_executor(None, self.invoke, prompt)
+        async with self._concurrency_slot():
+            # Google API has no native async interface; run sync invoke in an executor.
+            loop = asyncio.get_event_loop()
+            return await loop.run_in_executor(None, self.invoke, prompt)
     
-    def batch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> List[dict]:
+    def batch(self, prompts: list[str | list[dict[str, str]]]) -> list[dict]:
         """
         Send multiple requests to the model synchronously.
         
@@ -320,7 +306,7 @@ class GeminiNativeModel(Model):
         
         return results
     
-    async def abatch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> List[dict]:
+    async def abatch(self, prompts: list[str | list[dict[str, str]]]) -> list[dict]:
         """
         Send multiple requests to the model asynchronously.
         
@@ -342,7 +328,7 @@ class GeminiNativeModel(Model):
         
         return results 
         
-    async def stream_abatch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> AsyncGenerator[dict, None]:
+    async def stream_abatch(self, prompts: list[str | list[dict[str, str]]]) -> AsyncGenerator[dict, None]:
         """
         Send multiple requests to the model asynchronously and yield results as they complete.
 
@@ -404,7 +390,7 @@ class GeminiNativeModel(Model):
                         pending_tasks.add(new_task)
                         next_prompt_index += 1 
 
-    def get_params(self) -> Dict[str, Any]:
+    def get_params(self) -> dict[str, Any]:
         return {
             "model": self.model_name,
             "batch_size": self.batch_size,

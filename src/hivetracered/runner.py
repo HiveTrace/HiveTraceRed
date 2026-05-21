@@ -8,20 +8,24 @@ stage is disabled, the runner falls back to loading that stage's input
 from a file path specified in the config.
 """
 
+import asyncio
 import logging
 import os
 from datetime import datetime
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any
 
 import yaml
 
+from hivetracered.attacks.iterative_attack import IterativeAttack
 from hivetracered.pipeline import (
+    ATTACK_CLASSES,
     save_pipeline_results,
     setup_attacks,
     stream_attack_prompts,
     stream_evaluated_responses,
     stream_model_responses,
 )
+from hivetracered.pipeline.create_dataset import _parse_attack_config
 from hivetracered.report import (
     build_html_report,
     calculate_metrics,
@@ -30,7 +34,9 @@ from hivetracered.report import (
     load_data,
 )
 from hivetracered.setup import (
+    DatasetSpec,
     load_base_prompts,
+    load_datasets,
     load_records,
     setup_evaluator,
     setup_model,
@@ -40,8 +46,8 @@ logger = logging.getLogger(__name__)
 
 
 async def create_attack_prompts(
-    config: Dict[str, Any], run_dir: str, output_format: str = "csv"
-) -> List[Dict[str, Any]]:
+    config: dict[str, Any], run_dir: str, output_format: str = "csv"
+) -> list[dict[str, Any]]:
     """Stage 1: Create attack prompts using configured attacks."""
     logger.info("STAGE 1: Creating attack prompts...")
 
@@ -81,7 +87,7 @@ async def create_attack_prompts(
 
     system_prompt = config.get("system_prompt", None)
 
-    attack_prompts: List[Dict[str, Any]] = []
+    attack_prompts: list[dict[str, Any]] = []
     async for ap in stream_attack_prompts(attacks, base_prompts, system_prompt):
         attack_prompts.append(ap)
 
@@ -95,11 +101,11 @@ async def create_attack_prompts(
 
 
 async def get_model_responses(
-    config: Dict[str, Any],
-    attack_prompts: List[Dict[str, Any]],
+    config: dict[str, Any],
+    attack_prompts: list[dict[str, Any]],
     run_dir: str,
     output_format: str = "csv",
-) -> List[Dict[str, Any]]:
+) -> list[dict[str, Any]]:
     """Stage 2: Get model responses for the attack prompts."""
     logger.info("STAGE 2: Getting model responses...")
 
@@ -108,8 +114,8 @@ async def get_model_responses(
         logger.warning("No valid response model configured.")
         return []
 
-    model_responses: List[Dict[str, Any]] = []
-    async for response in stream_model_responses(response_model, attack_prompts, run_dir):
+    model_responses: list[dict[str, Any]] = []
+    async for response in stream_model_responses(response_model, attack_prompts):
         model_responses.append(response)
 
     if not model_responses:
@@ -121,11 +127,11 @@ async def get_model_responses(
 
 
 async def evaluate_responses(
-    config: Dict[str, Any],
-    model_responses: List[Dict[str, Any]],
+    config: dict[str, Any],
+    model_responses: list[dict[str, Any]],
     run_dir: str,
     output_format: str = "csv",
-) -> Tuple[List[Dict[str, Any]], Optional[str]]:
+) -> tuple[list[dict[str, Any]], str | None]:
     """Stage 3: Evaluate model responses."""
     logger.info("STAGE 3: Evaluating responses...")
 
@@ -136,7 +142,7 @@ async def evaluate_responses(
         logger.warning("No valid evaluator configured.")
         return [], None
 
-    evaluation_results: List[Dict[str, Any]] = []
+    evaluation_results: list[dict[str, Any]] = []
     async for result in stream_evaluated_responses(evaluator, model_responses):
         evaluation_results.append(result)
 
@@ -160,12 +166,15 @@ async def evaluate_responses(
 
 
 def generate_report(
-    config: Dict[str, Any], run_dir: str, evaluation_file: str
-) -> Optional[str]:
+    config: dict[str, Any], run_dir: str, evaluation_file: str
+) -> str | None:
     """Stage 4: Generate HTML report from evaluation results.
 
-    Exceptions propagate to the top-level CLI handler, which logs them
-    uniformly. No local try/except wrapper.
+    When the loaded DataFrame has more than one distinct ``dataset`` value,
+    per-dataset metric blocks are rendered and the cross-dataset aggregate is
+    suppressed (FR-15).
+
+    Exceptions propagate to the top-level CLI handler. No local try/except.
     """
     logger.info("STAGE 4: Generating report...")
 
@@ -180,10 +189,6 @@ def generate_report(
 
     logger.info("Loaded %d evaluation results for report", len(df))
 
-    metrics = calculate_metrics(df)
-    charts = create_charts(df)
-    data_tables = generate_data_tables(df)
-
     report_config = config.get("report", {})
     output_filename = report_config.get("output_filename")
     if not output_filename:
@@ -195,40 +200,68 @@ def generate_report(
     else:
         report_path = os.path.join(config.get("output_dir", "results"), output_filename)
 
-    html = build_html_report(df, metrics, charts, data_tables)
+    if "dataset" in df.columns and df["dataset"].nunique() > 1:
+        for ds_name in df["dataset"].unique():
+            logger.info("Dataset '%s': %d records", ds_name, len(df[df["dataset"] == ds_name]))
+        html = build_html_report(df, metrics=None, charts=None, data_tables=None)
+    else:
+        metrics = calculate_metrics(df)
+        charts = create_charts(df)
+        data_tables = generate_data_tables(df)
+        html = build_html_report(df, metrics, charts, data_tables)
+        logger.info(
+            "  Total: %d | Success rate: %.1f%% | Best attack: %s (%.1f%%)",
+            metrics["total_tests"],
+            metrics["success_rate"],
+            metrics["best_attack_name"],
+            metrics["best_attack_rate"],
+        )
+
     with open(report_path, "w", encoding="utf-8") as f:
         f.write(html)
 
     logger.info("Report generated: %s", report_path)
-    logger.info(
-        "  Total: %d | Success rate: %.1f%% | Best attack: %s (%.1f%%)",
-        metrics["total_tests"],
-        metrics["success_rate"],
-        metrics["best_attack_name"],
-        metrics["best_attack_rate"],
-    )
     return report_path
 
 
 def _preflight_config(
-    config: Dict[str, Any],
+    config: dict[str, Any],
     enable_attacks: bool,
     enable_responses: bool,
     enable_eval: bool,
-) -> None:
+) -> list[DatasetSpec]:
     """Validate each enabled stage's required models up-front and raise if
-    any cannot be constructed. Prevents earlier stages from burning API
-    calls before a later stage is guaranteed to fail — typically caused by
-    a typo'd top-level key such as ``respons_model`` or ``evaluaton_model``.
-
-    Required resources per stage:
-      - Stage 1 (attacks):   ``attacker_model``
-      - Stage 2 (responses): ``response_model``
-      - Stage 3 (eval):      ``evaluator`` (plus ``evaluation_model`` if the
-                             evaluator is a ``ModelEvaluator`` subclass)
-
-    Instances built here are discarded; each stage constructs its own.
+    any cannot be constructed. Returns the materialised DatasetSpec list for
+    direct reuse by the caller (ADR-0008).
     """
+    evaluation_model = setup_model(config.get("evaluation_model", {}))
+
+    specs = load_datasets(config, evaluation_model)
+
+    for spec in specs:
+        if len(spec.prompts) == 0:
+            entry = next(e for e in config["datasets"] if e["name"] == spec.name)
+            source = "base_prompts_file" if "base_prompts_file" in entry else "base_prompts"
+            raise ValueError(
+                f"Dataset '{spec.name}' has no prompts in '{source}'. "
+                "Each dataset must have at least one prompt."
+            )
+
+    for attack_cfg in config.get("attacks", []):
+        _check_no_iterative_attack(attack_cfg)
+
+    if not enable_attacks and config.get("attack_prompts_file"):
+        rows = load_records(config["attack_prompts_file"], "attack prompts")
+        file_datasets: set[str] = {str(row["dataset"]) for row in rows if row.get("dataset")}
+        spec_names = {spec.name for spec in specs}
+        orphans = file_datasets - spec_names
+        if orphans:
+            raise ValueError(
+                f"attack_prompts_file contains records with dataset name(s) not "
+                f"found in the config: {', '.join(sorted(orphans))}. "
+                "Remove orphan records or add matching dataset entries."
+            )
+
     if enable_attacks and setup_model(config.get("attacker_model", {})) is None:
         raise ValueError(
             "Stage 1 (create_attack_prompts) is enabled but 'attacker_model' "
@@ -244,29 +277,279 @@ def _preflight_config(
         )
 
     if enable_eval:
-        evaluation_model = setup_model(config.get("evaluation_model", {}))
-        evaluator = setup_evaluator(config.get("evaluator", {}), evaluation_model)
-        if evaluator is None:
+        if specs:
+            for spec in specs:
+                if spec.evaluator is None:
+                    raise ValueError(
+                        f"Stage 3 (evaluate_responses) is enabled but the evaluator "
+                        f"for dataset '{spec.name}' could not be initialized. "
+                        "Check the 'evaluator' block for that dataset entry."
+                    )
+        else:
+            evaluator = setup_evaluator(config.get("evaluator", {}), evaluation_model)
+            if evaluator is None:
+                raise ValueError(
+                    "Stage 3 (evaluate_responses) is enabled but the evaluator "
+                    "could not be initialized. See previous log messages; "
+                    "typically a missing or misnamed 'evaluator' / "
+                    "'evaluation_model' config block."
+                )
+
+    return specs
+
+
+def _check_no_iterative_attack(attack_cfg: Any) -> None:
+    """Raise ValueError if attack_cfg (or any nested inner_attack) is iterative."""
+    attack_name, _params, inner_attack_cfg = _parse_attack_config(attack_cfg)
+    if attack_name and attack_name in ATTACK_CLASSES:
+        attack_class = ATTACK_CLASSES[attack_name]["attack_class"]
+        if issubclass(attack_class, IterativeAttack):
             raise ValueError(
-                "Stage 3 (evaluate_responses) is enabled but the evaluator "
-                "could not be initialized. See previous log messages; "
-                "typically a missing or misnamed 'evaluator' / "
-                "'evaluation_model' config block."
+                f"Iterative attack '{attack_name}' is not supported with the "
+                "'datasets:' schema (FR-13). Use non-iterative attacks instead."
+            )
+    if inner_attack_cfg is not None:
+        _check_no_iterative_attack(inner_attack_cfg)
+
+
+async def _evaluate_dataset(
+    spec: DatasetSpec, responses: list[dict[str, Any]]
+) -> list[dict[str, Any]]:
+    """Run Stage 3 for one dataset.
+
+    Evaluator exceptions are caught and converted to per-record failure dicts
+    so one dataset's evaluator failure does not abort the others (AC-10).
+    """
+    if spec.evaluator is None:
+        return []
+
+    evaluation_results: list[dict[str, Any]] = []
+    try:
+        prompts = [r.get("base_prompt", "") for r in responses]
+        async for batch_result in spec.evaluator.stream_abatch(prompts, responses):
+            idx = len(evaluation_results)
+            source = responses[idx] if idx < len(responses) else {}
+            evaluation_results.append({
+                **source,
+                "success": batch_result.get("success", False),
+                "evaluation": batch_result,
+                "evaluator": spec.evaluator.__class__.__name__,
+            })
+    except Exception as e:
+        logger.error("Stage 3 failed for dataset '%s': %s", spec.name, e, exc_info=True)
+        if len(responses) == 0:
+            evaluation_results.append({
+                "dataset": spec.name,
+                "success": False,
+                "error": str(e),
+                "evaluator": "",
+                "evaluation": {"success": False, "reason": "evaluator failure — empty response slice"},
+            })
+        else:
+            for resp in responses:
+                evaluation_results.append({
+                    **resp,
+                    "dataset": spec.name,
+                    "success": False,
+                    "evaluator": "",
+                    "evaluation": {"success": False, "reason": "evaluator failure"},
+                    "error": str(e),
+                })
+
+    return evaluation_results
+
+
+async def _run_pipeline_for_datasets(
+    config: dict[str, Any],
+    dataset_specs: list[DatasetSpec],
+    run_dir: str,
+    output_format: str,
+    enable_attacks: bool,
+    enable_responses: bool,
+    enable_eval: bool,
+) -> tuple[list[dict[str, Any]], str | None]:
+    """Run Stages 1-3 across all datasets, one stage at a time.
+
+    Each stage processes the datasets sequentially; the only concurrency is
+    each model's own internal request batching. Stage 1 and Stage 2 write one
+    file per dataset; Stage 3 results are combined into a single
+    ``evaluations`` file. Returns ``(all_evaluation_results,
+    evaluation_file_path)``. Stage-1/2 exceptions abort the run; Stage-3
+    exceptions are isolated per-dataset and converted to failure records.
+    """
+    system_prompt = config.get("system_prompt")
+
+    # Stage 1: attack prompts — one file per dataset.
+    attacks_by_dataset: dict[str, list[dict[str, Any]]] = {}
+    if enable_attacks:
+        attacker_model = setup_model(config.get("attacker_model", {}))
+        response_model_for_attacks = setup_model(config.get("response_model", {}))
+        evaluation_model = setup_model(config.get("evaluation_model", {}))
+        for spec in dataset_specs:
+            # Attacks are re-built per dataset so that each dataset's own
+            # evaluator (spec.evaluator) flows into attack-internal judge
+            # slots — e.g. CrescendoAttack.success_judge uses the per-dataset
+            # WildGuardGPTEvaluator instead of a generic ScoringJudgeEvaluator.
+            attacks = setup_attacks(
+                config.get("attacks", []),
+                attacker_model,
+                target_model=response_model_for_attacks,
+                evaluator=spec.evaluator,
+                evaluation_model=evaluation_model,
+                setup_evaluator_fn=setup_evaluator,
+            )
+            records: list[dict[str, Any]] = []
+            async for record in stream_attack_prompts(attacks, spec.prompts, system_prompt):
+                record["dataset"] = spec.name
+                records.append(record)
+            save_pipeline_results(
+                records, run_dir, f"attack_prompts_{spec.name}", format=output_format
+            )
+            attacks_by_dataset[spec.name] = records
+    elif enable_responses:
+        all_attacks = load_records(config.get("attack_prompts_file"), "attack prompts")
+        for spec in dataset_specs:
+            attacks_by_dataset[spec.name] = [
+                r for r in all_attacks if r.get("dataset") == spec.name
+            ]
+
+    # Stage 2: model responses — one file per dataset, shared response model.
+    responses_by_dataset: dict[str, list[dict[str, Any]]] = {}
+    if enable_responses:
+        response_model = setup_model(config.get("response_model", {}))
+        for spec in dataset_specs:
+            records = []
+            if response_model is not None:
+                async for record in stream_model_responses(
+                    response_model, attacks_by_dataset.get(spec.name, [])
+                ):
+                    records.append(record)
+            save_pipeline_results(
+                records, run_dir, f"model_responses_{spec.name}", format=output_format
+            )
+            responses_by_dataset[spec.name] = records
+    elif enable_eval:
+        all_responses = load_records(config.get("model_responses_file"), "model responses")
+        for spec in dataset_specs:
+            responses_by_dataset[spec.name] = [
+                r for r in all_responses if r.get("dataset") == spec.name
+            ]
+
+    # Stage 3: evaluation — combined into a single file.
+    all_eval_results: list[dict[str, Any]] = []
+    if enable_eval:
+        for spec in dataset_specs:
+            all_eval_results.extend(
+                await _evaluate_dataset(spec, responses_by_dataset.get(spec.name, []))
             )
 
+    evaluation_file: str | None = None
+    if enable_eval and all_eval_results:
+        output = save_pipeline_results(
+            all_eval_results, run_dir, "evaluations", format=output_format
+        )
+        evaluation_file = output.get("path")
 
-async def run_pipeline(config: Dict[str, Any]) -> None:
-    """Run the complete testing pipeline, controlling stages via config."""
+    return all_eval_results, evaluation_file
+
+
+def _dump_config_to_yaml(config: dict[str, Any], config_path: str) -> None:
+    with open(config_path, "w", encoding="utf-8") as f:
+        yaml.dump(config, f, default_flow_style=False)
+
+
+async def _prepare_run_dir(config: dict[str, Any]) -> str:
     output_dir = config.get("output_dir", "results")
     timestamp = datetime.now().strftime(config.get("timestamp_format", "%Y%m%d_%H%M%S"))
     run_dir = os.path.join(output_dir, f"run_{timestamp}")
     os.makedirs(run_dir, exist_ok=True)
 
     config_path = os.path.join(run_dir, "config.yaml")
-    with open(config_path, "w", encoding="utf-8") as f:
-        yaml.dump(config, f, default_flow_style=False)
+    await asyncio.to_thread(_dump_config_to_yaml, config, config_path)
     logger.info("Configuration saved to %s", config_path)
+    return run_dir
 
+
+async def _run_stage_attacks(
+    config: dict[str, Any], run_dir: str, output_format: str,
+    enable_attacks: bool, enable_responses: bool,
+) -> tuple[list[dict[str, Any]], bool]:
+    if enable_attacks:
+        attack_prompts = await create_attack_prompts(config, run_dir, output_format)
+        if not attack_prompts and enable_responses:
+            logger.warning("No attack prompts. Skipping model responses.")
+            enable_responses = False
+        return attack_prompts, enable_responses
+
+    if enable_responses:
+        attack_prompts = load_records(config.get("attack_prompts_file"), "attack prompts")
+        if not attack_prompts:
+            enable_responses = False
+        return attack_prompts, enable_responses
+
+    return [], enable_responses
+
+
+async def _run_stage_responses(
+    config: dict[str, Any], attack_prompts: list[dict[str, Any]],
+    run_dir: str, output_format: str,
+    enable_responses: bool, enable_eval: bool,
+) -> tuple[list[dict[str, Any]], bool]:
+    if enable_responses:
+        model_responses = await get_model_responses(config, attack_prompts, run_dir, output_format)
+        if not model_responses and enable_eval:
+            logger.warning("No model responses. Skipping evaluation.")
+            enable_eval = False
+        return model_responses, enable_eval
+
+    if enable_eval:
+        model_responses = load_records(config.get("model_responses_file"), "model responses")
+        if not model_responses:
+            enable_eval = False
+        return model_responses, enable_eval
+
+    return [], enable_eval
+
+
+async def _run_stage_eval(
+    config: dict[str, Any], model_responses: list[dict[str, Any]],
+    run_dir: str, output_format: str,
+    enable_eval: bool, enable_report: bool,
+) -> tuple[list[dict[str, Any]], str | None]:
+    if enable_eval:
+        return await evaluate_responses(config, model_responses, run_dir, output_format)
+
+    if enable_report:
+        provided = config.get("evaluation_results_file")
+        if provided and os.path.exists(provided):
+            logger.info("Using provided evaluation file for report: %s", provided)
+            return [], provided
+
+    return [], None
+
+
+def _log_summary(
+    run_dir: str,
+    attack_prompts: list[dict[str, Any]],
+    model_responses: list[dict[str, Any]],
+    evaluation_results: list[dict[str, Any]],
+    report_path: str | None,
+) -> None:
+    logger.info(
+        "Pipeline complete: %d attack prompts, %d responses, %d evaluations",
+        len(attack_prompts), len(model_responses), len(evaluation_results),
+    )
+    if evaluation_results:
+        success_count = sum(1 for r in evaluation_results if r.get("success", False))
+        logger.info("Attack success rate: %.2f%%", (success_count / len(evaluation_results)) * 100)
+    logger.info("Results saved to: %s", run_dir)
+    if report_path:
+        logger.info("Report: %s", report_path)
+
+
+async def run_pipeline(config: dict[str, Any]) -> None:
+    """Run the complete testing pipeline, controlling stages via config."""
+    run_dir = await _prepare_run_dir(config)
     output_format = config.get("output_format", "csv")
 
     stages = config.get("stages", {})
@@ -282,61 +565,34 @@ async def run_pipeline(config: Dict[str, Any]) -> None:
 
     # Fail fast on config errors (e.g. typo'd model keys) before any stage
     # burns time and API credits.
-    _preflight_config(config, enable_attacks, enable_responses, enable_eval)
+    dataset_specs = _preflight_config(config, enable_attacks, enable_responses, enable_eval)
 
-    attack_prompts: List[Dict[str, Any]] = []
-    model_responses: List[Dict[str, Any]] = []
-    evaluation_results: List[Dict[str, Any]] = []
-    evaluation_file: Optional[str] = None
-
-    # Stage 1
-    if enable_attacks:
-        attack_prompts = await create_attack_prompts(config, run_dir, output_format)
-        if not attack_prompts and enable_responses:
-            logger.warning("No attack prompts. Skipping model responses.")
-            enable_responses = False
-    elif enable_responses:
-        attack_prompts = load_records(config.get("attack_prompts_file"), "attack prompts")
-        if not attack_prompts:
-            enable_responses = False
-
-    # Stage 2
-    if enable_responses:
-        model_responses = await get_model_responses(config, attack_prompts, run_dir, output_format)
-        if not model_responses and enable_eval:
-            logger.warning("No model responses. Skipping evaluation.")
-            enable_eval = False
-    elif enable_eval:
-        model_responses = load_records(config.get("model_responses_file"), "model responses")
-        if not model_responses:
-            enable_eval = False
-
-    # Stage 3
-    if enable_eval:
-        evaluation_results, evaluation_file = await evaluate_responses(
-            config, model_responses, run_dir, output_format
+    if "datasets" in config:
+        evaluation_results, evaluation_file = await _run_pipeline_for_datasets(
+            config, dataset_specs, run_dir, output_format,
+            enable_attacks, enable_responses, enable_eval,
         )
-    elif enable_report:
-        provided = config.get("evaluation_results_file")
-        if provided and os.path.exists(provided):
-            evaluation_file = provided
-            logger.info("Using provided evaluation file for report: %s", evaluation_file)
+        attack_prompts: list[dict[str, Any]] = []
+        model_responses: list[dict[str, Any]] = []
+    else:
+        attack_prompts, enable_responses = await _run_stage_attacks(
+            config, run_dir, output_format, enable_attacks, enable_responses,
+        )
 
-    # Stage 4
+        model_responses, enable_eval = await _run_stage_responses(
+            config, attack_prompts, run_dir, output_format,
+            enable_responses, enable_eval,
+        )
+
+        evaluation_results, evaluation_file = await _run_stage_eval(
+            config, model_responses, run_dir, output_format,
+            enable_eval, enable_report,
+        )
+
     report_path = None
     if enable_report and evaluation_file:
         report_path = generate_report(config, run_dir, evaluation_file)
     elif enable_report:
         logger.info("Skipping report: no evaluation file available.")
 
-    # Summary
-    logger.info(
-        "Pipeline complete: %d attack prompts, %d responses, %d evaluations",
-        len(attack_prompts), len(model_responses), len(evaluation_results),
-    )
-    if evaluation_results:
-        success_count = sum(1 for r in evaluation_results if r.get("success", False))
-        logger.info("Attack success rate: %.2f%%", (success_count / len(evaluation_results)) * 100)
-    logger.info("Results saved to: %s", run_dir)
-    if report_path:
-        logger.info("Report: %s", report_path)
+    _log_summary(run_dir, attack_prompts, model_responses, evaluation_results, report_path)

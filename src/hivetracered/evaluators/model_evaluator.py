@@ -1,4 +1,6 @@
-from typing import Dict, Any, Union, List, Optional, AsyncGenerator
+import re
+from typing import Any
+from collections.abc import AsyncGenerator
 from hivetracered.evaluators.base_evaluator import BaseEvaluator
 from hivetracered.models.base_model import Model
 from abc import abstractmethod
@@ -11,8 +13,8 @@ class ModelEvaluator(BaseEvaluator):
     def __init__(self, 
                  model: Model,
                  evaluation_prompt_template: str,
-                 name: Optional[str] = None,
-                 description: Optional[str] = None):
+                 name: str | None = None,
+                 description: str | None = None):
         """
         Initialize the model-based evaluator.
         
@@ -27,7 +29,7 @@ class ModelEvaluator(BaseEvaluator):
         self._name = name
         self._description = description
     
-    def _get_extra_format_kwargs(self) -> Dict[str, Any]:
+    def _get_extra_format_kwargs(self) -> dict[str, Any]:
         """
         Return extra keyword arguments for the evaluation prompt template.
 
@@ -35,13 +37,16 @@ class ModelEvaluator(BaseEvaluator):
         """
         return {}
 
-    def create_evaluation_prompt(self, prompt: Union[str, List[Dict[str, str]]], response: str) -> str:
+    def create_evaluation_prompt(self, prompt: str | list[dict[str, str]], response: Any) -> str:
         """
         Create the evaluation prompt to send to the model.
 
         Args:
             prompt: The original prompt as a string or list of messages
-            response: The model's response to evaluate
+            response: The model's response to evaluate. Accepts a string,
+                a dict with a ``content`` key, an object exposing a
+                ``.content`` attribute (e.g. LangChain message), or any
+                value with a sensible ``__str__``.
 
         Returns:
             The formatted evaluation prompt
@@ -72,7 +77,7 @@ class ModelEvaluator(BaseEvaluator):
             **self._get_extra_format_kwargs(),
         )
     
-    def evaluate(self, prompt: Union[str, List[Dict[str, str]]], response: str) -> Dict[str, Any]:
+    def evaluate(self, prompt: str | list[dict[str, str]], response: str) -> dict[str, Any]:
         """
         Evaluate a model response by using another model as evaluator.
         
@@ -89,13 +94,30 @@ class ModelEvaluator(BaseEvaluator):
     
     
     @abstractmethod
-    def _parse_evaluation_response(self, evaluation_response: Dict[str, Any]) -> Dict[str, Any]:
+    def _parse_evaluation_response(self, evaluation_response: dict[str, Any]) -> dict[str, Any]:
         """
         Parse the evaluation response from the model.
         """
         pass
+
+    def _extract_answer(self, text: str, pattern: str, default: str) -> str:
+        """
+        Extract an answer using a regex pattern.
+
+        Args:
+            text: The text to search in
+            pattern: The regex pattern to use
+            default: The default value to return if no match is found
+
+        Returns:
+            The extracted answer or the default value
+        """
+        match = re.search(pattern, text, re.IGNORECASE)
+        if match and match.group(1):
+            return match.group(1).lower()
+        return default
     
-    async def stream_abatch(self, prompts: List[Dict[str, str]], responses: List[Any]) -> AsyncGenerator[Dict[str, Any], None]:
+    async def stream_abatch(self, prompts: list[dict[str, str]], responses: list[Any]) -> AsyncGenerator[dict[str, Any], None]:
         """
         Stream a batch of evaluations.
         """
@@ -128,7 +150,7 @@ class ModelEvaluator(BaseEvaluator):
         
         return "Evaluates responses using a language model to analyze prompt-response pairs" 
     
-    def get_params(self) -> Dict[str, Any]:
+    def get_params(self) -> dict[str, Any]:
         """
         Get the parameters of the evaluator.
         """

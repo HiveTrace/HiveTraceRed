@@ -1,9 +1,7 @@
-from typing import List, Any, Optional, Union, Dict
 from langchain_gigachat import GigaChat
 from hivetracered.models.langchain_model import LangchainModel
 import os
 from dotenv import load_dotenv
-import warnings
 from hivetracered.registry import Registry
 
 @Registry.model()
@@ -14,7 +12,7 @@ class GigaChatModel(LangchainModel):
     both synchronous and asynchronous request processing.
     """
     
-    def __init__(self, model: str = "GigaChat", max_concurrency: Optional[int] = None, batch_size: Optional[int] = None, scope: Optional[str] = None, credentials: Optional[str] = None, verify_ssl_certs: bool = False, max_retries: int = 3, **kwargs):
+    def __init__(self, model: str = "GigaChat", max_concurrency: int | None = None, batch_size: int | None = None, scope: str | None = None, credentials: str | None = None, verify_ssl_certs: bool = False, max_retries: int = 3, **kwargs):
         """
         Initialize the GigaChat model client with the specified configuration.
 
@@ -42,22 +40,7 @@ class GigaChatModel(LangchainModel):
         self.model_name = model
         self.max_retries = max_retries
 
-        # Handle deprecation
-        if batch_size is not None:
-            warnings.warn(
-                "The 'batch_size' parameter is deprecated and will be removed in v2.0.0. "
-                "Use 'max_concurrency' instead.",
-                DeprecationWarning,
-                stacklevel=2
-            )
-            if max_concurrency is None:
-                max_concurrency = batch_size
-
-        # Set default if neither provided
-        if max_concurrency is None:
-            max_concurrency = 1
-
-        self.max_concurrency = max_concurrency
+        self.max_concurrency = self._resolve_concurrency(max_concurrency, batch_size, default=1)
         # Keep for backward compatibility in get_params()
         self.batch_size = self.max_concurrency
 

@@ -1,10 +1,20 @@
 Attack Types Reference
 ======================
 
-HiveTraceRed includes 80+ attack implementations organized into 10 categories. This section provides detailed information about each attack type.
+HiveTraceRed includes 80+ attack implementations organised into two sub-packages: ``single_turn/`` (one attack prompt per invocation, including PAIR/TAP) and ``multi_turn/`` (multi-message conversations with the target, currently just Crescendo). This section provides detailed information about each attack type.
 
-Attack Categories Overview
---------------------------
+Multi-Turn Attacks
+------------------
+
+Conversational attacks that drive a persistent multi-message dialogue with the target model within a single invocation:
+
+**Crescendo** (arXiv:2404.01833)
+  A graduated multi-turn jailbreak attack that escalates a harmful request across conversation turns. An attacker LLM guides the target incrementally toward producing harmful content, with refusal-driven backtracking and per-turn success checking via two separate judges.
+
+  For detailed information, see :doc:`crescendo`.
+
+Single-Turn Attack Categories Overview
+--------------------------------------
 
 Roleplay Attacks
 ~~~~~~~~~~~~~~~~

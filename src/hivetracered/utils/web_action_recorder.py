@@ -13,10 +13,10 @@ import signal
 import sys
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, List, Dict, Any, TYPE_CHECKING
+from typing import Any, TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from playwright.sync_api import sync_playwright, Page, Browser
+    from playwright.sync_api import Page, Browser  # noqa: F401
 
 
 # JavaScript tracking scripts
@@ -478,14 +478,14 @@ class WebActionRecorder:
         Args:
             verbose: If True, print events to console as they're captured
         """
-        self.events: List[Dict[str, Any]] = []
-        self.browser: Optional["Browser"] = None
-        self.page: Optional["Page"] = None
+        self.events: list[dict[str, Any]] = []
+        self.browser: "Browser | None" = None
+        self.page: "Page | None" = None
         self.verbose = verbose
         self._playwright = None
         self._cleanup_called = False
 
-    def add_event(self, event_type: str, event_data: Dict[str, Any]) -> None:
+    def add_event(self, event_type: str, event_data: dict[str, Any]) -> None:
         """
         Add an event with timestamp to the log.
 
@@ -503,7 +503,7 @@ class WebActionRecorder:
         if self.verbose:
             self._print_event(event_type, event_data)
 
-    def _print_event(self, event_type: str, event_data: Dict[str, Any]) -> None:
+    def _print_event(self, event_type: str, event_data: dict[str, Any]) -> None:
         """Print event information to console."""
         if event_type == 'click':
             print(f"\n[CLICK] {event_data['target']['tagName']} at ({event_data['x']}, {event_data['y']}) - {event_data['url']}")
@@ -587,7 +587,7 @@ class WebActionRecorder:
             if self._playwright:
                 self._playwright.stop()
 
-    def save_to_file(self, filepath: Optional[str] = None) -> str:
+    def save_to_file(self, filepath: str | None = None) -> str:
         """
         Save all events to a JSON file.
 
@@ -608,8 +608,8 @@ class WebActionRecorder:
         filepath = Path(filepath)
         filepath.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(filepath, 'w') as f:
-            json.dump(self.events, f, indent=2)
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(self.events, f, indent=2, ensure_ascii=False)
 
         if self.verbose:
             print(f'\nEvent log saved to {filepath}')
@@ -624,7 +624,7 @@ class WebActionRecorder:
         selection_count = sum(1 for e in self.events if e['event_type'] == 'selection')
         print(f'Total events logged: {len(self.events)} (Clicks: {click_count}, Inputs: {input_count}, Selections: {selection_count})')
 
-    def get_events(self) -> List[Dict[str, Any]]:
+    def get_events(self) -> list[dict[str, Any]]:
         """
         Get all recorded events.
 
@@ -640,7 +640,7 @@ class WebActionRecorder:
 
 def record_browser_session(
     url: str = "https://www.google.com",
-    output_file: Optional[str] = None,
+    output_file: str | None = None,
     headless: bool = False,
     verbose: bool = True
 ) -> str:
@@ -690,7 +690,7 @@ def main():
     """CLI entry point for the web action recorder."""
     # Check for playwright availability early
     try:
-        from playwright.sync_api import sync_playwright
+        from playwright.sync_api import sync_playwright  # noqa: F401
     except ImportError:
         print("Error: The web action recorder requires the 'web' extras.", file=sys.stderr)
         print("Install with: pip install 'hivetracered[web]'", file=sys.stderr)

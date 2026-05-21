@@ -1,13 +1,8 @@
-from typing import List, Any, Optional, Union, Dict
 from langchain_community.chat_models import ChatLlamaCpp
 from hivetracered.models.langchain_model import LangchainModel
 from dotenv import load_dotenv
 import os
-from typing import AsyncGenerator
-import asyncio
-from tqdm import tqdm
 import multiprocessing
-import warnings
 from hivetracered.registry import Registry
 
 @Registry.model()
@@ -25,12 +20,12 @@ class LlamaCppModel(LangchainModel):
     def __init__(
         self,
         model_path: str,
-        max_concurrency: Optional[int] = None,
-        batch_size: Optional[int] = None,
+        max_concurrency: int | None = None,
+        batch_size: int | None = None,
         n_ctx: int = 10000,
         n_gpu_layers: int = -1,
         n_batch: int = 512,
-        n_threads: Optional[int] = None,
+        n_threads: int | None = None,
         max_retries: int = 3,
         **kwargs
     ):
@@ -81,22 +76,7 @@ class LlamaCppModel(LangchainModel):
         self.model_name = f"llamacpp:{os.path.basename(model_path)}"
         self.max_retries = max_retries
 
-        # Handle deprecation
-        if batch_size is not None:
-            warnings.warn(
-                "The 'batch_size' parameter is deprecated and will be removed in v2.0.0. "
-                "Use 'max_concurrency' instead.",
-                DeprecationWarning,
-                stacklevel=2
-            )
-            if max_concurrency is None:
-                max_concurrency = batch_size
-
-        # Set default if neither provided
-        if max_concurrency is None:
-            max_concurrency = 1
-
-        self.max_concurrency = max_concurrency
+        self.max_concurrency = self._resolve_concurrency(max_concurrency, batch_size, default=1)
         # Keep for backward compatibility in get_params()
         self.batch_size = self.max_concurrency
 

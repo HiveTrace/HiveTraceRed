@@ -1,7 +1,7 @@
 Pipeline API
 ============
 
-The pipeline module orchestrates the complete red teaming workflow.
+The pipeline module orchestrates the complete red teaming workflow. A configuration always contains a ``datasets:`` list — one entry for a single-dataset run, several for a multi-dataset run. The pipeline runs one stage at a time across all datasets (Stage 1 for every dataset, then Stage 2, then Stage 3), with per-dataset evaluators and combined output files; concurrency within a stage comes from each model's own ``max_concurrency``.
 
 Constants
 ---------

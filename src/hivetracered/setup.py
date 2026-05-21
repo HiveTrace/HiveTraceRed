@@ -9,7 +9,7 @@ and intermediate pipeline records.
 import json
 import logging
 import os
-from typing import Any, Dict, List, Optional, Union
+from typing import Any, NamedTuple
 
 import pandas as pd
 
@@ -19,6 +19,25 @@ from hivetracered.pipeline.constants import EVALUATOR_CLASSES, MODEL_CLASSES
 
 logger = logging.getLogger(__name__)
 
+
+class DatasetSpec(NamedTuple):
+    """Immutable specification for one dataset in a multi-dataset run.
+
+    Attributes:
+        name: Unique dataset identifier (validated to match ^[A-Za-z0-9_-]+$).
+              Used as the dataset column value in output files.
+        prompts: List of base prompts (strings or dicts) loaded from the dataset
+                 entry's base_prompts or base_prompts_file. Guaranteed non-empty.
+        evaluator: Evaluator instance (BaseEvaluator | None) for this dataset.
+                   None if setup_evaluator failed; the pipeline's preflight check
+                   raises ValueError if any dataset has evaluator=None when
+                   Stage 3 is enabled.
+    """
+
+    name: str
+    prompts: list
+    evaluator: BaseEvaluator | None
+
 _PROMPT_COLUMN_NAMES = (
     "Prompt", "Text", "Question", "Query", "Input",
     "Input_text", "Input_query", "Input_question",
@@ -27,7 +46,7 @@ _PROMPT_COLUMN_NAMES = (
 )
 
 
-def setup_model(model_config: Dict[str, Any]) -> Optional[Model]:
+def setup_model(model_config: dict[str, Any]) -> Model | None:
     """Set up a model based on configuration dict.
 
     Resolution order:
@@ -63,8 +82,8 @@ def setup_model(model_config: Dict[str, Any]) -> Optional[Model]:
 
 
 def setup_evaluator(
-    evaluator_config: Dict[str, Any], model: Optional[Model] = None
-) -> Optional[BaseEvaluator]:
+    evaluator_config: dict[str, Any], model: Model | None = None
+) -> BaseEvaluator | None:
     """Set up an evaluator based on configuration dict.
 
     ModelEvaluator subclasses receive ``model``; other evaluators are
@@ -113,7 +132,7 @@ def _read_tabular(file_path: str) -> pd.DataFrame:
     raise ValueError(f"Unsupported file extension: {ext}")
 
 
-def load_base_prompts(config: Dict[str, Any]) -> List[Union[str, Dict[str, Any]]]:
+def load_base_prompts(config: dict[str, Any]) -> list[str | dict[str, Any]]:
     """Load base prompts from ``base_prompts_file`` or fall back to
     ``base_prompts`` in the config.
 
@@ -133,7 +152,7 @@ def load_base_prompts(config: Dict[str, Any]) -> List[Union[str, Dict[str, Any]]
 
     ext = os.path.splitext(file_path)[1].lower()
     if ext == ".txt":
-        with open(file_path, "r", encoding="utf-8") as f:
+        with open(file_path, encoding="utf-8") as f:
             return [line.strip() for line in f.readlines()]
 
     df = _read_tabular(file_path)
@@ -151,7 +170,43 @@ def load_base_prompts(config: Dict[str, Any]) -> List[Union[str, Dict[str, Any]]
     )
 
 
-def load_records(file_path: str, label: str = "records") -> List[Dict[str, Any]]:
+def load_datasets(config: dict, evaluation_model: Model | None) -> list[DatasetSpec]:
+    """Build a list of DatasetSpec from ``config["datasets"]``.
+
+    Processes each entry in config["datasets"] by loading its base prompts
+    (via load_base_prompts) and instantiating its evaluator (via setup_evaluator).
+    Each dataset receives its own independent evaluator instance.
+
+    Args:
+        config: Configuration dict containing a "datasets" key (list of dicts).
+        evaluation_model: Shared evaluation model passed to setup_evaluator.
+                          Required for model-based evaluators (ModelEvaluator
+                          subclasses); may be None for standalone evaluators.
+
+    Returns:
+        List of DatasetSpec in config["datasets"] order. Empty list if config
+        has no "datasets" key.
+
+    Note:
+        The evaluator field may be None if setup_evaluator failed (it logs
+        a warning but does not raise). Callers must check before using specs
+        for Stage 3; the pipeline's preflight check raises ValueError if any
+        spec.evaluator is None when Stage 3 is enabled.
+
+    Raises:
+        FileNotFoundError: If a dataset's base_prompts_file path does not exist.
+        ValueError: If no valid prompt column is found in a tabular file.
+    """
+    specs: list[DatasetSpec] = []
+    for entry in config.get("datasets", []):
+        name = entry["name"]
+        prompts = load_base_prompts(entry)
+        evaluator = setup_evaluator(entry.get("evaluator", {}), evaluation_model)
+        specs.append(DatasetSpec(name=name, prompts=prompts, evaluator=evaluator))
+    return specs
+
+
+def load_records(file_path: str, label: str = "records") -> list[dict[str, Any]]:
     """Load intermediate pipeline records from a file.
 
     Replaces the previous ``load_attack_prompts`` / ``load_model_responses``
@@ -170,7 +225,7 @@ def load_records(file_path: str, label: str = "records") -> List[Dict[str, Any]]
     try:
         ext = os.path.splitext(file_path)[1].lower()
         if ext == ".json":
-            with open(file_path, "r", encoding="utf-8") as f:
+            with open(file_path, encoding="utf-8") as f:
                 data = json.load(f)
             if not isinstance(data, list):
                 raise ValueError(

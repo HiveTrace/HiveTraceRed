@@ -11,14 +11,19 @@ techniques — they differ in HOW they inject, not WHAT they target. Therefore:
 - Dataset categories (category/subcategory) → determine which vulnerability is tested
 """
 
-from typing import Dict, Set, Optional, List
+
+
+AML_TA0002 = "AML.TA0002"
+AML_TA0010 = "AML.TA0010"
+P_61A = "п.61а"
+P_61B = "п.61б"
 
 
 # ---------------------------------------------------------------------------
 # 1a. FRAMEWORKS — source of truth for all framework definitions
 # ---------------------------------------------------------------------------
 
-FRAMEWORKS: Dict[str, Dict] = {
+FRAMEWORKS: dict[str, dict] = {
     "OWASP_LLM_TOP_10": {
         "name": "OWASP Top 10 for LLM 2025",
         "categories": {
@@ -67,7 +72,7 @@ FRAMEWORKS: Dict[str, Dict] = {
     "MITRE_ATLAS": {
         "name": "MITRE ATLAS",
         "categories": {
-            "AML.TA0002": {
+            AML_TA0002: {
                 "name": "Reconnaissance",
                 "description": "The adversary is trying to gather information about the AI system they can use to plan future operations",
             },
@@ -123,7 +128,7 @@ FRAMEWORKS: Dict[str, Dict] = {
                 "name": "Command and Control",
                 "description": "The adversary is trying to communicate with compromised AI systems to control them",
             },
-            "AML.TA0010": {
+            AML_TA0010: {
                 "name": "Exfiltration",
                 "description": "The adversary is trying to steal AI artifacts or other information about the AI system",
             },
@@ -140,11 +145,11 @@ FRAMEWORKS: Dict[str, Dict] = {
                 "name": "Защита информации при использовании ИИ",
                 "description": "Общие требования к защите информации при использовании технологий искусственного интеллекта",
             },
-            "п.61а": {
+            P_61A: {
                 "name": "Контроль шаблонных запросов и ответов ИИ",
                 "description": "Контроль содержания шаблонных запросов к технологиям ИИ и полученных ответов",
             },
-            "п.61б": {
+            P_61B: {
                 "name": "Контроль свободных текстовых запросов и ответов ИИ",
                 "description": "Контроль содержания свободных текстовых запросов к технологиям ИИ и полученных ответов",
             },
@@ -169,18 +174,19 @@ FRAMEWORKS: Dict[str, Dict] = {
 # 1b. ATTACK_TYPE_FRAMEWORK_MAP — all attack types are prompt injection
 # ---------------------------------------------------------------------------
 
-_PROMPT_INJECTION_BASE: Dict[str, List[str]] = {
+_PROMPT_INJECTION_BASE: dict[str, list[str]] = {
     "OWASP_LLM_TOP_10": ["LLM01"],
     "MITRE_ATLAS": ["AML.TA0005", "AML.TA0012", "AML.TA0007"],  # Execution + Privilege Escalation + Defense Evasion
-    "FSTEK_117": ["п.61а", "п.61б", "п.66"],
+    "FSTEK_117": [P_61A, P_61B, "п.66"],
 }
 
-ATTACK_TYPE_FRAMEWORK_MAP: Dict[str, Dict[str, List[str]]] = {
+ATTACK_TYPE_FRAMEWORK_MAP: dict[str, dict[str, list[str]]] = {
     atype: dict(_PROMPT_INJECTION_BASE)
     for atype in [
         "simple_instructions", "roleplay", "persuasion", "output_formatting",
         "context_switching", "token_smuggling", "text_structure_modification",
-        "task_deflection", "irrelevant_information", "in_context_learning", "iterative",
+        "task_deflection", "irrelevant_information", "in_context_learning",
+        "iterative", "conversational",
     ]
 }
 
@@ -189,7 +195,7 @@ ATTACK_TYPE_FRAMEWORK_MAP: Dict[str, Dict[str, List[str]]] = {
 # 1c. ATTACK_NAME_FRAMEWORK_MAP — per-attack overrides
 # ---------------------------------------------------------------------------
 
-ATTACK_NAME_FRAMEWORK_MAP: Dict[str, Dict[str, List[str]]] = {
+ATTACK_NAME_FRAMEWORK_MAP: dict[str, dict[str, list[str]]] = {
     "NoneAttack": {
         "OWASP_LLM_TOP_10": [],  # Baseline — not prompt injection
         "MITRE_ATLAS": [],
@@ -204,28 +210,28 @@ ATTACK_NAME_FRAMEWORK_MAP: Dict[str, Dict[str, List[str]]] = {
 #     determines what vulnerability is being tested.
 # ---------------------------------------------------------------------------
 
-BASE_CATEGORY_FRAMEWORK_MAP: Dict[str, Dict[str, List[str]]] = {
+BASE_CATEGORY_FRAMEWORK_MAP: dict[str, dict[str, list[str]]] = {
     "Harmful Content Generation": {
         "OWASP_LLM_TOP_10": ["LLM04"],
         "MITRE_ATLAS": ["AML.TA0003", "AML.TA0011"],  # Resource Development + Impact
-        "FSTEK_117": ["п.61а", "п.61б"],
+        "FSTEK_117": [P_61A, P_61B],
     },
     "Internal Information Exposure": {
         "OWASP_LLM_TOP_10": ["LLM02"],
-        "MITRE_ATLAS": ["AML.TA0002", "AML.TA0010"],  # Reconnaissance + Exfiltration
+        "MITRE_ATLAS": [AML_TA0002, AML_TA0010],  # Reconnaissance + Exfiltration
         "FSTEK_117": ["п.60", "п.66"],
     },
     "System Prompt Extraction": {
         "OWASP_LLM_TOP_10": ["LLM07"],
-        "MITRE_ATLAS": ["AML.TA0002", "AML.TA0010"],  # Reconnaissance + Exfiltration
+        "MITRE_ATLAS": [AML_TA0002, AML_TA0010],  # Reconnaissance + Exfiltration
         "FSTEK_117": ["п.60", "п.66"],
     },
 }
 
-SUBCATEGORY_FRAMEWORK_MAP: Dict[str, Dict[str, List[str]]] = {
+SUBCATEGORY_FRAMEWORK_MAP: dict[str, dict[str, list[str]]] = {
     "System Prompt Extraction": {
         "OWASP_LLM_TOP_10": ["LLM07"],
-        "MITRE_ATLAS": ["AML.TA0002", "AML.TA0010"],  # Reconnaissance + Exfiltration
+        "MITRE_ATLAS": [AML_TA0002, AML_TA0010],  # Reconnaissance + Exfiltration
         "FSTEK_117": ["п.60", "п.66"],
     },
 }
@@ -236,18 +242,18 @@ SUBCATEGORY_FRAMEWORK_MAP: Dict[str, Dict[str, List[str]]] = {
 # ---------------------------------------------------------------------------
 
 def get_framework_mappings(
-    attack_type: Optional[str] = None,
-    attack_name: Optional[str] = None,
-    base_category: Optional[str] = None,
-    subcategories: Optional[List[str]] = None,
-) -> Dict[str, Set[str]]:
+    attack_type: str | None = None,
+    attack_name: str | None = None,
+    base_category: str | None = None,
+    subcategories: list[str] | None = None,
+) -> dict[str, set[str]]:
     """Return {framework_id: {category_ids}} for the given attack context.
 
     Merges attack_type defaults + attack_name overrides + base_category mappings.
     """
-    result: Dict[str, Set[str]] = {}
+    result: dict[str, set[str]] = {}
 
-    def _merge(mapping: Dict[str, List[str]]) -> None:
+    def _merge(mapping: dict[str, list[str]]) -> None:
         for fw, cats in mapping.items():
             result.setdefault(fw, set()).update(cats)
 
@@ -271,13 +277,13 @@ def get_framework_mappings(
 
 
 def get_framework_coverage(
-    mapped_categories: Dict[str, Set[str]],
-) -> Dict[str, Dict]:
+    mapped_categories: dict[str, set[str]],
+) -> dict[str, dict]:
     """Compute coverage stats for each framework.
 
     Returns {framework_key: {total, covered, coverage_pct, covered_list, uncovered_list}}.
     """
-    coverage: Dict[str, Dict] = {}
+    coverage: dict[str, dict] = {}
     for fw_key, fw_def in FRAMEWORKS.items():
         all_cats = set(fw_def["categories"].keys())
         covered = mapped_categories.get(fw_key, set()) & all_cats
@@ -294,14 +300,14 @@ def get_framework_coverage(
     return coverage
 
 
-def get_all_frameworks() -> Dict:
+def get_all_frameworks() -> dict:
     """Return the full FRAMEWORKS dict."""
     return FRAMEWORKS
 
 
 def get_attack_types_for_category(
     framework_key: str, category_id: str,
-) -> List[str]:
+) -> list[str]:
     """Return attack types that map to a given framework category."""
     result = []
     for attack_type, fw_map in ATTACK_TYPE_FRAMEWORK_MAP.items():
@@ -312,7 +318,7 @@ def get_attack_types_for_category(
 
 def get_dataset_categories_for_framework_category(
     framework_key: str, category_id: str,
-) -> List[str]:
+) -> list[str]:
     """Return dataset categories (from BASE_CATEGORY_FRAMEWORK_MAP) that map to
     a given framework category."""
     result = []

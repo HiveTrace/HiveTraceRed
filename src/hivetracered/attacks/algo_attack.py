@@ -1,4 +1,4 @@
-from typing import Union, List, Dict, Optional, AsyncGenerator
+from collections.abc import AsyncGenerator
 from abc import ABC, abstractmethod
 from hivetracered.attacks.template_attack import TemplateAttack
 
@@ -9,7 +9,7 @@ class AlgoAttack(TemplateAttack, ABC):
     to deliver raw transformations or transformations wrapped in template instructions.
     """
     
-    def __init__(self, raw: bool = False, template: Optional[str] = None, name: Optional[str] = None, description: Optional[str] = None):
+    def __init__(self, raw: bool = False, template: str | None = None, name: str | None = None, description: str | None = None):
         """
         Initialize the algorithmic attack.
         
@@ -36,7 +36,7 @@ class AlgoAttack(TemplateAttack, ABC):
         """
         pass
     
-    def apply(self, prompt: Union[str, List[Dict[str, str]]]) -> Union[str, List[Dict[str, str]]]:
+    def apply(self, prompt: str | list[dict[str, str]]) -> str | list[dict[str, str]]:
         """
         Apply the attack to the given prompt, with or without instructions based on the raw flag.
         
@@ -70,7 +70,7 @@ class AlgoAttack(TemplateAttack, ABC):
             
             return result
         
-    async def stream_abatch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> AsyncGenerator[List[Union[str, List[Dict[str, str]]]], None]:
+    async def stream_abatch(self, prompts: list[str | list[dict[str, str]]]) -> AsyncGenerator[list[str | list[dict[str, str]]], None]:
         """
         Apply the attack to a batch of prompts asynchronously.
         

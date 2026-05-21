@@ -1,12 +1,7 @@
-from typing import List, Any, Optional, Union, Dict
 from langchain_ollama import ChatOllama
 from hivetracered.models.langchain_model import LangchainModel
 from dotenv import load_dotenv
 import os
-from typing import AsyncGenerator
-import asyncio
-from tqdm import tqdm
-import warnings
 from hivetracered.registry import Registry
 
 @Registry.model()
@@ -23,8 +18,8 @@ class OllamaModel(LangchainModel):
     def __init__(
         self,
         model: str = "ollama/qwen3:0.6b",
-        max_concurrency: Optional[int] = None,
-        batch_size: Optional[int] = None,
+        max_concurrency: int | None = None,
+        batch_size: int | None = None,
         base_url: str = "http://localhost:11434",
         max_retries: int = 3,
         **kwargs
@@ -59,22 +54,7 @@ class OllamaModel(LangchainModel):
         self.model_name = model
         self.max_retries = max_retries
 
-        # Handle deprecation
-        if batch_size is not None:
-            warnings.warn(
-                "The 'batch_size' parameter is deprecated and will be removed in v2.0.0. "
-                "Use 'max_concurrency' instead.",
-                DeprecationWarning,
-                stacklevel=2
-            )
-            if max_concurrency is None:
-                max_concurrency = batch_size
-
-        # Set default if neither provided
-        if max_concurrency is None:
-            max_concurrency = 1
-
-        self.max_concurrency = max_concurrency
+        self.max_concurrency = self._resolve_concurrency(max_concurrency, batch_size, default=1)
         # Keep for backward compatibility in get_params()
         self.batch_size = self.max_concurrency
 

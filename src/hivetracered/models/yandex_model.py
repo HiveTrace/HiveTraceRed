@@ -1,24 +1,18 @@
-from typing import List, Any, Optional, Union, Dict
-from abc import ABC, abstractmethod
+from typing import Any
 import os
-import aiohttp
-import json
 import asyncio
 from hivetracered.models.base_model import Model
 from dotenv import load_dotenv
-import requests
 from yandex_ai_studio_sdk import AIStudio
-from yandexcloud import SDK
 from yandex_ai_studio_sdk.retry import RetryPolicy
-import warnings
 
-import time
-import threading
 from concurrent.futures import ThreadPoolExecutor
 from grpc.aio import AioRpcError
 from tqdm import tqdm
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 from hivetracered.registry import Registry
+
+YANDEX_INTERNET_SEARCH_NOTICE = 'В интернете есть много сайтов с информацией на эту тему. [Посмотрите, что нашлось в поиске](https://ya.ru)'
 
 @Registry.model()
 class YandexGPTModel(Model):
@@ -28,7 +22,7 @@ class YandexGPTModel(Model):
     and asynchronous operations, batched requests, and error handling.
     """
     
-    def __init__(self, model="yandexgpt", max_concurrency: Optional[int] = None, batch_size: Optional[int] = None, max_retries: int = 3, **kwargs):
+    def __init__(self, model="yandexgpt", max_concurrency: int | None = None, batch_size: int | None = None, max_retries: int = 3, **kwargs):
         """
         Initialize the Yandex GPT model client with the specified configuration.
 
@@ -46,22 +40,7 @@ class YandexGPTModel(Model):
         self.model_name = model
         self.max_retries = max_retries
 
-        # Handle deprecation
-        if batch_size is not None:
-            warnings.warn(
-                "The 'batch_size' parameter is deprecated and will be removed in v2.0.0. "
-                "Use 'max_concurrency' instead.",
-                DeprecationWarning,
-                stacklevel=2
-            )
-            if max_concurrency is None:
-                max_concurrency = batch_size
-
-        # Set default if neither provided
-        if max_concurrency is None:
-            max_concurrency = 10
-
-        self.max_concurrency = max_concurrency
+        self.max_concurrency = self._resolve_concurrency(max_concurrency, batch_size, default=10)
         # Keep for backward compatibility in get_params()
         self.batch_size = self.max_concurrency
 
@@ -84,7 +63,7 @@ class YandexGPTModel(Model):
             **self.kwargs
         )
         
-    def _format_prompt(self, prompt: Union[str, List[Dict[str, str]]]) -> List[Dict[str, str]]:
+    def _format_prompt(self, prompt: str | list[dict[str, str]]) -> list[dict[str, str]]:
         """
         Format the prompt for the Yandex GPT API.
         
@@ -109,7 +88,7 @@ class YandexGPTModel(Model):
                     formatted_messages.append({"role": "assistant", "text": message["content"]})
             return formatted_messages
     
-    def _format_response(self, response: Any) -> Dict:
+    def _format_response(self, response: Any) -> dict:
         """
         Format the API response to match the expected output format.
 
@@ -139,7 +118,7 @@ class YandexGPTModel(Model):
             "model_version": model_version
         }
     
-    def invoke(self, prompt: Union[str, List[Dict[str, str]]]) -> dict:
+    def invoke(self, prompt: str | list[dict[str, str]]) -> dict:
         """
         Send a single request to the model synchronously.
         
@@ -153,31 +132,34 @@ class YandexGPTModel(Model):
         
         return self._format_response(response)
     
-    async def ainvoke(self, prompt: Union[str, List[Dict[str, str]]]) -> dict:
+    async def ainvoke(self, prompt: str | list[dict[str, str]]) -> dict:
         """
         Send a single request to the model asynchronously.
-        
+
         Args:
             prompt: A string or list of messages to send to the model
-            
+
         Returns:
             Dictionary containing the model's response with content and metadata
-            
+
         Note:
             Returns a fallback response if the API request fails
         """
-        try:
-            operation = self.client.run_deferred(self._format_prompt(prompt))
-            response = operation.wait()
-            return self._format_response(response)
-        except AioRpcError as e:
-            return {
-                'content': 'В интернете есть много сайтов с информацией на эту тему. [Посмотрите, что нашлось в поиске](https://ya.ru)',
-                'role': 'assistant',
-                'status': 4
-            }
+        async with self._concurrency_slot():
+            try:
+                operation = await asyncio.to_thread(
+                    self.client.run_deferred, self._format_prompt(prompt)
+                )
+                response = await asyncio.to_thread(operation.wait)
+                return self._format_response(response)
+            except AioRpcError:
+                return {
+                    'content': YANDEX_INTERNET_SEARCH_NOTICE,
+                    'role': 'assistant',
+                    'status': 4
+                }
     
-    def batch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> List[dict]:
+    def batch(self, prompts: list[str | list[dict[str, str]]]) -> list[dict]:
         """
         Send multiple requests to the model synchronously.
         
@@ -202,7 +184,7 @@ class YandexGPTModel(Model):
                 results = [future.result() for future in tqdm(futures, desc=f"Processing requests with {self.model_name}", unit="request")]
             return results
 
-    async def abatch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> List[dict]:
+    async def abatch(self, prompts: list[str | list[dict[str, str]]]) -> list[dict]:
         """
         Send multiple requests to the model asynchronously.
         
@@ -225,22 +207,22 @@ class YandexGPTModel(Model):
                      unit="batch"):
             for prompt in formatted_prompts[i:i + self.max_concurrency]:
                 try:
-                    operation = self.client.run_deferred(prompt)
+                    operation = await asyncio.to_thread(self.client.run_deferred, prompt)
                     last_operation = operation
                     operations.append(operation)
                 except AioRpcError as e:
                     operations.append({
-                        'content': 'В интернете есть много сайтов с информацией на эту тему. [Посмотрите, что нашлось в поиске](https://ya.ru)',
+                        'content': YANDEX_INTERNET_SEARCH_NOTICE,
                         'role': 'assistant',
                         'status': 4
                     })
-            time.sleep(1)
+            await asyncio.sleep(1)
 
         # Wait for operations to complete
         if last_operation:
             with tqdm(total=1, desc=f"Waiting for operations to complete", unit="batch") as pbar:
-                while last_operation.get_status().is_running:
-                    time.sleep(0.1)
+                while (await asyncio.to_thread(last_operation.get_status)).is_running:
+                    await asyncio.sleep(0.1)
                 pbar.update(1)
 
         # Collect results
@@ -249,7 +231,8 @@ class YandexGPTModel(Model):
             if isinstance(operation, dict):
                 results.append(operation)
             else:
-                results.append(self._format_response(operation.get_result()))
+                result = await asyncio.to_thread(operation.get_result)
+                results.append(self._format_response(result))
         return results
     
     def is_answer_blocked(self, answer: dict) -> bool:
@@ -277,7 +260,7 @@ class YandexGPTModel(Model):
             **self.kwargs
         }
 
-    async def stream_abatch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> AsyncGenerator[dict, None]:
+    async def stream_abatch(self, prompts: list[str | list[dict[str, str]]]) -> AsyncGenerator[dict, None]:
         """
         Send multiple requests to the model asynchronously and yield results as they complete.
         
@@ -300,18 +283,18 @@ class YandexGPTModel(Model):
                      unit="batch"):
             for prompt in formatted_prompts[i:i + batch_size]:
                 try:
-                    operation = self.client.run_deferred(prompt)
+                    operation = await asyncio.to_thread(self.client.run_deferred, prompt)
                     operations.append(operation)
                 except AioRpcError as e:
                     # Return error response with proper error metadata
                     operations.append({
-                        'content': 'В интернете есть много сайтов с информацией на эту тему. [Посмотрите, что нашлось в поиске](https://ya.ru)',
+                        'content': YANDEX_INTERNET_SEARCH_NOTICE,
                         'role': 'assistant',
                         'status': 4,
                         'error': str(e),
                         'error_type': type(e).__name__
                     })
-            time.sleep(1)
+            await asyncio.sleep(1)
 
         # Use context manager for proper cleanup even if errors occur
         with tqdm(total=len(operations), desc=f"Processing requests with {self.model_name}", unit="request") as progress_bar:
@@ -321,5 +304,5 @@ class YandexGPTModel(Model):
                 if isinstance(operation, dict):
                     yield operation
                 else:
-                    response = operation.wait()
+                    response = await asyncio.to_thread(operation.wait)
                     yield self._format_response(response)

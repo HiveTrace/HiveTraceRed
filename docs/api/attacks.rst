@@ -42,6 +42,15 @@ ModelAttack
    :show-inheritance:
    :special-members: __init__
 
+IterativeAttack
+~~~~~~~~~~~~~~~
+
+.. autoclass:: hivetracered.attacks.iterative_attack.IterativeAttack
+   :members:
+   :undoc-members:
+   :show-inheritance:
+   :special-members: __init__
+
 ComposedAttack
 ~~~~~~~~~~~~~~
 
@@ -51,13 +60,24 @@ ComposedAttack
    :show-inheritance:
    :special-members: __init__
 
-Attack Types
-------------
+Single-Turn Attack Types
+------------------------
+
+Iterative Attacks
+~~~~~~~~~~~~~~~~~
+
+Iterative attacks (PAIR, TAP) that optimise a single attack prompt across an
+internal refinement loop:
+
+.. automodule:: hivetracered.attacks.types.single_turn.iterative
+   :members:
+   :undoc-members:
+   :no-index:
 
 Roleplay Attacks
 ~~~~~~~~~~~~~~~~
 
-.. automodule:: hivetracered.attacks.types.roleplay
+.. automodule:: hivetracered.attacks.types.single_turn.roleplay
    :members:
    :undoc-members:
    :no-index:
@@ -65,7 +85,7 @@ Roleplay Attacks
 Persuasion Attacks
 ~~~~~~~~~~~~~~~~~~
 
-.. automodule:: hivetracered.attacks.types.persuasion
+.. automodule:: hivetracered.attacks.types.single_turn.persuasion
    :members:
    :undoc-members:
    :no-index:
@@ -73,7 +93,7 @@ Persuasion Attacks
 Token Smuggling Attacks
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-.. automodule:: hivetracered.attacks.types.token_smuggling
+.. automodule:: hivetracered.attacks.types.single_turn.token_smuggling
    :members:
    :undoc-members:
    :no-index:
@@ -81,7 +101,7 @@ Token Smuggling Attacks
 Context Switching Attacks
 ~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. automodule:: hivetracered.attacks.types.context_switching
+.. automodule:: hivetracered.attacks.types.single_turn.context_switching
    :members:
    :undoc-members:
    :no-index:
@@ -89,7 +109,7 @@ Context Switching Attacks
 In-Context Learning Attacks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. automodule:: hivetracered.attacks.types.in_context_learning
+.. automodule:: hivetracered.attacks.types.single_turn.in_context_learning
    :members:
    :undoc-members:
    :no-index:
@@ -97,7 +117,7 @@ In-Context Learning Attacks
 Task Deflection Attacks
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-.. automodule:: hivetracered.attacks.types.task_deflection
+.. automodule:: hivetracered.attacks.types.single_turn.task_deflection
    :members:
    :undoc-members:
    :no-index:
@@ -105,7 +125,7 @@ Task Deflection Attacks
 Text Structure Modification Attacks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. automodule:: hivetracered.attacks.types.text_structure_modification
+.. automodule:: hivetracered.attacks.types.single_turn.text_structure_modification
    :members:
    :undoc-members:
    :no-index:
@@ -113,7 +133,7 @@ Text Structure Modification Attacks
 Output Formatting Attacks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. automodule:: hivetracered.attacks.types.output_formatting
+.. automodule:: hivetracered.attacks.types.single_turn.output_formatting
    :members:
    :undoc-members:
    :no-index:
@@ -121,7 +141,7 @@ Output Formatting Attacks
 Irrelevant Information Attacks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. automodule:: hivetracered.attacks.types.irrelevant_information
+.. automodule:: hivetracered.attacks.types.single_turn.irrelevant_information
    :members:
    :undoc-members:
    :no-index:
@@ -129,7 +149,21 @@ Irrelevant Information Attacks
 Simple Instructions Attacks
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-.. automodule:: hivetracered.attacks.types.simple_instructions
+.. automodule:: hivetracered.attacks.types.single_turn.simple_instructions
+   :members:
+   :undoc-members:
+   :no-index:
+
+Multi-Turn Attack Types
+-----------------------
+
+Conversational Attacks
+~~~~~~~~~~~~~~~~~~~~~~
+
+Conversational attacks (Crescendo) that drive a multi-turn dialogue with the
+target across many rounds within a single invocation:
+
+.. automodule:: hivetracered.attacks.types.multi_turn.conversational
    :members:
    :undoc-members:
    :no-index:
@@ -139,3 +173,4 @@ See Also
 
 * :doc:`../attacks/index` - Attack reference
 * :doc:`../user-guide/custom-attacks` - Usage and custom attacks
+* :doc:`../attacks/crescendo` - Crescendo attack reference

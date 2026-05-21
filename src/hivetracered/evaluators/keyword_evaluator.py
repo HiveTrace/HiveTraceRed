@@ -1,4 +1,5 @@
-from typing import Dict, Any, Union, List, Set, Optional, AsyncGenerator
+from typing import Any
+from collections.abc import AsyncGenerator
 from hivetracered.evaluators.base_evaluator import BaseEvaluator
 from hivetracered.evaluators.data.utils import load_keywords
 from hivetracered.registry import Registry
@@ -11,11 +12,11 @@ class KeywordEvaluator(BaseEvaluator):
     """
     
     def __init__(self, 
-                 keywords: Optional[List[str]] = None, 
+                 keywords: list[str] | None = None, 
                  case_sensitive: bool = False,
                  match_all: bool = False,
-                 name: Optional[str] = None,
-                 description: Optional[str] = None):
+                 name: str | None = None,
+                 description: str | None = None):
         """
         Initialize the keyword evaluator with detection parameters.
         
@@ -36,7 +37,7 @@ class KeywordEvaluator(BaseEvaluator):
         self._name = name
         self._description = description
     
-    def evaluate(self, prompt: Union[str, List[Dict[str, str]]], response: Any) -> Dict[str, Any]:
+    def evaluate(self, prompt: str | list[dict[str, str]], response: Any) -> dict[str, Any]:
         """
         Evaluate a model response by checking for keyword presence.
         
@@ -61,7 +62,7 @@ class KeywordEvaluator(BaseEvaluator):
         else:
             try:
                 response_text = str(response)
-            except:
+            except Exception:
                 return {
                     'matched': False,
                     'matched_keywords': [],
@@ -99,7 +100,7 @@ class KeywordEvaluator(BaseEvaluator):
             'keyword_count': keyword_count
         }
     
-    async def stream_abatch(self, prompts: List[Dict[str, str]], responses: List[Any]) -> AsyncGenerator[Dict[str, Any], None]:
+    async def stream_abatch(self, prompts: list[dict[str, str]], responses: list[Any]) -> AsyncGenerator[dict[str, Any], None]:
         """
         Process and evaluate multiple prompt-response pairs asynchronously.
         
@@ -140,7 +141,7 @@ class KeywordEvaluator(BaseEvaluator):
         
         return f"Evaluates responses for the presence of {mode} keywords: {', '.join(self.keywords)} ({case})" 
     
-    def get_params(self) -> Dict[str, Any]:
+    def get_params(self) -> dict[str, Any]:
         """
         Get the parameters of the evaluator.
         

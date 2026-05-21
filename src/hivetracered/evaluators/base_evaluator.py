@@ -1,4 +1,5 @@
-from typing import Dict, Any, Union, List, AsyncGenerator
+from typing import Any
+from collections.abc import AsyncGenerator
 from abc import ABC, abstractmethod
 
 class BaseEvaluator(ABC):
@@ -8,7 +9,7 @@ class BaseEvaluator(ABC):
     """
     
     @abstractmethod
-    def evaluate(self, prompt: Union[str, List[Dict[str, str]]], response: Any) -> Dict[str, Any]:
+    def evaluate(self, prompt: str | list[dict[str, str]], response: Any) -> dict[str, Any]:
         """
         Evaluate a model response to a given prompt.
         
@@ -22,7 +23,7 @@ class BaseEvaluator(ABC):
         pass
     
     @abstractmethod
-    async def stream_abatch(self, prompts: List[Dict[str, str]], responses: List[Any]) -> AsyncGenerator[Dict[str, Any], None]:
+    async def stream_abatch(self, prompts: list[dict[str, str]], responses: list[Any]) -> AsyncGenerator[dict[str, Any], None]:
         """
         Asynchronously evaluate multiple prompts and responses.
         
@@ -56,7 +57,7 @@ class BaseEvaluator(ABC):
         pass 
     
     @abstractmethod
-    def get_params(self) -> Dict[str, Any]:
+    def get_params(self) -> dict[str, Any]:
         """
         Get the parameters of the evaluator.
         

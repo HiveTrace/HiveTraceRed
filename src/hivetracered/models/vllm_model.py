@@ -1,6 +1,4 @@
-from typing import Optional, Union, Dict, Any
 import os
-import warnings
 
 from dotenv import load_dotenv
 from langchain_openai import ChatOpenAI
@@ -25,9 +23,9 @@ class VLLMModel(LangchainModel):
         self,
         model: str,
         base_url: str = "http://localhost:8000/v1",
-        api_key: Optional[str] = None,
-        max_concurrency: Optional[int] = None,
-        batch_size: Optional[int] = None,
+        api_key: str | None = None,
+        max_concurrency: int | None = None,
+        batch_size: int | None = None,
         max_retries: int = 3,
         **kwargs,
     ):
@@ -48,19 +46,7 @@ class VLLMModel(LangchainModel):
         self.model_name = model
         self.max_retries = max_retries
 
-        if batch_size is not None:
-            warnings.warn(
-                "The 'batch_size' parameter is deprecated and will be removed in v2.0.0. "
-                "Use 'max_concurrency' instead.",
-                DeprecationWarning,
-                stacklevel=2,
-            )
-            if max_concurrency is None:
-                max_concurrency = batch_size
-
-        if max_concurrency is None:
-            max_concurrency = 1
-        self.max_concurrency = max_concurrency
+        self.max_concurrency = self._resolve_concurrency(max_concurrency, batch_size, default=1)
         self.batch_size = self.max_concurrency
 
         base_url = base_url or os.getenv("VLLM_BASE_URL")

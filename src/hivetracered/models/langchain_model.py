@@ -1,18 +1,14 @@
-from typing import List, Any, Optional, Union, Dict, Type
-from langchain_core.language_models.chat_models import BaseChatModel
-from langchain_core.language_models.llms import BaseLLM
+from typing import Any
 from hivetracered.models.base_model import Model
-from dotenv import load_dotenv
-import os
-from typing import AsyncGenerator
+from collections.abc import AsyncGenerator
 import asyncio
 from tqdm import tqdm
 from abc import abstractmethod
 
 from uuid import UUID
 from langchain_core.callbacks import BaseCallbackHandler
+from langchain_core.rate_limiters import InMemoryRateLimiter
 from langchain.schema import LLMResult
-from langchain_core.exceptions import OutputParserException
 
 class LangchainModel(Model):
     """
@@ -49,6 +45,27 @@ class LangchainModel(Model):
         """
         pass
 
+    @staticmethod
+    def _make_rate_limiter(rpm: int, max_bucket_size: int | None = None) -> InMemoryRateLimiter:
+        """
+        Build an InMemoryRateLimiter from a requests-per-minute setting.
+
+        Args:
+            rpm: Target rate in requests per minute. Clamped to a minimum of 1
+                so a misconfigured 0 still produces a usable limiter.
+            max_bucket_size: Optional burst capacity for the token bucket.
+
+        Returns:
+            Configured InMemoryRateLimiter instance.
+        """
+        kwargs: dict[str, Any] = {
+            "requests_per_second": max(1, rpm) / 60,
+            "check_every_n_seconds": 0.1,
+        }
+        if max_bucket_size is not None:
+            kwargs["max_bucket_size"] = max_bucket_size
+        return InMemoryRateLimiter(**kwargs)
+
     def _add_retry_policy(self, client):
         """
         Wrap the LangChain client with retry policy for transient errors.
@@ -79,7 +96,7 @@ class LangchainModel(Model):
             ),
         )
 
-    def invoke(self, prompt: Union[str, List[Dict[str, str]]]) -> dict:
+    def invoke(self, prompt: str | list[dict[str, str]]) -> dict:
         """
         Send a single request to the model synchronously.
         
@@ -91,19 +108,20 @@ class LangchainModel(Model):
         """
         return dict(self.client.invoke(prompt))
     
-    async def ainvoke(self, prompt: Union[str, List[Dict[str, str]]]) -> dict:
+    async def ainvoke(self, prompt: str | list[dict[str, str]]) -> dict:
         """
         Send a single request to the model asynchronously.
-        
+
         Args:
             prompt: A string or list of messages to send to the model
-            
+
         Returns:
             The model's response
         """
-        return dict(await self.client.ainvoke(prompt))
+        async with self._concurrency_slot():
+            return dict(await self.client.ainvoke(prompt))
     
-    def batch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> List[dict]:
+    def batch(self, prompts: list[str | list[dict[str, str]]]) -> list[dict]:
         """
         Send multiple requests to the model synchronously.
 
@@ -118,7 +136,7 @@ class LangchainModel(Model):
         else:
             return [dict(response) for response in self.client.batch(prompts, config={"max_concurrency": self.max_concurrency})]
     
-    async def abatch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> List[dict]:
+    async def abatch(self, prompts: list[str | list[dict[str, str]]]) -> list[dict]:
         """
         Send multiple requests to the model asynchronously.
 
@@ -128,12 +146,10 @@ class LangchainModel(Model):
         Returns:
             A list of model responses
         """
-        if self.max_concurrency == 0:
-            with BatchCallback(len(prompts)) as cb:
-                return [dict(response) for response in await self.client.abatch(prompts, config={"callbacks": [cb]})]
-        else:
-            with BatchCallback(len(prompts)) as cb:
-                return [dict(response) for response in await self.client.abatch(prompts, config={"max_concurrency": self.max_concurrency, "callbacks": [cb]})]
+        # Concurrency is enforced inside ainvoke via self._concurrency_slot();
+        # asyncio.gather lets every prompt acquire a slot independently and
+        # the cap holds whether or not other batches are running concurrently.
+        return list(await asyncio.gather(*(self.ainvoke(p) for p in prompts)))
 
     def is_answer_blocked(self, answer: dict) -> bool:
         """
@@ -160,7 +176,7 @@ class LangchainModel(Model):
             "batch_size": self.batch_size
         }
     
-    async def stream_abatch(self, prompts: List[Union[str, List[Dict[str, str]]]]) -> AsyncGenerator[dict, None]:
+    async def stream_abatch(self, prompts: list[str | list[dict[str, str]]]) -> AsyncGenerator[dict, None]:
         """
         Send multiple requests to the model asynchronously and yield results as they complete.
 
@@ -170,22 +186,20 @@ class LangchainModel(Model):
         Returns:
             An async generator of model responses in order of completion
         """
-        semaphore = asyncio.Semaphore(self.max_concurrency)
-        async def sem_task(idx, prompt):
-            async with semaphore:
-                try:
-                    result = await self.ainvoke(prompt)
-                    return idx, result, None
-                except Exception as e:
-                    # Return error response instead of crashing entire batch
-                    error_response = {
-                        "content": "",
-                        "error": str(e),
-                        "error_type": type(e).__name__
-                    }
-                    return idx, error_response, e
+        async def task(idx, prompt):
+            # Concurrency is enforced inside ainvoke via self._concurrency_slot().
+            try:
+                result = await self.ainvoke(prompt)
+                return idx, result, None
+            except Exception as e:
+                error_response = {
+                    "content": "",
+                    "error": str(e),
+                    "error_type": type(e).__name__,
+                }
+                return idx, error_response, e
 
-        tasks = [asyncio.create_task(sem_task(i, inp)) for i, inp in enumerate(prompts)]
+        tasks = [asyncio.create_task(task(i, inp)) for i, inp in enumerate(prompts)]
         total_tasks = len(tasks)
 
         results = dict()
@@ -218,9 +232,15 @@ class BatchCallback(BaseCallbackHandler):
     def __enter__(self):
         self.progress_bar.__enter__()
         return self
-        
+
     def __exit__(self, exc_type, exc_value, exc_traceback):
         self.progress_bar.__exit__(exc_type, exc_value, exc_traceback)
-        
+
+    async def __aenter__(self):
+        return self.__enter__()
+
+    async def __aexit__(self, exc_type, exc_value, exc_traceback):
+        return self.__exit__(exc_type, exc_value, exc_traceback)
+
     def __del__(self):
         self.progress_bar.__del__()

@@ -1,4 +1,5 @@
-from typing import Dict, Any, Union, List, AsyncGenerator, Optional
+from typing import Any
+from collections.abc import AsyncGenerator
 import re
 from difflib import SequenceMatcher
 from hivetracered.evaluators.base_evaluator import BaseEvaluator
@@ -20,8 +21,8 @@ class SystemPromptDetectionEvaluator(BaseEvaluator):
                  case_sensitive: bool = False,
                  normalize_whitespace: bool = True,
                  check_word_boundaries: bool = True,
-                 name: Optional[str] = None,
-                 description: Optional[str] = None):
+                 name: str | None = None,
+                 description: str | None = None):
         """
         Initialize the system prompt detection evaluator.
 
@@ -70,7 +71,7 @@ class SystemPromptDetectionEvaluator(BaseEvaluator):
 
         return text
 
-    def _split_into_sentences(self, text: str) -> List[str]:
+    def _split_into_sentences(self, text: str) -> list[str]:
         """
         Split text into sentences for granular matching.
 
@@ -85,7 +86,7 @@ class SystemPromptDetectionEvaluator(BaseEvaluator):
         sentences = [s.strip() for s in sentences if len(s.strip()) > 10]
         return sentences
 
-    def _find_substring_matches(self, response_text: str) -> List[Dict[str, Any]]:
+    def _find_substring_matches(self, response_text: str) -> list[dict[str, Any]]:
         """
         Find direct substring matches between system prompt and response.
 
@@ -146,7 +147,7 @@ class SystemPromptDetectionEvaluator(BaseEvaluator):
 
         return unique_matches
 
-    def _find_fuzzy_matches(self, response_text: str) -> List[Dict[str, Any]]:
+    def _find_fuzzy_matches(self, response_text: str) -> list[dict[str, Any]]:
         """
         Find fuzzy matches using sequence matching.
 
@@ -187,7 +188,7 @@ class SystemPromptDetectionEvaluator(BaseEvaluator):
 
         return sorted(matches, key=lambda x: x['confidence'], reverse=True)
 
-    def _check_word_boundaries(self, match: Dict[str, Any], response_text: str) -> bool:
+    def _check_word_boundaries(self, match: dict[str, Any], response_text: str) -> bool:
         """
         Check if a match respects word boundaries.
 
@@ -213,7 +214,7 @@ class SystemPromptDetectionEvaluator(BaseEvaluator):
 
         return True
 
-    def evaluate(self, prompt: Union[str, List[Dict[str, str]]], response: Any) -> Dict[str, Any]:
+    def evaluate(self, prompt: str | list[dict[str, str]], response: Any) -> dict[str, Any]:
         """
         Evaluate a model response for system prompt detection.
 
@@ -281,7 +282,7 @@ class SystemPromptDetectionEvaluator(BaseEvaluator):
             'system_prompt_length': len(self.system_prompt)
         }
 
-    async def stream_abatch(self, prompts: List[Dict[str, str]], responses: List[Any]) -> AsyncGenerator[Dict[str, Any], None]:
+    async def stream_abatch(self, prompts: list[dict[str, str]], responses: list[Any]) -> AsyncGenerator[dict[str, Any], None]:
         """
         Process and evaluate multiple prompt-response pairs asynchronously.
 
@@ -312,7 +313,7 @@ class SystemPromptDetectionEvaluator(BaseEvaluator):
                 f"Uses substring matching (min length: {self.min_substring_length}) and "
                 f"fuzzy matching (threshold: {self.fuzzy_threshold}) to identify prompt leakage.")
 
-    def get_params(self) -> Dict[str, Any]:
+    def get_params(self) -> dict[str, Any]:
         """Get the parameters of the evaluator."""
         return {
             "system_prompt": self.system_prompt,

@@ -7,7 +7,6 @@ interface at chat.mistral.ai when no official API is available.
 
 from __future__ import annotations
 
-from typing import Tuple
 
 from playwright.async_api import (
     BrowserContext,
@@ -80,7 +79,7 @@ class MistralWebModel(WebModel):
         # Set the target URL for Mistral Le Chat
         self.target_url = "https://chat.mistral.ai/chat"
 
-    async def _setup_context_and_page(self) -> Tuple[BrowserContext, Page]:
+    async def _setup_context_and_page(self) -> tuple[BrowserContext, Page]:
         """
         Create and configure a (context, page) pair with domcontentloaded navigation.
 
@@ -175,7 +174,7 @@ class MistralWebModel(WebModel):
             'textarea[data-testid]',
         ]
 
-        element = await self._find_element_with_fallbacks(page, selectors, timeout=3000)
+        element = await self._find_element_with_fallbacks(page, selectors)
         if not element:
             raise RuntimeError("Could not find input element with any strategy")
 
@@ -227,12 +226,13 @@ class MistralWebModel(WebModel):
             timeout=self.wait_timeout * 1000
         )
 
-        # Use stability detection to wait for complete response
-        # The parent's _wait_for_stable_response now handles fallback automatically
+        # Use stability detection to wait for complete response.
+        # _wait_for_stable_response uses self.response_wait_time as its deadline
+        # via asyncio.timeout(); callers that need a different budget should
+        # adjust that attribute or wrap the call in their own asyncio.timeout().
         response_text = await self._wait_for_stable_response(
             page,
             'div[data-testid="text-message-part"][data-message-part-type="answer"]',
-            timeout=self.response_wait_time,
             stable_time=self.stability_check_time,
             fallback_to_last=True
         )

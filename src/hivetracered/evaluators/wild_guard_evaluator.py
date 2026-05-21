@@ -1,7 +1,6 @@
-from typing import Coroutine, Dict, Any, Union, List, Optional, AsyncGenerator
+from typing import Any
 from hivetracered.evaluators.model_evaluator import ModelEvaluator
 from hivetracered.models.base_model import Model
-import re
 from hivetracered.registry import Registry
 
 @Registry.evaluator()
@@ -25,8 +24,8 @@ Answer each question with one word only, using the designated answer choices."""
     
     def __init__(self, 
                  model: Model,
-                 name: Optional[str] = None,
-                 description: Optional[str] = None):
+                 name: str | None = None,
+                 description: str | None = None):
         """
         Initialize the WildGuardGPTEvaluator.
         
@@ -42,7 +41,7 @@ Answer each question with one word only, using the designated answer choices."""
             description=description or "Evaluates prompt-response pairs for policy compliance and safety. Uses the WildGuard prompt for gpt4."
         )
     
-    def _parse_evaluation_response(self, evaluation_response: Dict[str, Any]) -> Dict[str, Any]:
+    def _parse_evaluation_response(self, evaluation_response: dict[str, Any]) -> dict[str, Any]:
         """
         Parse the evaluation response from the model.
         """
@@ -62,20 +61,3 @@ Answer each question with one word only, using the designated answer choices."""
             'success': success,
             'raw_evaluation': evaluation_response,
         }
-    
-    def _extract_answer(self, text: str, pattern: str, default: str) -> str:
-        """
-        Extract an answer using a regex pattern.
-        
-        Args:
-            text: The text to search in
-            pattern: The regex pattern to use
-            default: The default value to return if no match is found
-            
-        Returns:
-            The extracted answer or the default value
-        """
-        match = re.search(pattern, text, re.IGNORECASE)
-        if match and match.group(1):
-            return match.group(1).lower()
-        return default 

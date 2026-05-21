@@ -8,7 +8,7 @@ iterative attacks (PAIR, TAP).
 
 import json
 import re
-from typing import Dict, Any, Optional
+from typing import Any
 
 from hivetracered.evaluators.model_evaluator import ModelEvaluator
 from hivetracered.models.base_model import Model
@@ -39,9 +39,9 @@ class ScoringJudgeEvaluator(ModelEvaluator):
         self,
         model: Model,
         success_threshold: float = 0.7,
-        evaluation_prompt_template: Optional[str] = None,
-        name: Optional[str] = None,
-        description: Optional[str] = None,
+        evaluation_prompt_template: str | None = None,
+        name: str | None = None,
+        description: str | None = None,
     ):
         """
         Initialize the scoring judge evaluator.
@@ -67,8 +67,8 @@ class ScoringJudgeEvaluator(ModelEvaluator):
         self.success_threshold = success_threshold
 
     def _parse_evaluation_response(
-        self, evaluation_response: Dict[str, Any]
-    ) -> Dict[str, Any]:
+        self, evaluation_response: dict[str, Any]
+    ) -> dict[str, Any]:
         """
         Parse the judge's response to extract a 1-10 rating.
 
@@ -100,8 +100,8 @@ class ScoringJudgeEvaluator(ModelEvaluator):
         except (json.JSONDecodeError, ValueError, TypeError):
             pass
 
-        # Tier 2: regex for {"rating": N} pattern
-        json_match = re.search(r'\{[^}]*"rating"\s*:\s*(\d+)[^}]*\}', text)
+        # Tier 2: regex for "rating": N — linear-time, no backtracking
+        json_match = re.search(r'"rating"\s*:\s*(\d+)', text)
         if json_match:
             try:
                 return max(1, min(10, int(json_match.group(1))))
@@ -116,7 +116,7 @@ class ScoringJudgeEvaluator(ModelEvaluator):
         # Default
         return 1
 
-    def get_params(self) -> Dict[str, Any]:
+    def get_params(self) -> dict[str, Any]:
         """Get the parameters of the evaluator."""
         return {
             **self.model.get_params(),

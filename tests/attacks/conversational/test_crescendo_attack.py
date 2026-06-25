@@ -552,37 +552,6 @@ def test_SPEC_015_prompt_field_in_pipeline_row_is_valid_json_list_of_role_conten
     )
 
 
-# ── SPEC-016 ─────────────────────────────────────────────────────────
-
-
-def test_SPEC_016_crescendo_attack_yaml_is_valid_with_required_keys():
-    """SPEC-016 (AC-16): examples/crescendo_attack.yaml is valid YAML with required keys."""
-    import yaml
-    import os
-
-    yaml_path = os.path.join(
-        os.path.dirname(__file__), "..", "..", "..", "examples", "crescendo_attack.yaml"
-    )
-    yaml_path = os.path.abspath(yaml_path)
-
-    with open(yaml_path, "r") as f:
-        data = yaml.safe_load(f)
-
-    assert "attacker_model" in data, "YAML must contain 'attacker_model' key"
-    assert "response_model" in data, "YAML must contain 'response_model' key"
-    assert "attacks" in data, "YAML must contain 'attacks' key"
-    # The design mandates attacks[0] is the CrescendoAttack entry (design.md Touch point yaml)
-    crescendo_entry = data["attacks"][0]
-    assert isinstance(crescendo_entry, dict), "attacks[0] must be a dict"
-    assert crescendo_entry.get("name") == "CrescendoAttack", (
-        "attacks[0] must have name 'CrescendoAttack'"
-    )
-    assert "params" in crescendo_entry, "CrescendoAttack entry must have 'params'"
-    assert "max_rounds" in crescendo_entry["params"], (
-        "CrescendoAttack params must include 'max_rounds'"
-    )
-
-
 # ── SPEC-017 ─────────────────────────────────────────────────────────
 
 

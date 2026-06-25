@@ -146,6 +146,58 @@ def test_ainvoke_awaits_client_ainvoke_and_dict_converts():
     assert out["content"] == "async-hello"
 
 
+def test_invoke_returns_error_dict_when_client_raises():
+    # A failed request (404, no balance, etc.) must not propagate — it becomes an
+    # error dict, matching RestModel/GeminiNativeModel, so direct callers don't crash.
+    client = MagicMock()
+    client.invoke.side_effect = RuntimeError("boom")
+    model = _ConcreteLangchainModel(client=client)
+
+    out = model.invoke("hi")
+
+    assert out["content"] == ""
+    assert out["error_type"] == "RuntimeError"
+    assert "boom" in out["error"]
+
+
+def test_ainvoke_returns_error_dict_when_client_raises():
+    client = MagicMock()
+    client.ainvoke = AsyncMock(side_effect=RuntimeError("kaboom"))
+    model = _ConcreteLangchainModel(client=client)
+
+    out = _run(model.ainvoke("hi"))
+
+    assert out["content"] == ""
+    assert out["error_type"] == "RuntimeError"
+    assert "kaboom" in out["error"]
+
+
+def test_stream_abatch_cancels_pending_tasks_when_consumer_stops_early():
+    # When the consumer stops early (e.g. circuit breaker -> aclose), outstanding
+    # tasks must be cancelled so they don't keep hitting the API in the background.
+    calls = {"n": 0}
+
+    async def slow(prompt):
+        calls["n"] += 1
+        await asyncio.sleep(0.02)
+        return _msg("ok")
+
+    client = MagicMock()
+    client.ainvoke = slow
+    model = _ConcreteLangchainModel(client=client, max_concurrency=1)
+
+    async def consume_one_then_close():
+        gen = model.stream_abatch([f"p{i}" for i in range(10)])
+        async for _ in gen:
+            break  # stop after the first result
+        await gen.aclose()
+        await asyncio.sleep(0.2)  # give any leaked tasks a chance to fire
+        return calls["n"]
+
+    fired = _run(consume_one_then_close())
+    assert fired <= 2  # not all 10 — pending tasks were cancelled
+
+
 # ── batch (sync) ────────────────────────────────────────────────────
 
 

@@ -44,6 +44,35 @@ def _run(coro):
         loop.close()
 
 
+def test_evaluate_dataset_skips_failed_requests():
+    # Failed requests (error field) must not reach the evaluator and must be
+    # marked success=False with reason "Request failed", preserving order.
+    from hivetracered.runner import _evaluate_dataset
+    from hivetracered.setup import DatasetSpec
+
+    ev = _RecordingEvaluator(result={"success": True, "reason": "ok"})
+    responses = [
+        {"base_prompt": "p0", "response": "real answer"},
+        {"base_prompt": "p1", "response": "", "error": "no balance"},
+        {"base_prompt": "p2", "response": "another real"},
+    ]
+    spec = DatasetSpec(name="ds", prompts=["p0", "p1", "p2"], evaluator=ev)
+
+    results = _run(_evaluate_dataset(spec, responses))
+
+    # Only the two non-error records were sent to the evaluator.
+    assert ev.received_prompts == ["p0", "p2"]
+    # All three results returned, in order.
+    assert [r["base_prompt"] for r in results] == ["p0", "p1", "p2"]
+    # The error record is skipped, not scored.
+    assert results[1]["evaluator"] == ""
+    assert results[1]["success"] is False
+    assert results[1]["evaluation"]["reason"] == "Request failed"
+    # Real records were scored by the evaluator.
+    assert results[0]["evaluator"] == "_RecordingEvaluator"
+    assert results[2]["evaluator"] == "_RecordingEvaluator"
+
+
 def _write_yaml(path: Path, data: dict) -> str:
     """Write a dict as YAML and return the file path string."""
     path.write_text(yaml.dump(data, default_flow_style=False), encoding="utf-8")
@@ -127,7 +156,7 @@ async def _fake_stream_attack_prompts_str_only(attacks, base_prompts, system_pro
         }
 
 
-async def _fake_stream_model_responses_passthrough(response_model, attack_prompts):
+async def _fake_stream_model_responses_passthrough(response_model, attack_prompts, consecutive_failures=None):
     """Fake stream_model_responses for SPEC-014.
 
     Passes through all attack_prompt fields unchanged and adds response columns.
@@ -155,7 +184,7 @@ async def _capturing_stream_attack_prompts_with_system_prompt(
 
 
 async def _capturing_stream_model_responses_recording_system_prompt(
-    response_model, attack_prompts, *, _seen: list
+    response_model, attack_prompts, consecutive_failures=None, *, _seen: list
 ):
     """Fake stream_model_responses for SPEC-008.
 

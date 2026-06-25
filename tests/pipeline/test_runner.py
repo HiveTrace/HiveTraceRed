@@ -21,6 +21,7 @@ import yaml
 from hivetracered import runner
 from hivetracered.runner import (
     _dump_config_to_yaml,
+    _error_rate,
     _log_summary,
     _prepare_run_dir,
     _preflight_config,
@@ -49,6 +50,23 @@ async def _aiter(items):
     """Convert an iterable into an async generator."""
     for item in items:
         yield item
+
+
+# ── _error_rate ─────────────────────────────────────────────────────
+
+
+def test_error_rate_counts_records_with_nonempty_error():
+    records = [
+        {"error": "boom"},
+        {"error": ""},      # empty error = success
+        {},                  # no error key = success
+        {"error": "skipped_after_failures: x"},
+    ]
+    assert _error_rate(records) == 0.5
+
+
+def test_error_rate_empty_is_zero():
+    assert _error_rate([]) == 0.0
 
 
 # ── _preflight_config ───────────────────────────────────────────────
@@ -373,7 +391,7 @@ def test_get_model_responses_no_response_model_returns_empty(monkeypatch, tmp_pa
 def test_get_model_responses_no_responses_returns_empty(monkeypatch, tmp_path, caplog):
     caplog.set_level(logging.WARNING, logger="hivetracered.runner")
     monkeypatch.setattr(runner, "setup_model", lambda cfg: MagicMock())
-    monkeypatch.setattr(runner, "stream_model_responses", lambda model, prompts: _aiter([]))
+    monkeypatch.setattr(runner, "stream_model_responses", lambda model, prompts, *a: _aiter([]))
     saved: List[str] = []
     monkeypatch.setattr(
         runner, "save_pipeline_results",

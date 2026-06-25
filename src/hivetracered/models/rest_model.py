@@ -324,14 +324,22 @@ class RestModel(Model):
         cur_result_idx = 0
 
         with tqdm(total=len(tasks), desc=f"Processing requests with {self.model_name}", unit="request") as progress_bar:
-            for task in asyncio.as_completed(tasks):
-                idx, res, error = await task
-                progress_bar.update(1)
+            try:
+                for completed in asyncio.as_completed(tasks):
+                    idx, res, error = await completed
+                    progress_bar.update(1)
 
-                results[idx] = res
-                while cur_result_idx in results:
-                    yield results.pop(cur_result_idx)
-                    cur_result_idx += 1
+                    results[idx] = res
+                    while cur_result_idx in results:
+                        yield results.pop(cur_result_idx)
+                        cur_result_idx += 1
+            finally:
+                # If the consumer stops early (e.g. circuit breaker -> aclose),
+                # cancel outstanding tasks so they don't keep hitting the API.
+                for t in tasks:
+                    if not t.done():
+                        t.cancel()
+                await asyncio.gather(*tasks, return_exceptions=True)
 
     def get_params(self) -> dict:
         return {

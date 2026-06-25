@@ -45,7 +45,9 @@ def main() -> None:
 
     try:
         config = load_config(args.config)
-        asyncio.run(run_pipeline(config))
+        degraded = asyncio.run(run_pipeline(config))
+        if degraded:
+            raise SystemExit(1)
     except KeyboardInterrupt:
         logger.warning("Pipeline interrupted by user")
     except (FileNotFoundError, ValueError) as e:

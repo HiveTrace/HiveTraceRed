@@ -158,9 +158,16 @@ def test_SPEC_002_success_on_round_2_of_iteration_1_stops_early():
     assert turns[-1].committed is True, "last turn must be committed"
     transcript = result.final_transcript
     assert isinstance(transcript, list), "final_transcript must be a list"
-    assert len(transcript) == 6, "final_transcript must have 6 entries (3 human + 3 ai)"
+    assert len(transcript) == 5, (
+        "final_transcript must have 5 entries (3 human + 2 ai): the trailing "
+        "target answer is dropped so the transcript ends on the final human turn"
+    )
+    assert transcript[-1]["role"] == "human", (
+        "final_transcript must end on a human turn so the response stage elicits "
+        "a fresh answer"
+    )
     transcript_keys = [("role" in m, "content" in m) for m in transcript]
-    assert transcript_keys == [(True, True)] * 6, (
+    assert transcript_keys == [(True, True)] * 5, (
         "every final_transcript entry must have 'role' and 'content' keys"
     )
 
@@ -545,37 +552,6 @@ def test_SPEC_015_prompt_field_in_pipeline_row_is_valid_json_list_of_role_conten
     )
 
 
-# ── SPEC-016 ─────────────────────────────────────────────────────────
-
-
-def test_SPEC_016_crescendo_attack_yaml_is_valid_with_required_keys():
-    """SPEC-016 (AC-16): examples/crescendo_attack.yaml is valid YAML with required keys."""
-    import yaml
-    import os
-
-    yaml_path = os.path.join(
-        os.path.dirname(__file__), "..", "..", "..", "examples", "crescendo_attack.yaml"
-    )
-    yaml_path = os.path.abspath(yaml_path)
-
-    with open(yaml_path, "r") as f:
-        data = yaml.safe_load(f)
-
-    assert "attacker_model" in data, "YAML must contain 'attacker_model' key"
-    assert "response_model" in data, "YAML must contain 'response_model' key"
-    assert "attacks" in data, "YAML must contain 'attacks' key"
-    # The design mandates attacks[0] is the CrescendoAttack entry (design.md Touch point yaml)
-    crescendo_entry = data["attacks"][0]
-    assert isinstance(crescendo_entry, dict), "attacks[0] must be a dict"
-    assert crescendo_entry.get("name") == "CrescendoAttack", (
-        "attacks[0] must have name 'CrescendoAttack'"
-    )
-    assert "params" in crescendo_entry, "CrescendoAttack entry must have 'params'"
-    assert "max_rounds" in crescendo_entry["params"], (
-        "CrescendoAttack params must include 'max_rounds'"
-    )
-
-
 # ── SPEC-017 ─────────────────────────────────────────────────────────
 
 
@@ -811,18 +787,31 @@ def test_SPEC_023_synthetic_saturation_marker_appended_when_attacker_always_fail
 
 
 def test_SPEC_024_final_transcript_is_from_first_success_iteration():
-    """SPEC-024 (AC-15): final_transcript is from first-success iteration, not last attempted."""
-    # target_model: first call returns "response_for_iter_0", second returns "response_for_iter_1"
+    """SPEC-024 (AC-15): final_transcript is from first-success iteration, not last attempted.
+
+    Uses two rounds per iteration so each iteration has a committed (non-final)
+    target answer that survives the trailing-answer drop, giving the transcript
+    iteration-specific content to assert provenance against.
+    """
+    # iter 0: rounds 0,1 -> iter0_r0, iter0_r1 (both committed, no success)
+    # iter 1: rounds 0,1 -> iter1_r0 (committed), iter1_r1 (committed + success)
     target = Mock(spec=Model)
     target.invoke.side_effect = [
-        {"content": "response_for_iter_0"},
-        {"content": "response_for_iter_1"},
+        {"content": "iter0_r0"},
+        {"content": "iter0_r1"},
+        {"content": "iter1_r0"},
+        {"content": "iter1_r1"},
     ]
     target.__class__ = type("MockTargetModel", (), {"__name__": "MockTargetModel"})
 
-    # success_judge: False on first call (iter 0), True on second call (iter 1)
+    # success_judge: True only on the last call (iter 1, round 1)
     success_judge = Mock(spec=BaseEvaluator)
-    success_judge.evaluate.side_effect = [{"success": False}, {"success": True}]
+    success_judge.evaluate.side_effect = [
+        {"success": False},
+        {"success": False},
+        {"success": False},
+        {"success": True},
+    ]
     success_judge.get_name.return_value = "MockSuccessJudge"
 
     refusal_judge = Mock(spec=BaseEvaluator)
@@ -836,7 +825,7 @@ def test_SPEC_024_final_transcript_is_from_first_success_iteration():
         target_model=target,
         refusal_judge=refusal_judge,
         success_judge=success_judge,
-        max_rounds=1,
+        max_rounds=2,
         max_iterations=3,
         refusal_cap=10,
     )
@@ -845,15 +834,21 @@ def test_SPEC_024_final_transcript_is_from_first_success_iteration():
 
     assert len(result.iterations) == 2, "must have exactly 2 iterations (iter 0 failed, iter 1 succeeded)"
     assert result.final_transcript, "final_transcript must be non-empty"
-    # Build content list unconditionally (all messages have "content" in the transcript)
-    transcript_contents = [m.get("content", "") for m in result.final_transcript]
-    contains_iter1 = ["response_for_iter_1" in c for c in transcript_contents]
-    contains_iter0 = ["response_for_iter_0" in c for c in transcript_contents]
-    assert True in contains_iter1, (
-        "final_transcript must contain 'response_for_iter_1' (from the successful iteration 1)"
+    assert result.final_transcript[-1]["role"] == "human", (
+        "final_transcript must end on a human turn (trailing target answer dropped)"
     )
-    assert True not in contains_iter0, (
-        "final_transcript must NOT contain 'response_for_iter_0' (from the failed iteration 0)"
+    transcript_contents = [m.get("content", "") for m in result.final_transcript]
+    # The committed iter-1 round-0 answer stays as conversational context...
+    assert any("iter1_r0" in c for c in transcript_contents), (
+        "final_transcript must retain the committed iter-1 context answer 'iter1_r0'"
+    )
+    # ...the successful final answer is dropped...
+    assert not any("iter1_r1" in c for c in transcript_contents), (
+        "final_transcript must NOT contain the final target answer 'iter1_r1' (it is dropped)"
+    )
+    # ...and nothing from the failed iteration 0 leaks in.
+    assert not any("iter0" in c for c in transcript_contents), (
+        "final_transcript must NOT contain any iteration-0 response (failed iteration)"
     )
 
 

@@ -20,7 +20,7 @@ from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 from typing import Any
 
-from hivetracered.attacks.base_attack import BaseAttack
+from hivetracered.attacks.base_attack import AttackModelError, BaseAttack
 from hivetracered.attacks.iterative_attack import LanguageConfig, RUSSIAN_LANGUAGE_CONFIG
 from hivetracered.evaluators.base_evaluator import BaseEvaluator
 from hivetracered.evaluators.keyword_evaluator import KeywordEvaluator
@@ -103,7 +103,9 @@ class ConversationAttackResult:
         success: Whether any iteration achieved a successful jailbreak.
         iterations: All iteration results including failed/partial ones.
         final_transcript: First-success iteration H_T; last-attempted H_T if
-                          no success.
+                          no success. The trailing target (ai) answer is
+                          dropped so the transcript ends on the final human
+                          turn and can be replayed to elicit a fresh response.
     """
 
     goal: str
@@ -212,6 +214,14 @@ class CrescendoAttack(BaseAttack):
 
     # ── BaseAttack contract ───────────────────────────────────────────────
 
+    @staticmethod
+    def _content_or_raise(response: dict) -> str:
+        """Return the model response content, or raise AttackModelError if the
+        request failed (a global fault like a dead key aborts the whole run)."""
+        if response.get("error"):
+            raise AttackModelError(response["error"])
+        return response.get("content", "")
+
     def apply(self, prompt) -> tuple[str, dict[str, Any]]:
         """Apply the attack to a single prompt and return (transcript_json, metadata)."""
         goal = self._extract_goal(prompt)
@@ -229,17 +239,26 @@ class CrescendoAttack(BaseAttack):
 
         async def _run_task(idx: int, prompt):
             goal = self._extract_goal(prompt)
-            result = await self.run_attack_async(goal)
-            return idx, json.dumps(result.final_transcript, ensure_ascii=False)
+            try:
+                result = await self.run_attack_async(goal)
+                return idx, json.dumps(result.final_transcript, ensure_ascii=False), None
+            except AttackModelError as e:
+                # A model call failed mid-run; surface the error so create_dataset
+                # marks the record and Stage 2 skips it (no empty prompt to target).
+                return idx, "", e.error
 
         tasks = [asyncio.create_task(_run_task(i, p)) for i, p in enumerate(prompts)]
-        results: dict[int, str] = {}
+        results: dict[int, tuple] = {}
         cur_idx = 0
         for task in asyncio.as_completed(tasks):
-            idx, item = await task
-            results[idx] = item
+            idx, item, error = await task
+            results[idx] = (item, error)
             while cur_idx in results:
-                yield results.pop(cur_idx)
+                item, error = results.pop(cur_idx)
+                if error:
+                    yield (item, {"attack_error": error})
+                else:
+                    yield item
                 cur_idx += 1
 
     def get_name(self) -> str:
@@ -306,6 +325,23 @@ class CrescendoAttack(BaseAttack):
             ],
         }
 
+    @staticmethod
+    def _drop_trailing_target_answer(
+        transcript: list[dict[str, str]],
+    ) -> list[dict[str, str]]:
+        """Return a copy of the transcript with a trailing target (ai) turn removed.
+
+        ``final_transcript`` is replayed against the response-stage model to
+        obtain a fresh answer to the final escalated question, so the recorded
+        target answer must not be the last turn. All prior human/ai turns are
+        kept as conversational context. A committed transcript always ends with
+        an ``ai`` turn (see the H_T append/pop discipline); the role guard makes
+        the helper a no-op for an empty or already-trimmed transcript.
+        """
+        if transcript and transcript[-1].get("role") == "ai":
+            return transcript[:-1]
+        return list(transcript)
+
     # ── Core algorithm ────────────────────────────────────────────────────
 
     def run_attack(self, goal: str) -> ConversationAttackResult:
@@ -340,9 +376,11 @@ class CrescendoAttack(BaseAttack):
                         attacker_prompt = (
                             f"{system_content}\n\n{self._render_attacker_user_turn(H_A)}"
                         )
-                        raw = self.attacker_model.invoke(attacker_prompt)
-                        q = self._extract_json_field(raw["content"], "q")
-                        summary = self._extract_json_field(raw["content"], "summary")
+                        raw_content = self._content_or_raise(self.attacker_model.invoke(attacker_prompt))
+                        q = self._extract_json_field(raw_content, "q")
+                        summary = self._extract_json_field(raw_content, "summary")
+                    except AttackModelError:
+                        raise  # model fault: abort the run, surfaced by stream_abatch/apply
                     except Exception as e:
                         turns.append(ConversationTurnResult(
                             iteration=it, round=round_idx, q="",
@@ -375,8 +413,9 @@ class CrescendoAttack(BaseAttack):
                     # --- Target call ---
                     H_T.append({"role": "human", "content": q})
                     try:
-                        resp = self.target_model.invoke(H_T)
-                        r = resp["content"]
+                        r = self._content_or_raise(self.target_model.invoke(H_T))
+                    except AttackModelError:
+                        raise  # model fault: abort the run, surfaced by stream_abatch/apply
                     except Exception as e:
                         H_T.pop()
                         turns.append(ConversationTurnResult(
@@ -467,7 +506,7 @@ class CrescendoAttack(BaseAttack):
             goal=goal,
             success=overall_success,
             iterations=iterations,
-            final_transcript=final_transcript,
+            final_transcript=self._drop_trailing_target_answer(final_transcript),
         )
 
     async def run_attack_async(self, goal: str) -> ConversationAttackResult:
@@ -501,9 +540,11 @@ class CrescendoAttack(BaseAttack):
                         attacker_prompt = (
                             f"{system_content}\n\n{self._render_attacker_user_turn(H_A)}"
                         )
-                        raw = await self.attacker_model.ainvoke(attacker_prompt)
-                        q = self._extract_json_field(raw["content"], "q")
-                        summary = self._extract_json_field(raw["content"], "summary")
+                        raw_content = self._content_or_raise(await self.attacker_model.ainvoke(attacker_prompt))
+                        q = self._extract_json_field(raw_content, "q")
+                        summary = self._extract_json_field(raw_content, "summary")
+                    except AttackModelError:
+                        raise  # model fault: abort the run, surfaced by stream_abatch/apply
                     except Exception as e:
                         turns.append(ConversationTurnResult(
                             iteration=it, round=round_idx, q="",
@@ -536,8 +577,9 @@ class CrescendoAttack(BaseAttack):
                     # --- Target call ---
                     H_T.append({"role": "human", "content": q})
                     try:
-                        resp = await self.target_model.ainvoke(H_T)
-                        r = resp["content"]
+                        r = self._content_or_raise(await self.target_model.ainvoke(H_T))
+                    except AttackModelError:
+                        raise  # model fault: abort the run, surfaced by stream_abatch/apply
                     except Exception as e:
                         H_T.pop()
                         turns.append(ConversationTurnResult(
@@ -627,5 +669,5 @@ class CrescendoAttack(BaseAttack):
             goal=goal,
             success=overall_success,
             iterations=iterations,
-            final_transcript=final_transcript,
+            final_transcript=self._drop_trailing_target_answer(final_transcript),
         )

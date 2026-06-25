@@ -292,6 +292,12 @@ async def stream_attack(attack: BaseAttack,
             else:
                 prompt_value, prompt_metadata = attack_prompt, {}
 
+            # A model-based attack signals a per-prompt attacker-model failure via
+            # an 'attack_error' key in its metadata. Surface it as the record's
+            # error so Stage 2 skips it instead of sending an empty prompt.
+            prompt_metadata = dict(prompt_metadata) if isinstance(prompt_metadata, dict) else {}
+            attack_error = prompt_metadata.pop("attack_error", "")
+
             # Extract base fields if base_prompt is a dict
             base_fields = {}
             if isinstance(base_prompts[i], dict):
@@ -305,7 +311,7 @@ async def stream_attack(attack: BaseAttack,
                     "attack_name": attack_name,
                     "attack_type": ATTACK_CLASSES[attack_name]["attack_type"],
                     "attack_params": attack.get_params(),
-                    "error": ""
+                    "error": attack_error
                 }
             i += 1
     except Exception as e:

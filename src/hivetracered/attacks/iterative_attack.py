@@ -11,7 +11,7 @@ from dataclasses import dataclass, field
 from typing import Any
 from collections.abc import AsyncGenerator
 
-from hivetracered.attacks.base_attack import BaseAttack
+from hivetracered.attacks.base_attack import AttackModelError, BaseAttack
 from hivetracered.evaluators.base_evaluator import BaseEvaluator
 from hivetracered.models.base_model import Model
 
@@ -110,6 +110,14 @@ class IterativeAttack(BaseAttack):
         self._name = name
         self._description = description
 
+    @staticmethod
+    def _content_or_raise(response: dict) -> str:
+        """Return the model response content, or raise AttackModelError if the
+        request failed (response carries an 'error' field instead of real content)."""
+        if response.get("error"):
+            raise AttackModelError(response["error"])
+        return response.get("content", "")
+
     def _strip_markdown_json(self, response: str) -> str:
         """Strip markdown code block wrappers from JSON response."""
         response = response.strip()
@@ -200,18 +208,27 @@ class IterativeAttack(BaseAttack):
 
         async def _run_task(idx: int, prompt):
             goal = self._extract_goal(prompt)
-            result = await self.run_attack_async(goal)
-            return idx, self._format_result(prompt, result.best_attack_prompt)
+            try:
+                result = await self.run_attack_async(goal)
+                return idx, self._format_result(prompt, result.best_attack_prompt), None
+            except AttackModelError as e:
+                # A model call failed mid-run; surface the error so create_dataset
+                # marks the record and Stage 2 skips it (no empty prompt to target).
+                return idx, self._format_result(prompt, ""), e.error
 
         tasks = [asyncio.create_task(_run_task(i, p)) for i, p in enumerate(prompts)]
 
         results: dict[int, Any] = {}
         cur_idx = 0
         for task in asyncio.as_completed(tasks):
-            idx, formatted = await task
-            results[idx] = formatted
+            idx, formatted, error = await task
+            results[idx] = (formatted, error)
             while cur_idx in results:
-                yield results.pop(cur_idx)
+                formatted, error = results.pop(cur_idx)
+                if error:
+                    yield (formatted, {"attack_error": error})
+                else:
+                    yield formatted
                 cur_idx += 1
 
     def get_name(self) -> str:

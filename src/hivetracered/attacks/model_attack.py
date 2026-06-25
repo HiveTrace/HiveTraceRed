@@ -178,16 +178,22 @@ class ModelAttack(BaseAttack):
         
         i = 0
         async for response in self.model.stream_abatch(formatted_prompts):
+            processed_response = self.post_process_response(response.get("content", ""))
             if isinstance(prompts[i], str):
                 # For string prompts, return the model response content with post-processing
-                yield self.post_process_response(response["content"])
+                value = processed_response
             elif isinstance(prompts[i], list):
                 # For list prompts, keep all messages except the last and append the transformed message
                 transformed_messages = prompts[i][:-1]
-                # Post-process the response
-                processed_response = self.post_process_response(response["content"])
                 transformed_messages.append({"role": "human", "content": processed_response})
-                yield transformed_messages
+                value = transformed_messages
+
+            # If the attacker model failed, surface the error so downstream stages
+            # don't send the (empty) transformed prompt to the target model.
+            if response.get("error"):
+                yield (value, {"attack_error": response["error"]})
+            else:
+                yield value
             i += 1
             
     def get_name(self) -> str:

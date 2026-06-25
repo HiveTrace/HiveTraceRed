@@ -65,6 +65,69 @@ def test_stream_model_responses_does_not_add_error_field_on_success():
     assert "error" not in results[0]
 
 
+# ── Circuit breaker ─────────────────────────────────────────────────
+
+
+def test_stream_model_responses_circuit_breaker_marks_remaining_without_sending():
+    # 3 errors in a row at threshold 3 -> stop sending, mark the rest skipped_after_failures.
+    model = MockModel(side_effect=[
+        {"content": "", "error": "no balance"},
+        {"content": "", "error": "no balance"},
+        {"content": "", "error": "no balance"},
+        {"content": "unused"},
+        {"content": "unused"},
+    ])
+    attack_prompts = [{"prompt": f"p{i}", "attack_name": "A"} for i in range(5)]
+
+    results = async_collect(
+        stream_model_responses(model, attack_prompts, consecutive_failures=3)
+    )
+
+    # Contract preserved: one record per prompt, in order.
+    assert len(results) == 5
+    assert [r["prompt"] for r in results] == [f"p{i}" for i in range(5)]
+    # Remaining prompts are synthetic skipped errors, model never queried for them.
+    assert results[3]["error"].startswith("skipped_after_failures:")
+    assert results[4]["error"].startswith("skipped_after_failures:")
+    assert results[4]["response"] == ""
+    assert model.call_log == ["p0", "p1", "p2"]
+
+
+def test_stream_model_responses_breaker_disabled_when_zero():
+    model = MockModel(side_effect=[{"content": "", "error": "e"} for _ in range(4)])
+    attack_prompts = [{"prompt": f"p{i}", "attack_name": "A"} for i in range(4)]
+
+    results = async_collect(
+        stream_model_responses(model, attack_prompts, consecutive_failures=0)
+    )
+
+    assert len(results) == 4
+    assert all("skipped_after_failures" not in (r.get("error") or "") for r in results)
+    assert model.call_log == ["p0", "p1", "p2", "p3"]
+
+
+# ── Stage-1 error passthrough ───────────────────────────────────────
+
+
+def test_stream_model_responses_does_not_send_records_with_stage1_error():
+    # A record that already failed in Stage 1 (error set, empty prompt) must NOT
+    # be sent to the target; its error passes straight through, order preserved.
+    model = MockModel(side_effect=[{"content": "real-answer"}])
+    attack_prompts = [
+        {"prompt": "", "base_prompt": "p0", "error": "attacker failed"},
+        {"prompt": "real", "base_prompt": "p1"},
+    ]
+
+    results = async_collect(stream_model_responses(model, attack_prompts))
+
+    assert [r["base_prompt"] for r in results] == ["p0", "p1"]
+    assert model.call_log == ["real"]            # only the clean prompt was sent
+    assert results[0]["error"] == "attacker failed"
+    assert results[0]["response"] == ""
+    assert results[1]["response"] == "real-answer"
+    assert "error" not in results[1]
+
+
 # ── is_blocked flag ─────────────────────────────────────────────────
 
 

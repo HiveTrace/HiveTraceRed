@@ -157,6 +157,30 @@ def test_stream_attack_dict_inputs_preserve_extra_columns():
         Registry._attacks.pop("TemplateAttack", None)
 
 
+def test_stream_attack_maps_attack_error_metadata_to_record_error():
+    # A model attack signals a per-prompt attacker failure via (value,
+    # {"attack_error": ...}); stream_attack must surface it as the record error.
+    class _PartialFailAttack(TemplateAttack):
+        async def stream_abatch(self, prompts):
+            yield "ok-prompt"                                  # success
+            yield ("", {"attack_error": "attacker 402"})        # attacker failed
+
+    from hivetracered.registry import Registry
+    Registry._attacks["_PartialFailAttack"] = {"class": _PartialFailAttack, "category": "test"}
+    attack = _PartialFailAttack(template="{prompt}")
+
+    try:
+        results = async_collect(stream_attack(attack, ["a", "b"]))
+
+        assert results[0]["error"] == ""
+        assert results[0]["prompt"] == "ok-prompt"
+        assert results[1]["error"] == "attacker 402"
+        # attack_error is consumed, not left in the metadata column.
+        assert "attack_error" not in results[1]["metadata"]
+    finally:
+        Registry._attacks.pop("_PartialFailAttack", None)
+
+
 def test_stream_attack_failure_yields_error_dicts_for_each_input():
     class _BatchBoomAttack(TemplateAttack):
         async def stream_abatch(self, prompts):

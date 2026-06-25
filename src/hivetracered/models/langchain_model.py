@@ -1,3 +1,4 @@
+import logging
 from typing import Any
 from hivetracered.models.base_model import Model
 from collections.abc import AsyncGenerator
@@ -9,6 +10,8 @@ from uuid import UUID
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.rate_limiters import InMemoryRateLimiter
 from langchain.schema import LLMResult
+
+logger = logging.getLogger(__name__)
 
 class LangchainModel(Model):
     """
@@ -104,10 +107,15 @@ class LangchainModel(Model):
             prompt: A string or list of messages to send to the model
             
         Returns:
-            The model's response
+            The model's response, or an error dict ({"content": "", "error": ...,
+            "error_type": ...}) if the request fails after retries — never raises.
         """
-        return dict(self.client.invoke(prompt))
-    
+        try:
+            return dict(self.client.invoke(prompt))
+        except Exception as e:
+            logger.warning("%s request failed: %s", self.model_name, e)
+            return {"content": "", "error": str(e), "error_type": type(e).__name__}
+
     async def ainvoke(self, prompt: str | list[dict[str, str]]) -> dict:
         """
         Send a single request to the model asynchronously.
@@ -116,10 +124,15 @@ class LangchainModel(Model):
             prompt: A string or list of messages to send to the model
 
         Returns:
-            The model's response
+            The model's response, or an error dict ({"content": "", "error": ...,
+            "error_type": ...}) if the request fails after retries — never raises.
         """
         async with self._concurrency_slot():
-            return dict(await self.client.ainvoke(prompt))
+            try:
+                return dict(await self.client.ainvoke(prompt))
+            except Exception as e:
+                logger.warning("%s request failed: %s", self.model_name, e)
+                return {"content": "", "error": str(e), "error_type": type(e).__name__}
     
     def batch(self, prompts: list[str | list[dict[str, str]]]) -> list[dict]:
         """
@@ -207,15 +220,23 @@ class LangchainModel(Model):
 
         # Create tqdm progress bar with context manager for proper cleanup
         with tqdm(total=total_tasks, desc=f"Processing requests with {self.model_name}", unit="request") as progress_bar:
-            for task in asyncio.as_completed(tasks):
-                idx, res, error = await task
-                progress_bar.update(1)  # Update progress bar for each completed task
+            try:
+                for completed in asyncio.as_completed(tasks):
+                    idx, res, error = await completed
+                    progress_bar.update(1)  # Update progress bar for each completed task
 
-                results[idx] = res
-                while cur_result_idx in results:
-                    yield dict(results[cur_result_idx])
-                    results.pop(cur_result_idx)
-                    cur_result_idx += 1 
+                    results[idx] = res
+                    while cur_result_idx in results:
+                        yield dict(results[cur_result_idx])
+                        results.pop(cur_result_idx)
+                        cur_result_idx += 1
+            finally:
+                # If the consumer stops early (e.g. circuit breaker -> aclose),
+                # cancel outstanding tasks so they don't keep hitting the API.
+                for t in tasks:
+                    if not t.done():
+                        t.cancel()
+                await asyncio.gather(*tasks, return_exceptions=True)
 
 
 class BatchCallback(BaseCallbackHandler):

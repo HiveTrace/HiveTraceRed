@@ -1,6 +1,20 @@
 from collections.abc import AsyncGenerator
 from abc import ABC, abstractmethod
 
+
+class AttackModelError(Exception):
+    """Raised when an attacker/target model call fails mid-attack.
+
+    Lets a single failed model request abort that prompt's run and surface the
+    error, instead of silently continuing with empty content. Used by both
+    iterative (PAIR/TAP) and conversational (Crescendo) attacks.
+    """
+
+    def __init__(self, error: str):
+        super().__init__(error)
+        self.error = error
+
+
 class BaseAttack(ABC):
     """
     Abstract base class for all attack implementations.

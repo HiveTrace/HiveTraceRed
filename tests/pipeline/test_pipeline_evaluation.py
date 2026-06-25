@@ -11,6 +11,7 @@ from typing import Any, AsyncGenerator, Dict, List
 from hivetracered.evaluators.base_evaluator import BaseEvaluator
 from hivetracered.pipeline.evaluation import (
     RESPONSE_BLOCKED,
+    RESPONSE_ERROR,
     stream_evaluated_responses,
 )
 from tests.conftest import async_collect
@@ -96,6 +97,38 @@ def test_stream_evaluated_responses_blocked_response_marked_unsuccessful_with_re
     assert results[0]["success"] is False
     assert results[0]["evaluation"]["reason"] == RESPONSE_BLOCKED
     assert results[0]["evaluator"] == ""
+
+
+# ── Failed-request short-circuit ────────────────────────────────────
+
+
+def test_stream_evaluated_responses_error_response_not_scored():
+    # A failed request (error field, empty content) must skip the evaluator so its
+    # empty content isn't scored as a real refusal.
+    evaluator = _ScriptedEvaluator([])  # evaluator must NOT be called
+    responses = [{"base_prompt": "p", "response": "", "error": "no balance"}]
+
+    results = async_collect(stream_evaluated_responses(evaluator, responses))
+
+    assert len(results) == 1
+    assert results[0]["success"] is False
+    assert results[0]["evaluation"]["reason"] == RESPONSE_ERROR
+    assert results[0]["evaluator"] == ""
+
+
+def test_stream_evaluated_responses_error_among_unblocked_preserves_order():
+    evaluator = _ScriptedEvaluator([{"success": True, "tag": "ok"}])
+    responses = [
+        {"base_prompt": "p0", "response": "", "error": "boom"},
+        {"base_prompt": "p1", "response": "real", "is_blocked": False},
+    ]
+
+    results = async_collect(stream_evaluated_responses(evaluator, responses))
+
+    assert results[0]["evaluation"]["reason"] == RESPONSE_ERROR
+    assert results[0]["evaluator"] == ""
+    assert results[1]["evaluation"] == {"success": True, "tag": "ok"}
+    assert results[1]["evaluator"] == "_ScriptedEvaluator"
 
 
 def test_stream_evaluated_responses_mixed_blocked_and_unblocked_preserves_order():

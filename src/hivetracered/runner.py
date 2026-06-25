@@ -26,6 +26,8 @@ from hivetracered.pipeline import (
     stream_model_responses,
 )
 from hivetracered.pipeline.create_dataset import _parse_attack_config
+from hivetracered.pipeline.model_responses import CONSECUTIVE_FAILURES_DEFAULT
+from hivetracered.pipeline.evaluation import RESPONSE_ERROR
 from hivetracered.report import (
     build_html_report,
     calculate_metrics,
@@ -115,7 +117,9 @@ async def get_model_responses(
         return []
 
     model_responses: list[dict[str, Any]] = []
-    async for response in stream_model_responses(response_model, attack_prompts):
+    async for response in stream_model_responses(
+        response_model, attack_prompts, _consecutive_failures(config)
+    ):
         model_responses.append(response)
 
     if not model_responses:
@@ -325,16 +329,33 @@ async def _evaluate_dataset(
 
     evaluation_results: list[dict[str, Any]] = []
     try:
-        prompts = [r.get("base_prompt", "") for r in responses]
-        async for batch_result in spec.evaluator.stream_abatch(prompts, responses):
-            idx = len(evaluation_results)
-            source = responses[idx] if idx < len(responses) else {}
-            evaluation_results.append({
-                **source,
-                "success": batch_result.get("success", False),
-                "evaluation": batch_result,
-                "evaluator": spec.evaluator.__class__.__name__,
-            })
+        # Skip failed requests (error field): scoring their empty content would
+        # pollute results. Evaluate only the rest, then weave back in order.
+        eval_indices = [i for i, r in enumerate(responses) if not r.get("error")]
+        eval_inputs = [responses[i] for i in eval_indices]
+        prompts = [r.get("base_prompt", "") for r in eval_inputs]
+
+        scored_by_index: dict[int, dict[str, Any]] = {}
+        async for batch_result in spec.evaluator.stream_abatch(prompts, eval_inputs):
+            orig_idx = eval_indices[len(scored_by_index)]
+            scored_by_index[orig_idx] = batch_result
+
+        for i, source in enumerate(responses):
+            if i in scored_by_index:
+                batch_result = scored_by_index[i]
+                evaluation_results.append({
+                    **source,
+                    "success": batch_result.get("success", False),
+                    "evaluation": batch_result,
+                    "evaluator": spec.evaluator.__class__.__name__,
+                })
+            else:
+                evaluation_results.append({
+                    **source,
+                    "success": False,
+                    "evaluation": {"success": False, "reason": RESPONSE_ERROR},
+                    "evaluator": "",
+                })
     except Exception as e:
         logger.error("Stage 3 failed for dataset '%s': %s", spec.name, e, exc_info=True)
         if len(responses) == 0:
@@ -421,7 +442,8 @@ async def _run_pipeline_for_datasets(
             records = []
             if response_model is not None:
                 async for record in stream_model_responses(
-                    response_model, attacks_by_dataset.get(spec.name, [])
+                    response_model, attacks_by_dataset.get(spec.name, []),
+                    _consecutive_failures(config),
                 ):
                     records.append(record)
             save_pipeline_results(
@@ -528,6 +550,26 @@ async def _run_stage_eval(
     return [], None
 
 
+def _consecutive_failures(config: dict[str, Any]) -> int:
+    """Circuit-breaker threshold from config (error_handling.consecutive_failures)."""
+    return config.get("error_handling", {}).get(
+        "consecutive_failures", CONSECUTIVE_FAILURES_DEFAULT
+    )
+
+
+def _max_failure_rate(config: dict[str, Any]) -> float:
+    """Failure fraction above which a run is reported as degraded (nonzero exit)."""
+    return config.get("error_handling", {}).get("max_failure_rate", 0.5)
+
+
+def _error_rate(records: list[dict[str, Any]]) -> float:
+    """Fraction of records whose request failed (non-empty 'error' field)."""
+    if not records:
+        return 0.0
+    failed = sum(1 for r in records if r.get("error"))
+    return failed / len(records)
+
+
 def _log_summary(
     run_dir: str,
     attack_prompts: list[dict[str, Any]],
@@ -547,8 +589,12 @@ def _log_summary(
         logger.info("Report: %s", report_path)
 
 
-async def run_pipeline(config: dict[str, Any]) -> None:
-    """Run the complete testing pipeline, controlling stages via config."""
+async def run_pipeline(config: dict[str, Any]) -> bool:
+    """Run the complete testing pipeline, controlling stages via config.
+
+    Returns True if the run is degraded (request failure rate above
+    error_handling.max_failure_rate), so the CLI can exit non-zero.
+    """
     run_dir = await _prepare_run_dir(config)
     output_format = config.get("output_format", "csv")
 
@@ -596,3 +642,11 @@ async def run_pipeline(config: dict[str, Any]) -> None:
         logger.info("Skipping report: no evaluation file available.")
 
     _log_summary(run_dir, attack_prompts, model_responses, evaluation_results, report_path)
+
+    # Evaluation records carry the request 'error' field through; fall back to raw
+    # responses when evaluation was disabled.
+    rate = _error_rate(evaluation_results or model_responses)
+    degraded = rate > _max_failure_rate(config)
+    if degraded:
+        logger.warning("Degraded run: %.0f%% of requests failed", rate * 100)
+    return degraded

@@ -145,9 +145,9 @@ class PAIRAttack(IterativeAttack):
 
         for i in range(self.max_iterations):
             attacker_prompt = self._build_attacker_prompt(goal, i, iterations)
-            attacker_response = (await self.attacker_model.ainvoke(attacker_prompt))["content"]
+            attacker_response = self._content_or_raise(await self.attacker_model.ainvoke(attacker_prompt))
             attack_prompt = self._extract_attack(attacker_response)
-            target_content = (await self.target_model.ainvoke(attack_prompt))["content"]
+            target_content = self._content_or_raise(await self.target_model.ainvoke(attack_prompt))
             eval_result = await self._evaluate_response_async(goal, target_content)
 
             result = IterationResult(

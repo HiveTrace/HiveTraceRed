@@ -1,0 +1,1455 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>AI Red Team Report</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link
+    href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+  <style>
+    /* ═══════════════════ Design Tokens ═══════════════════ */
+    :root {
+      --background: 0 0% 100%;
+      --foreground: 0 0% 3.9%;
+      --card: 0 0% 100%;
+      --card-foreground: 0 0% 3.9%;
+      --popover: 0 0% 100%;
+      --popover-foreground: 0 0% 3.9%;
+      --primary: 0 0% 9%;
+      --primary-foreground: 0 0% 98%;
+      --secondary: 0 0% 96.1%;
+      --secondary-foreground: 0 0% 9%;
+      --muted: 0 0% 96.1%;
+      --muted-foreground: 0 0% 45.1%;
+      --accent: 0 0% 96.1%;
+      --accent-foreground: 0 0% 9%;
+      --destructive: 0 84.2% 60.2%;
+      --destructive-foreground: 0 0% 98%;
+      --border: 0 0% 89.8%;
+      --input: 0 0% 89.8%;
+      --ring: 0 0% 63.9%;
+      --radius: 0.625rem;
+
+      /* Severity palette */
+      --sev-critical: 0 72% 51%;
+      --sev-critical-foreground: 0 0% 100%;
+      --sev-high: 25 95% 53%;
+      --sev-high-foreground: 0 0% 100%;
+      --sev-medium: 48 96% 53%;
+      --sev-medium-foreground: 0 0% 0%;
+      --sev-low: 142 71% 45%;
+      --sev-low-foreground: 0 0% 100%;
+
+      /* Chart accent */
+      --chart-1: 0 0% 20%;
+      --chart-2: 0 0% 32%;
+      --chart-3: 0 0% 44%;
+      --chart-4: 0 0% 56%;
+      --chart-5: 0 0% 68%;
+    }
+
+    .dark {
+      --background: 0 0% 3.9%;
+      --foreground: 0 0% 98%;
+      --card: 0 0% 3.9%;
+      --card-foreground: 0 0% 98%;
+      --popover: 0 0% 3.9%;
+      --popover-foreground: 0 0% 98%;
+      --primary: 0 0% 98%;
+      --primary-foreground: 0 0% 9%;
+      --secondary: 0 0% 14.9%;
+      --secondary-foreground: 0 0% 98%;
+      --muted: 0 0% 14.9%;
+      --muted-foreground: 0 0% 63.9%;
+      --accent: 0 0% 14.9%;
+      --accent-foreground: 0 0% 98%;
+      --destructive: 0 62.8% 30.6%;
+      --destructive-foreground: 0 0% 98%;
+      --border: 0 0% 14.9%;
+      --input: 0 0% 14.9%;
+      --ring: 0 0% 83.1%;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    html {
+      color-scheme: dark;
+    }
+
+    body {
+      background: hsl(var(--background));
+      color: hsl(var(--foreground));
+      font-family: 'Inter', system-ui, -apple-system, sans-serif;
+      font-feature-settings: "cv02", "cv03", "cv04", "cv11";
+      min-height: 100vh;
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+    }
+
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+
+    ::-webkit-scrollbar-track {
+      background: transparent;
+    }
+
+    ::-webkit-scrollbar-thumb {
+      background: hsl(var(--muted));
+      border-radius: 9999px;
+    }
+
+    ::-webkit-scrollbar-thumb:hover {
+      background: hsl(var(--muted-foreground) / 0.3);
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: translateY(4px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .animate-in {
+      animation: fadeIn 0.2s ease-out forwards;
+    }
+
+    /* ═══════════════════ Badge ═══════════════════ */
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      border-radius: 9999px;
+      padding: 1px 10px;
+      font-size: 11px;
+      font-weight: 600;
+      line-height: 20px;
+      white-space: nowrap;
+      transition: colors 0.15s;
+      border: 1px solid transparent;
+    }
+
+    .badge-default {
+      background: hsl(var(--primary));
+      color: hsl(var(--primary-foreground));
+    }
+
+    .badge-secondary {
+      background: hsl(var(--secondary));
+      color: hsl(var(--secondary-foreground));
+    }
+
+    .badge-outline {
+      background: transparent;
+      color: hsl(var(--foreground));
+      border-color: hsl(var(--border));
+    }
+
+    .badge-destructive {
+      background: hsl(var(--destructive));
+      color: hsl(var(--destructive-foreground));
+    }
+
+    .badge-critical {
+      background: hsl(var(--sev-critical) / 0.15);
+      color: hsl(0 90% 65%);
+      border-color: hsl(var(--sev-critical) / 0.3);
+    }
+
+    .badge-high {
+      background: hsl(var(--sev-high) / 0.15);
+      color: hsl(25 100% 65%);
+      border-color: hsl(var(--sev-high) / 0.3);
+    }
+
+    .badge-medium {
+      background: hsl(var(--sev-medium) / 0.15);
+      color: hsl(48 100% 65%);
+      border-color: hsl(var(--sev-medium) / 0.3);
+    }
+
+    .badge-low {
+      background: hsl(var(--sev-low) / 0.15);
+      color: hsl(142 80% 55%);
+      border-color: hsl(var(--sev-low) / 0.3);
+    }
+
+    .badge-mono {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      letter-spacing: 0.02em;
+    }
+
+    /* ═══════════════════ Card ═══════════════════ */
+    .card {
+      border-radius: var(--radius);
+      border: 1px solid hsl(var(--border));
+      background: hsl(var(--card));
+      color: hsl(var(--card-foreground));
+    }
+
+    .card-header {
+      padding: 24px 24px 0;
+    }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 600;
+      letter-spacing: -0.025em;
+      line-height: 1;
+    }
+
+    .card-description {
+      font-size: 13px;
+      color: hsl(var(--muted-foreground));
+      margin-top: 6px;
+    }
+
+    .card-content {
+      padding: 24px;
+    }
+
+    .card-footer {
+      padding: 0 24px 24px;
+    }
+
+    /* ═══════════════════ Table ═══════════════════ */
+    .table-wrapper {
+      overflow-x: auto;
+    }
+
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+    }
+
+    .table th {
+      padding: 10px 16px;
+      text-align: left;
+      font-weight: 500;
+      font-size: 12px;
+      color: hsl(var(--muted-foreground));
+      border-bottom: 1px solid hsl(var(--border));
+      white-space: nowrap;
+    }
+
+    .table td {
+      padding: 12px 16px;
+      border-bottom: 1px solid hsl(var(--border) / 0.5);
+      vertical-align: middle;
+    }
+
+    .table tr:last-child td {
+      border-bottom: none;
+    }
+
+    .table tr:hover td {
+      background: hsl(var(--muted) / 0.5);
+    }
+
+    /* ═══════════════════ Tabs ═══════════════════ */
+    .tabs-list {
+      display: flex;
+      align-items: center;
+      border-radius: var(--radius);
+      background: hsl(var(--muted));
+      padding: 4px;
+      gap: 2px;
+      border: 1px solid hsl(var(--border));
+      overflow-x: auto;
+      width: 100%;
+    }
+
+    .tabs-trigger {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 6px 16px;
+      border-radius: calc(var(--radius) - 2px);
+      border: 1px solid transparent;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 13px;
+      font-weight: 500;
+      white-space: nowrap;
+      background: transparent;
+      color: hsl(var(--muted-foreground));
+      transition: all 0.15s;
+    }
+
+    .tabs-trigger:hover {
+      color: hsl(var(--foreground));
+    }
+
+    .tabs-trigger.active {
+      background: hsl(var(--background));
+      color: hsl(var(--foreground));
+      box-shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
+      font-weight: 600;
+    }
+
+    .tabs-count {
+      font-size: 10px;
+      padding: 0 6px;
+      border-radius: 9999px;
+      font-weight: 600;
+      background: hsl(var(--destructive) / 0.15);
+      color: hsl(0 90% 65%);
+      line-height: 18px;
+    }
+
+    /* ═══════════════════ Progress ═══════════════════ */
+    .progress {
+      width: 100%;
+      height: 6px;
+      border-radius: 9999px;
+      background: hsl(var(--secondary));
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      border-radius: 9999px;
+      transition: width 0.4s ease;
+    }
+
+    /* ═══════════════════ Separator ═══════════════════ */
+    .separator {
+      border: none;
+      border-top: 1px solid hsl(var(--border));
+      margin: 16px 0;
+    }
+
+    /* ═══════════════════ Button ═══════════════════ */
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.15s;
+      padding: 8px 16px;
+      white-space: nowrap;
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: hsl(var(--foreground));
+      border: 1px solid hsl(var(--border));
+    }
+
+    .btn-outline:hover {
+      background: hsl(var(--accent));
+    }
+
+    .btn-ghost {
+      background: transparent;
+      border: none;
+      color: hsl(var(--muted-foreground));
+    }
+
+    .btn-ghost:hover {
+      background: hsl(var(--accent));
+      color: hsl(var(--accent-foreground));
+    }
+
+    .btn-sm {
+      padding: 4px 12px;
+      font-size: 12px;
+    }
+
+    .btn:focus-visible,
+    .tabs-trigger:focus-visible,
+    .sev-filter-btn:focus-visible,
+    .finding-item-header:focus-visible {
+      outline: 2px solid hsl(var(--ring));
+      outline-offset: 2px;
+    }
+
+    /* ═══════════════════ Layout ═══════════════════ */
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    .grid-3 {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
+    }
+
+    .grid-4 {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+    }
+
+    .grid-auto {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 12px;
+    }
+
+    .flex {
+      display: flex;
+    }
+
+    .flex-wrap {
+      flex-wrap: wrap;
+    }
+
+    .items-center {
+      align-items: center;
+    }
+
+    .justify-between {
+      justify-content: space-between;
+    }
+
+    .gap-1 {
+      gap: 4px;
+    }
+
+    .gap-2 {
+      gap: 8px;
+    }
+
+    .gap-3 {
+      gap: 12px;
+    }
+
+    .gap-4 {
+      gap: 16px;
+    }
+
+    .gap-6 {
+      gap: 24px;
+    }
+
+    .mt-1 {
+      margin-top: 4px;
+    }
+
+    .mt-2 {
+      margin-top: 8px;
+    }
+
+    .mt-3 {
+      margin-top: 12px;
+    }
+
+    .mt-4 {
+      margin-top: 16px;
+    }
+
+    .mt-6 {
+      margin-top: 24px;
+    }
+
+    .mb-2 {
+      margin-bottom: 8px;
+    }
+
+    .mb-3 {
+      margin-bottom: 12px;
+    }
+
+    .mb-4 {
+      margin-bottom: 16px;
+    }
+
+    .mb-6 {
+      margin-bottom: 24px;
+    }
+
+    .p-4 {
+      padding: 16px;
+    }
+
+    .p-6 {
+      padding: 24px;
+    }
+
+    .text-xs {
+      font-size: 12px;
+    }
+
+    .text-sm {
+      font-size: 13px;
+    }
+
+    .text-base {
+      font-size: 14px;
+    }
+
+    .text-lg {
+      font-size: 18px;
+    }
+
+    .text-xl {
+      font-size: 20px;
+    }
+
+    .text-2xl {
+      font-size: 24px;
+    }
+
+    .text-4xl {
+      font-size: 36px;
+    }
+
+    .font-medium {
+      font-weight: 500;
+    }
+
+    .font-semibold {
+      font-weight: 600;
+    }
+
+    .font-bold {
+      font-weight: 700;
+    }
+
+    .font-black {
+      font-weight: 900;
+    }
+
+    .tracking-tight {
+      letter-spacing: -0.025em;
+    }
+
+    .text-muted {
+      color: hsl(var(--muted-foreground));
+    }
+
+    .text-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .w-full {
+      width: 100%;
+    }
+
+    .text-center {
+      text-align: center;
+    }
+
+    .text-right {
+      text-align: right;
+    }
+
+    .truncate {
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .whitespace-pre-wrap {
+      white-space: pre-wrap;
+    }
+
+    .break-all {
+      word-break: break-all;
+    }
+
+    .rounded-t-0 {
+      border-top-left-radius: 0;
+      border-top-right-radius: 0;
+    }
+
+    .rounded-b-0 {
+      border-bottom-left-radius: 0;
+      border-bottom-right-radius: 0;
+    }
+
+    .border-t-transparent {
+      border-top-color: transparent;
+    }
+
+    /* ═══════════════════ Specific Components ═══════════════════ */
+    .status-indicator {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+    }
+
+    .status-indicator.fail {
+      background: hsl(var(--sev-critical));
+      box-shadow: 0 0 8px hsl(var(--sev-critical) / 0.4);
+    }
+
+    .status-indicator.pass {
+      background: hsl(var(--sev-low));
+      box-shadow: 0 0 8px hsl(var(--sev-low) / 0.4);
+    }
+
+    .status-indicator.warn {
+      background: hsl(var(--sev-high));
+      box-shadow: 0 0 8px hsl(var(--sev-high) / 0.4);
+    }
+
+    .status-indicator.skip {
+      background: hsl(var(--muted-foreground) / 0.3);
+    }
+
+    .stat-card {
+      text-align: center;
+      padding: 16px 12px;
+      background: hsl(var(--card));
+      border: 1px solid hsl(var(--border));
+      border-radius: calc(var(--radius) - 1px);
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(0, 1fr));
+      gap: 8px;
+      margin: 20px 0 16px;
+    }
+
+    .finding-item {
+      border-radius: var(--radius);
+      border: 1px solid hsl(var(--border));
+      margin-bottom: 8px;
+      overflow: hidden;
+      transition: all 0.15s;
+    }
+
+    .finding-item:hover {
+      border-color: hsl(var(--muted-foreground) / 0.3);
+    }
+
+    .finding-item-header {
+      width: 100%;
+      padding: 14px 20px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      background: hsl(var(--card));
+      border: none;
+      text-align: left;
+      color: inherit;
+    }
+
+    .finding-item-header:hover {
+      background: hsl(var(--muted) / 0.35);
+    }
+
+    .finding-item-detail {
+      padding: 20px;
+      background: hsl(var(--background));
+      border-top: 1px solid hsl(var(--border));
+    }
+
+    .diff-line-add {
+      color: hsl(142 80% 55%);
+      background: hsl(142 80% 55% / 0.06);
+      padding: 1px 8px;
+      border-radius: 2px;
+    }
+
+    .diff-line-del {
+      color: hsl(0 90% 65%);
+      background: hsl(0 90% 65% / 0.06);
+      padding: 1px 8px;
+      border-radius: 2px;
+    }
+
+    .diff-line-ctx {
+      color: hsl(var(--muted-foreground));
+      padding: 1px 8px;
+    }
+
+    .conv-bubble {
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      margin-bottom: 6px;
+      border: 1px solid hsl(var(--border));
+    }
+
+    .heatmap-shell {
+      border: 1px solid hsl(var(--border));
+      border-radius: var(--radius);
+      overflow: hidden;
+      background: hsl(var(--card));
+    }
+
+    .heatmap-table {
+      width: 100%;
+      min-width: 760px;
+      border-collapse: separate;
+      border-spacing: 0;
+      table-layout: fixed;
+    }
+
+    .heatmap-table thead th {
+      padding: 10px 8px;
+      text-align: center;
+      font-size: 10px;
+      font-weight: 600;
+      line-height: 1.35;
+      border-bottom: 1px solid hsl(var(--border));
+      border-right: 1px solid hsl(var(--border));
+    }
+
+    .heatmap-table thead th:first-child {
+      width: 140px;
+      min-width: 140px;
+      text-align: left;
+      position: sticky;
+      left: 0;
+      z-index: 3;
+    }
+
+    .heatmap-table thead th:last-child {
+      border-right: none;
+    }
+
+    .heatmap-row-label {
+      padding: 10px 12px;
+      text-align: left;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+      color: hsl(var(--foreground));
+      background: hsl(var(--card));
+      border-right: 1px solid hsl(var(--border));
+      border-bottom: 1px solid hsl(var(--border));
+      position: sticky;
+      left: 0;
+      z-index: 2;
+    }
+
+    .heatmap-cell {
+      padding: 10px 6px;
+      text-align: center;
+      font-size: 11px;
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      border-right: 1px solid hsl(var(--border));
+      border-bottom: 1px solid hsl(var(--border));
+      color: hsl(var(--foreground));
+      background: hsl(var(--muted));
+    }
+
+    .heatmap-table tbody tr:last-child .heatmap-row-label,
+    .heatmap-table tbody tr:last-child .heatmap-cell {
+      border-bottom: none;
+    }
+
+    .heatmap-table tbody tr .heatmap-cell:last-child {
+      border-right: none;
+    }
+
+    .heatmap-value {
+      display: inline-block;
+      min-width: 34px;
+    }
+
+    .heatmap-legend {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 12px;
+      flex-wrap: wrap;
+    }
+
+    .heatmap-scale {
+      display: flex;
+      border-radius: 4px;
+      overflow: hidden;
+      border: 1px solid hsl(var(--border));
+    }
+
+    .heatmap-scale-seg {
+      width: 18px;
+      height: 8px;
+    }
+
+    .sev-filter-btn {
+      padding: 6px 14px;
+      border-radius: var(--radius);
+      font-size: 12px;
+      font-weight: 500;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.15s;
+      background: transparent;
+      border: 1px solid hsl(var(--border));
+      color: hsl(var(--muted-foreground));
+    }
+
+    .sev-filter-btn.active {
+      background: hsl(var(--secondary));
+      color: hsl(var(--foreground));
+      border-color: hsl(var(--ring) / 0.3);
+    }
+
+    .kv-block {}
+
+    .kv-block-label {
+      font-size: 11px;
+      color: hsl(var(--muted-foreground));
+      font-weight: 500;
+      margin-bottom: 2px;
+    }
+
+    .kv-block-value {
+      font-size: 13px;
+      font-weight: 600;
+      font-family: 'JetBrains Mono', monospace;
+      color: hsl(var(--foreground));
+      word-break: break-all;
+    }
+
+    header {
+      background: hsl(var(--background) / 0.85);
+      backdrop-filter: blur(6px);
+    }
+
+    .header-panel {
+      border: 1px solid hsl(var(--border));
+      background: hsl(var(--card));
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-top: 20px;
+      margin-bottom: 0;
+      box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.06);
+    }
+
+    .main-content {
+      padding-top: 24px;
+      padding-bottom: 48px;
+    }
+
+    footer {
+      border-top: 1px solid hsl(var(--border));
+      background: hsl(var(--card));
+    }
+
+    .footer-inner {
+      padding: 20px;
+      text-align: center;
+    }
+
+    /* Score ring */
+    .grade-ring {
+      width: 64px;
+      height: 64px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      font-weight: 900;
+      letter-spacing: -0.03em;
+    }
+
+    @media (max-width: 1024px) {
+      .stats-grid {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 768px) {
+
+      .grid-2,
+      .grid-3,
+      .grid-4 {
+        grid-template-columns: 1fr;
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+
+      .header-panel {
+        padding: 16px;
+      }
+
+      .owasp-row {
+        grid-template-columns: 1fr !important;
+      }
+
+      .strat-row {
+        grid-template-columns: 1fr !important;
+      }
+
+      .heatmap-table {
+        min-width: 680px;
+      }
+
+      .heatmap-table thead th:first-child,
+      .heatmap-row-label {
+        width: 120px;
+        min-width: 120px;
+      }
+    }
+
+    /* OWASP compliance row */
+    .owasp-row {
+      display: grid;
+      grid-template-columns: 56px 1fr 80px 80px 90px;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      margin-bottom: 6px;
+      border: 1px solid hsl(var(--border));
+    }
+
+    /* Strategy row */
+    .strat-row {
+      display: grid;
+      grid-template-columns: 200px 1fr 80px 70px;
+      align-items: center;
+      gap: 12px;
+      padding: 12px 16px;
+      border-radius: var(--radius);
+      border: 1px solid hsl(var(--border));
+      margin-bottom: 6px;
+      background: hsl(var(--card));
+    }
+
+    .export-card {
+      padding: 16px;
+      border-radius: var(--radius);
+      border: 1px solid hsl(var(--border));
+      background: hsl(var(--card));
+      cursor: pointer;
+      transition: all 0.15s;
+      box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.04);
+    }
+
+    .export-card:hover {
+      background: hsl(var(--accent));
+      border-color: hsl(var(--ring) / 0.3);
+    }
+
+    .export-icon {
+      width: 28px;
+      height: 28px;
+      border-radius: calc(var(--radius) - 2px);
+      border: 1px solid hsl(var(--border));
+      background: hsl(var(--secondary));
+      color: hsl(var(--muted-foreground));
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 8px;
+    }
+
+    .tab-panel {
+      display: none;
+    }
+
+    .tab-panel.active {
+      display: block;
+    }
+
+    summary.finding-item-header {
+      list-style: none;
+    }
+
+    summary.finding-item-header::-webkit-details-marker {
+      display: none;
+    }
+  </style>
+</head>
+
+<body>
+  {% set scan = scan if scan is defined else (SCAN if SCAN is defined else {}) %}
+  {% set summary = summary if summary is defined else (SUMMARY if SUMMARY is defined else {}) %}
+  {% set cats = cats if cats is defined else (CATS if CATS is defined else []) %}
+  {% set strats = strats if strats is defined else (STRATS if STRATS is defined else []) %}
+  {% set heat = heat if heat is defined else (HEAT if HEAT is defined else {}) %}
+  {% set owasp_data = owasp_data if owasp_data is defined else (OWASP_DATA if OWASP_DATA is defined else []) %}
+  {% set mitre = mitre if mitre is defined else (MITRE if MITRE is defined else []) %}
+  {% set trend = trend if trend is defined else (TREND if TREND is defined else []) %}
+  {% set findings = findings if findings is defined else (FINDINGS if FINDINGS is defined else []) %}
+  {% set token_usage = scan.token_usage if scan.token_usage is defined else {} %}
+
+  {% macro sev_text(sev) -%}
+    {%- if sev == 'critical' -%}hsl(0 90% 65%)
+    {%- elif sev == 'high' -%}hsl(25 100% 65%)
+    {%- elif sev == 'medium' -%}hsl(48 100% 65%)
+    {%- else -%}hsl(142 80% 55%)
+    {%- endif -%}
+  {%- endmacro %}
+
+  {% macro asr_bar_color(asr) -%}
+    {%- if asr > 0.2 -%}hsl(0 72% 51%)
+    {%- elif asr > 0.12 -%}hsl(25 95% 53%)
+    {%- else -%}hsl(142 71% 45%)
+    {%- endif -%}
+  {%- endmacro %}
+
+  {% set ns = namespace(critical=0, high=0, medium=0, low=0) %}
+  {% for f in findings %}
+    {% set sev = f.sev|default('low', true) %}
+    {% if sev == 'critical' %}{% set ns.critical = ns.critical + 1 %}{% endif %}
+    {% if sev == 'high' %}{% set ns.high = ns.high + 1 %}{% endif %}
+    {% if sev == 'medium' %}{% set ns.medium = ns.medium + 1 %}{% endif %}
+    {% if sev == 'low' %}{% set ns.low = ns.low + 1 %}{% endif %}
+  {% endfor %}
+
+  {% set risk = summary.risk|default(0, true)|float %}
+  {% if risk >= 7 %}
+    {% set risk_color = 'hsl(0 90% 65%)' %}
+  {% elif risk >= 4 %}
+    {% set risk_color = 'hsl(25 100% 65%)' %}
+  {% else %}
+    {% set risk_color = 'hsl(142 80% 55%)' %}
+  {% endif %}
+
+  <header>
+    <div class="container">
+      <div class="header-panel">
+        <div class="flex justify-between items-center flex-wrap gap-4">
+          <div>
+            <div class="flex items-center gap-3 mb-2">
+              <span class="text-xs text-muted text-mono font-medium" style="letter-spacing:2px;text-transform:uppercase">AI Red Team Report</span>
+              <span class="badge badge-destructive">{{ summary.failed|default(0, true) }} vulnerabilities</span>
+            </div>
+            <h1 class="text-2xl font-bold tracking-tight">{{ scan.target_label|default('Untitled target', true) }}</h1>
+            <p class="text-muted mt-2">{{ scan.target_description|default('No description', true) }}</p>
+            <div class="flex flex-wrap gap-2 mt-3">
+              <span class="badge badge-secondary badge-mono">{{ scan.target_model|default('—', true) }}</span>
+              <span class="badge badge-secondary badge-mono">{{ scan.scan_timestamp|default('—', true) }}</span>
+              <span class="badge badge-secondary badge-mono">{{ scan.execution_time|default('—', true) }}</span>
+              <span class="badge badge-secondary badge-mono">{{ scan.tool_version|default('—', true) }}</span>
+            </div>
+          </div>
+          <div class="flex items-center gap-6">
+            <div class="text-center">
+              <p class="text-4xl font-black tracking-tight" style="color:{{ risk_color }}">{{ '%.1f'|format(risk) }}%</p>
+            </div>
+          </div>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat-card"><div class="text-xl font-black tracking-tight">{{ summary.total|default(0, true) }}</div><div class="text-xs text-muted text-mono mt-1">Tests</div></div>
+          <div class="stat-card"><div class="text-xl font-black tracking-tight" style="color:hsl(142 80% 55%)">{{ summary.passed|default(0, true) }}</div><div class="text-xs text-muted text-mono mt-1">Passed</div></div>
+          <div class="stat-card"><div class="text-xl font-black tracking-tight" style="color:hsl(0 90% 65%)">{{ summary.failed|default(0, true) }}</div><div class="text-xs text-muted text-mono mt-1">Failed</div></div>
+          <div class="stat-card"><div class="text-xl font-black tracking-tight" style="color:hsl(var(--muted-foreground))">{{ summary.errors|default(0, true) }}</div><div class="text-xs text-muted text-mono mt-1">Errors</div></div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="container main-content">
+    <div class="tabs-list rounded-b-0" id="tab-nav">
+      <button type="button" class="tabs-trigger active" data-tab="overview">Overview</button>
+      <button type="button" class="tabs-trigger" data-tab="compliance">Compliance</button>
+      <button type="button" class="tabs-trigger" data-tab="findings">Findings <span class="tabs-count">{{ summary.failed|default(0, true) }}</span></button>
+      <button type="button" class="tabs-trigger" data-tab="attacks">Attacks</button>
+      <button type="button" class="tabs-trigger" data-tab="remediation">Remediation</button>
+      <button type="button" class="tabs-trigger" data-tab="meta">Run Config</button>
+    </div>
+
+    <section class="tab-panel active" data-tab-panel="overview">
+      <div class="card rounded-t-0 border-t-transparent">
+        <div class="card-header">
+          <div class="card-title">Vulnerability Categories</div>
+          <div class="card-description">Pass/fail per category with OWASP and MITRE mapping</div>
+        </div>
+        <div class="card-content">
+          <div class="table-wrapper">
+            <table class="table">
+              <thead>
+                <tr><th>Category</th><th>OWASP</th><th>MITRE</th><th>Severity</th><th>Pass</th><th>Fail</th><th>ASR</th><th></th></tr>
+              </thead>
+              <tbody>
+                {% for row in cats %}
+                  {% set p = row.p|default(0, true)|float %}
+                  {% set f = row.f|default(0, true)|float %}
+                  {% set total = p + f %}
+                  {% set asr = (f / total) if total > 0 else 0 %}
+                  <tr>
+                    <td><div class="font-semibold text-sm">{{ row.cat|default('Unknown', true) }}</div><div class="text-xs text-muted text-mono">{{ row.plugin|default('—', true) }}</div></td>
+                    <td><span class="badge badge-outline badge-mono">{{ row.owasp|default('—', true) }}</span></td>
+                    <td><span class="badge badge-secondary badge-mono">{{ row.mitre|default('—', true) }}</span></td>
+                    <td><span class="badge badge-{{ row.sev|default('low', true) }}">{{ row.sev|default('low', true) }}</span></td>
+                    <td class="text-mono text-sm" style="color:hsl(142 80% 55%)">{{ row.p|default(0, true) }}</td>
+                    <td class="text-mono text-sm font-bold" style="color:hsl(0 90% 65%)">{{ row.f|default(0, true) }}</td>
+                    <td class="text-mono text-sm font-bold" style="color:{{ sev_text('critical' if asr > 0.2 else ('high' if asr > 0.12 else 'low')) }}">{{ '%.1f'|format(asr * 100) }}%</td>
+                    <td style="width:110px">
+                      <div class="progress"><div class="progress-fill" style="width:{{ '%.2f'|format((asr if asr < 1 else 1) * 100) }}%;background:{{ asr_bar_color(asr) }}"></div></div>
+                    </td>
+                  </tr>
+                {% endfor %}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-tab-panel="compliance">
+      <div class="card rounded-t-0 border-t-transparent">
+        <div class="card-header">
+          <div class="card-title">OWASP LLM Top 10 (2025)</div>
+          <div class="card-description">Compliance scorecard with status, findings, severity, and coverage</div>
+        </div>
+        <div class="card-content">
+          {% for o in owasp_data %}
+            {% if o.st == 'fail' %}
+              {% set bg = 'background:hsl(0 72% 51%/0.06);border-color:hsl(0 72% 51%/0.2)' %}
+            {% elif o.st == 'warn' %}
+              {% set bg = 'background:hsl(25 95% 53%/0.06);border-color:hsl(25 95% 53%/0.2)' %}
+            {% elif o.st == 'pass' %}
+              {% set bg = 'background:hsl(142 71% 45%/0.06);border-color:hsl(142 71% 45%/0.2)' %}
+            {% else %}
+              {% set bg = '' %}
+            {% endif %}
+            {% set cov = o.cov|default(0, true)|float %}
+            {% if cov == 100 %}
+              {% set cov_color = 'hsl(142 71% 45%)' %}
+            {% elif cov > 0 %}
+              {% set cov_color = 'hsl(25 95% 53%)' %}
+            {% else %}
+              {% set cov_color = 'hsl(var(--muted-foreground)/0.2)' %}
+            {% endif %}
+            <div class="owasp-row" style="{{ bg }}">
+              <span class="text-mono text-sm font-bold">{{ o.id|default('—', true) }}</span>
+              <span class="text-sm font-semibold">{{ o.name|default('Unknown', true) }}</span>
+              <span class="flex items-center gap-2 text-sm text-mono"><span class="status-indicator {{ o.st|default('skip', true) }}"></span> {{ o.st|default('skip', true)|upper }}</span>
+              {% if o.f|default(0, true) > 0 %}
+                <span class="text-sm text-mono font-bold" style="color:hsl(0 90% 65%)">{{ o.f }} findings</span>
+              {% else %}
+                <span class="text-sm text-muted">—</span>
+              {% endif %}
+              <div>
+                <div class="progress" style="height:4px"><div class="progress-fill" style="width:{{ cov if cov < 100 else 100 }}%;background:{{ cov_color }}"></div></div>
+                <div class="text-xs text-muted text-mono mt-1">{{ o.cov|default(0, true) }}%</div>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="card mt-4">
+        <div class="card-header">
+          <div class="card-title">MITRE ATLAS Tactics</div>
+          <div class="card-description">Adversarial ML tactics with technique IDs</div>
+        </div>
+        <div class="card-content">
+          <div class="grid-auto">
+            {% for m in mitre %}
+              <div class="card p-4" {% if m.f|default(0, true) > 0 %}style="border-color:hsl(0 72% 51%/0.3)"{% endif %}>
+                <div class="font-semibold text-sm mb-2">{{ m.tactic|default('Unknown', true) }}</div>
+                <div class="flex flex-wrap gap-1 mb-3">
+                  {% for t in m.tech|default([], true) %}<span class="badge badge-outline badge-mono">{{ t }}</span>{% endfor %}
+                </div>
+                <div class="text-sm text-mono font-bold">
+                  {% if m.f|default(0, true) > 0 %}
+                    <span style="color:hsl(0 90% 65%)">{{ m.f }} findings</span>
+                  {% else %}
+                    <span style="color:hsl(142 80% 55%)">✓ Clean</span>
+                  {% endif %}
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-tab-panel="findings">
+      <div class="card rounded-t-0 border-t-transparent p-6">
+        <div class="flex flex-wrap gap-2 mb-4" id="sev-filters">
+          <button class="sev-filter-btn active" data-sev-filter="all">All ({{ findings|length }})</button>
+          <button class="sev-filter-btn" data-sev-filter="critical">critical ({{ ns.critical }})</button>
+          <button class="sev-filter-btn" data-sev-filter="high">high ({{ ns.high }})</button>
+          <button class="sev-filter-btn" data-sev-filter="medium">medium ({{ ns.medium }})</button>
+          <button class="sev-filter-btn" data-sev-filter="low">low ({{ ns.low }})</button>
+        </div>
+
+        {% for f in findings %}
+          {% set sev = f.sev|default('low', true) %}
+          <details class="finding-item" data-sev="{{ sev }}" style="border-left:3px solid {{ sev_text(sev) }};">
+            <summary class="finding-item-header">
+              <span class="text-mono text-xs text-muted font-bold" style="min-width:56px">{{ f.id|default('—', true) }}</span>
+              <span class="font-semibold text-sm">{{ f.type|default('Unknown', true) }}</span>
+              <span class="text-sm text-muted">· {{ f.sub|default('—', true) }}</span>
+              <span class="badge badge-{{ sev }}">{{ sev }}</span>
+              <span class="badge badge-outline badge-mono">{{ f.owasp|default('—', true) }}</span>
+              <span class="badge badge-secondary">{{ f.strategy|default('—', true) }}</span>
+              {% if f.lang|default('en', true) != 'en' %}<span class="badge badge-medium">{{ f.lang|upper }}</span>{% endif %}
+              <div style="margin-left:auto;display:flex;align-items:center;gap:12px" class="text-xs text-mono text-muted">
+                <span>{{ f.hits|default(0, true) }}/{{ f.attempts|default(0, true) }}</span>
+                <span>{% if f.turns|default(0, true) > 1 %}{{ f.turns }}T{% else %}1T{% endif %}</span>
+                <span class="font-bold" style="color:{{ sev_text(sev) }}">{{ f.risk|default(0, true) }}</span>
+                <span>{{ '%.0f'|format((f.conf|default(0, true)|float) * 100) }}%</span>
+              </div>
+            </summary>
+            <div class="finding-item-detail">
+              <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px" class="card p-4 mb-4">
+                <div class="kv-block"><div class="kv-block-label">Plugin</div><div class="kv-block-value">{{ f.plugin|default('—', true) }}</div></div>
+                <div class="kv-block"><div class="kv-block-label">Detector</div><div class="kv-block-value">{{ f.detector|default('—', true) }}</div></div>
+                <div class="kv-block"><div class="kv-block-label">Status</div><div class="kv-block-value">{{ f.status|default('unknown', true) }}</div></div>
+                <div class="kv-block"><div class="kv-block-label">Complexity</div><div class="kv-block-value">{{ f.complexity|default('—', true) }}</div></div>
+                <div class="kv-block"><div class="kv-block-label">Turns</div><div class="kv-block-value">{{ f.turns|default(0, true) }}</div></div>
+                <div class="kv-block"><div class="kv-block-label">Language</div><div class="kv-block-value">{{ f.lang|default('en', true) }}</div></div>
+                <div class="kv-block"><div class="kv-block-label">Modality</div><div class="kv-block-value">{{ f.modality|default('text', true) }}</div></div>
+                <div class="kv-block"><div class="kv-block-label">Attempts/Hits</div><div class="kv-block-value">{{ f.attempts|default(0, true) }}/{{ f.hits|default(0, true) }}</div></div>
+              </div>
+
+              <div class="card p-4 mb-4 flex flex-wrap gap-2 items-center">
+                {% if f.owasp and f.owasp != '—' %}<span class="badge badge-outline badge-mono">OWASP LLM: {{ f.owasp }}</span>{% endif %}
+                {% if f.owaspApi and f.owaspApi != '—' %}<span class="badge badge-outline badge-mono">OWASP API: {{ f.owaspApi }}</span>{% endif %}
+                {% if f.owaspAgent and f.owaspAgent != '—' %}<span class="badge badge-outline badge-mono">OWASP Agentic: {{ f.owaspAgent }}</span>{% endif %}
+                {% if f.mitreTactic and f.mitreTactic != '—' %}<span class="badge badge-outline badge-mono">MITRE Tactic: {{ f.mitreTactic }}</span>{% endif %}
+                {% if f.mitreTech and f.mitreTech != '—' %}<span class="badge badge-outline badge-mono">MITRE Tech: {{ f.mitreTech }}</span>{% endif %}
+                {% if f.nist and f.nist != '—' %}<span class="badge badge-outline badge-mono">NIST: {{ f.nist }}</span>{% endif %}
+                {% if f.euAiAct and f.euAiAct != '—' %}<span class="badge badge-outline badge-mono">EU AI Act: {{ f.euAiAct }}</span>{% endif %}
+                {% if f.gdpr and f.gdpr != '—' %}<span class="badge badge-outline badge-mono">GDPR: {{ f.gdpr }}</span>{% endif %}
+                {% if f.iso42001 and f.iso42001 != '—' %}<span class="badge badge-outline badge-mono">ISO 42001: {{ f.iso42001 }}</span>{% endif %}
+                {% if f.avid and f.avid != '—' %}<span class="badge badge-outline badge-mono">AVID: {{ f.avid }}</span>{% endif %}
+                {% if f.rtPhase and f.rtPhase != '—' %}<span class="badge badge-outline badge-mono">RT Phase: {{ f.rtPhase }}</span>{% endif %}
+                {% for tag in f.mispTags|default([], true) %}<span class="badge badge-secondary badge-mono">{{ tag }}</span>{% endfor %}
+              </div>
+
+              {% if f.conversation|default([], true)|length > 0 %}
+                <div class="mb-4">
+                  <div class="text-xs text-muted text-mono mb-3">CONVERSATION EVIDENCE · {{ f.conversation|length }} messages · Session: {{ f.sessionId|default('—', true) }}</div>
+                  {% for msg in f.conversation %}
+                    {% set is_user = msg.r|default('', true) == 'user' %}
+                    {% set is_last = loop.last %}
+                    <div class="conv-bubble" style="
+                      {% if is_last and is_user %}background:hsl(25 95% 53%/0.06);border-color:hsl(25 95% 53%/0.2);
+                      {% elif is_last and not is_user %}background:hsl(0 72% 51%/0.06);border-color:hsl(0 72% 51%/0.2);
+                      {% endif %}
+                      margin-left:{% if is_user %}0{% else %}24px{% endif %};
+                      margin-right:{% if is_user %}24px{% else %}0{% endif %};
+                    ">
+                      <div class="flex items-center gap-2 mb-2">
+                        <span class="text-xs text-mono font-bold" style="color:{% if is_user %}hsl(var(--muted-foreground)){% else %}hsl(var(--foreground)){% endif %}">{% if is_user %}Attacker{% else %}Target{% endif %} · Turn {{ loop.index }}</span>
+                        {% if is_last %}<span class="badge badge-destructive">BREACH</span>{% endif %}
+                      </div>
+                      <div class="text-sm whitespace-pre-wrap" style="line-height:1.65">{{ msg.c|default('', true) }}</div>
+                    </div>
+                  {% endfor %}
+                </div>
+              {% else %}
+                <div class="grid-2 mb-4">
+                  <div>
+                    <div class="text-xs text-muted text-mono mb-2">ATTACK PROMPT</div>
+                    <div class="card p-4 text-sm text-mono whitespace-pre-wrap" style="line-height:1.6">{{ f.prompt|default('', true) }}</div>
+                  </div>
+                  <div>
+                    <div class="text-xs text-muted text-mono mb-2">TARGET RESPONSE</div>
+                    <div class="card p-4 text-sm text-mono whitespace-pre-wrap" style="line-height:1.6;background:hsl(0 72% 51%/0.06);border-color:hsl(0 72% 51%/0.2)">{{ f.response|default('', true) }}</div>
+                  </div>
+                </div>
+              {% endif %}
+
+              <div class="card p-4 mb-4" style="border-left:3px solid hsl(var(--foreground) / 0.7)">
+                <div class="text-xs text-mono font-semibold mb-2" style="color:hsl(var(--foreground) / 0.8)">LLM-AS-JUDGE REASONING</div>
+                <div class="text-sm text-muted" style="line-height:1.75;font-style:italic">{{ f.graderReasoning|default('', true) }}</div>
+              </div>
+            </div>
+          </details>
+        {% endfor %}
+      </div>
+    </section>
+
+    <section class="tab-panel" data-tab-panel="attacks">
+      <div class="card rounded-t-0 border-t-transparent">
+        <div class="card-header">
+          <div class="card-title">Attack Strategy Effectiveness</div>
+          <div class="card-description">Ranked by attack success rate</div>
+        </div>
+        <div class="card-content">
+          {% for s in strats %}
+            {% set att = s.att|default(0, true)|float %}
+            {% set succ = s.succ|default(0, true)|float %}
+            {% set asr = (succ / att) if att > 0 else 0 %}
+            <div class="strat-row">
+              <span class="text-sm font-semibold">{{ s.name|default('Unknown', true) }}</span>
+              <div class="progress" style="height:8px"><div class="progress-fill" style="width:{{ '%.2f'|format((asr if asr < 1 else 1) * 100) }}%;background:{{ asr_bar_color(asr) }}"></div></div>
+              <span class="text-mono text-sm font-black text-right" style="color:{{ sev_text('critical' if asr > 0.2 else ('high' if asr > 0.12 else 'low')) }}">{{ '%.1f'|format(asr * 100) }}%</span>
+              <span class="text-mono text-xs text-muted text-right">{{ s.succ|default(0, true) }}/{{ s.att|default(0, true) }}</span>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+
+      <div class="card mt-4">
+        <div class="card-header">
+          <div class="card-title">Strategy × Vulnerability Heatmap</div>
+          <div class="card-description">Cross-tabulated ASR across all strategies and vulnerability categories</div>
+        </div>
+        <div class="card-content">
+          <div class="table-wrapper">
+            <div class="heatmap-shell">
+              <table class="heatmap-table">
+                <thead>
+                  <tr>
+                    <th>Strategy / Vuln</th>
+                    {% for h in heat.cols|default([], true) %}<th>{{ h|replace('
+', '<br>')|safe }}</th>{% endfor %}
+                  </tr>
+                </thead>
+                <tbody>
+                  {% for row in heat.rows|default([], true) %}
+                    <tr>
+                      <th scope="row" class="heatmap-row-label">{{ row.s|default('—', true) }}</th>
+                      {% for val in row.v|default([], true) %}
+                        {% set ratio = (val|float / 0.45) if val|float < 0.45 else 1 %}
+                        {% set alpha = 0.08 + (ratio * 0.37) %}
+                        <td class="heatmap-cell" style="background:hsl(0 72% 51% / {{ '%.3f'|format(alpha) }});color:{% if ratio > 0.52 %}hsl(0 0% 98%){% else %}hsl(var(--foreground) / 0.9){% endif %}"><span class="heatmap-value">{{ '%.0f'|format((val|float) * 100) }}%</span></td>
+                      {% endfor %}
+                    </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-tab-panel="remediation">
+      <div class="card rounded-t-0 border-t-transparent">
+        <div class="card-header">
+          <div class="card-title">Prioritized Action Items</div>
+          <div class="card-description">Sorted by risk score with prompt hardening diffs and effort estimates</div>
+        </div>
+        <div class="card-content">
+          {% for f in findings|sort(attribute='risk', reverse=true) %}
+            {% set sev = f.sev|default('low', true) %}
+            <div class="card mb-3" style="border-left:3px solid {{ sev_text(sev) }}">
+              <div class="card-content">
+                <div class="flex items-center gap-2 flex-wrap mb-3">
+                  <span class="text-lg font-black tracking-tight text-muted">#{{ loop.index }}</span>
+                  <span class="font-semibold text-sm">{{ f.type|default('Unknown', true) }}: {{ f.sub|default('—', true) }}</span>
+                  <span class="badge badge-{{ sev }}">{{ sev }}</span>
+                  <span class="badge badge-{{ 'low' if f.effort|default('moderate', true) == 'easy' else 'medium' }}">effort: {{ f.effort|default('moderate', true) }}</span>
+                  <span class="text-mono text-sm font-bold" style="margin-left:auto;color:{{ sev_text(sev) }}">{{ f.risk|default(0, true) }}/10</span>
+                </div>
+                <div class="text-sm text-muted mb-4" style="line-height:1.75">{{ f.remediation|default('', true) }}</div>
+                <pre style="font-size:12px;font-family:'JetBrains Mono',monospace;margin:0;padding:14px;background:hsl(var(--secondary));border-radius:var(--radius);white-space:pre-wrap;line-height:1.7">{{ f.promptDiff|default('', true) }}</pre>
+              </div>
+            </div>
+          {% endfor %}
+        </div>
+      </div>
+    </section>
+
+    <section class="tab-panel" data-tab-panel="meta">
+      <div class="card rounded-t-0 border-t-transparent">
+        <div class="card-header">
+          <div class="card-title">Operational Metadata</div>
+          <div class="card-description">Complete scan configuration for audit and reproduction</div>
+        </div>
+        <div class="card-content">
+          <div style="display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px">
+            <div class="card p-4"><div class="kv-block-label">Scan ID</div><div class="kv-block-value">{{ scan.scan_id|default('—', true) }}</div></div>
+            <div class="card p-4"><div class="kv-block-label">Timestamp</div><div class="kv-block-value">{{ scan.scan_timestamp|default('—', true) }}</div></div>
+            <div class="card p-4"><div class="kv-block-label">Target Model</div><div class="kv-block-value">{{ scan.target_model|default('—', true) }}</div></div>
+            <div class="card p-4"><div class="kv-block-label">Target Label</div><div class="kv-block-value">{{ scan.target_label|default('—', true) }}</div></div>
+            <div class="card p-4"><div class="kv-block-label">Attack Provider</div><div class="kv-block-value">{{ scan.attack_provider|default('—', true) }}</div></div>
+            <div class="card p-4"><div class="kv-block-label">Grader Model</div><div class="kv-block-value">{{ scan.grader_model|default('—', true) }}</div></div>
+            <div class="card p-4"><div class="kv-block-label">Execution Time</div><div class="kv-block-value">{{ scan.execution_time|default('—', true) }}</div></div>
+            <div class="card p-4"><div class="kv-block-label">Tool Version</div><div class="kv-block-value">{{ scan.tool_version|default('—', true) }}</div></div>
+            <div class="card p-4"><div class="kv-block-label">Prompt Tokens</div><div class="kv-block-value">{{ token_usage.prompt|default(0, true) }}</div></div>
+            <div class="card p-4"><div class="kv-block-label">Completion Tokens</div><div class="kv-block-value">{{ token_usage.completion|default(0, true) }}</div></div>
+            <div class="card p-4"><div class="kv-block-label">Estimated Cost</div><div class="kv-block-value">{{ token_usage.cost|default('—', true) }}</div></div>
+            <div class="card p-4"><div class="kv-block-label">Total Tests</div><div class="kv-block-value">{{ summary.total|default(0, true) }}</div></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card mt-4">
+        <div class="card-header">
+          <div class="card-title">YAML Configuration Snapshot</div>
+          <div class="card-description">Exact config used — copy to reproduce this scan</div>
+        </div>
+        <div class="card-content">
+          <pre style="padding:20px;background:hsl(var(--secondary));border:1px solid hsl(var(--border));border-radius:var(--radius);font-family:'JetBrains Mono',monospace;font-size:12px;line-height:1.8;color:hsl(var(--muted-foreground));overflow:auto;white-space:pre-wrap">{{ scan.config|default('', true) }}</pre>
+        </div>
+      </div>
+    </section>
+  </main>
+
+  <footer>
+    <div class="footer-inner">
+      <div class="text-xs text-muted text-mono" style="letter-spacing:0.5px">
+        AI Red Team Report · {{ scan.target_label|default('—', true) }} · {{ scan.tool_version|default('—', true) }} · {{ scan.scan_timestamp|default('—', true) }} · {{ scan.scan_id|default('—', true) }}
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    (function () {
+      function setActiveTab(tab) {
+        document.querySelectorAll('[data-tab]').forEach(function (btn) {
+          btn.classList.toggle('active', btn.getAttribute('data-tab') === tab);
+        });
+        document.querySelectorAll('[data-tab-panel]').forEach(function (panel) {
+          panel.classList.toggle('active', panel.getAttribute('data-tab-panel') === tab);
+        });
+      }
+
+      function setSeverityFilter(sev) {
+        var buttons = document.querySelectorAll('[data-sev-filter]');
+        var items = document.querySelectorAll('.finding-item[data-sev]');
+        buttons.forEach(function (btn) {
+          btn.classList.toggle('active', btn.getAttribute('data-sev-filter') === sev);
+        });
+        items.forEach(function (item) {
+          var match = sev === 'all' || item.getAttribute('data-sev') === sev;
+          item.style.display = match ? '' : 'none';
+          if (!match) item.removeAttribute('open');
+        });
+      }
+
+      document.addEventListener('DOMContentLoaded', function () {
+        document.querySelectorAll('[data-tab]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            setActiveTab(btn.getAttribute('data-tab'));
+          });
+        });
+
+        document.querySelectorAll('[data-sev-filter]').forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            setSeverityFilter(btn.getAttribute('data-sev-filter'));
+          });
+        });
+
+        setActiveTab('overview');
+        setSeverityFilter('all');
+      });
+    })();
+  </script>
+</body>
+
+</html>

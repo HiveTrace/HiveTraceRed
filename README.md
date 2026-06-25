@@ -58,6 +58,15 @@ The `hivetracered-report` command generates comprehensive HTML reports with:
 - Data explorer with filtering capabilities
 - Sample prompts and responses for detailed inspection
 
+### Report Templates (Jinja2)
+
+Reports are rendered with Jinja2 templates (no frontend framework required):
+- Main template: `src/hivetracered/templates/report/report_template.jinja`
+- Renderer/context builder: `src/hivetracered/report.py` (`build_html_report`)
+- Charts/tables are generated in Python and injected into the template
+
+This keeps HTML/CSS/JS separate from report calculation logic and makes report customization easier.
+
 ### Results Example
 
 The framework provides detailed attack analysis showing success rates across different attack types and individual attack techniques:

@@ -367,28 +367,36 @@ class GeminiNativeModel(Model):
 
         # Use context manager for proper cleanup even if errors occur
         with tqdm(total=len(prompts), desc=f"Processing requests with {self.model_name}", unit="request") as progress_bar:
-            # Process tasks and add new ones as they complete
-            while pending_tasks:
-                # Wait for the first task to complete
-                done, pending = await asyncio.wait(
-                    pending_tasks,
-                    return_when=asyncio.FIRST_COMPLETED
-                )
+            try:
+                # Process tasks and add new ones as they complete
+                while pending_tasks:
+                    # Wait for the first task to complete
+                    done, pending = await asyncio.wait(
+                        pending_tasks,
+                        return_when=asyncio.FIRST_COMPLETED
+                    )
 
-                # Update pending tasks
-                pending_tasks = pending
+                    # Update pending tasks
+                    pending_tasks = pending
 
-                # Process completed tasks
-                for task in done:
-                    result = await task
-                    progress_bar.update(1)
-                    yield result
+                    # Process completed tasks
+                    for task in done:
+                        result = await task
+                        progress_bar.update(1)
+                        yield result
 
-                    # Add a new task if there are more prompts
-                    if next_prompt_index < len(prompts):
-                        new_task = asyncio.create_task(safe_ainvoke(prompts[next_prompt_index]))
-                        pending_tasks.add(new_task)
-                        next_prompt_index += 1 
+                        # Add a new task if there are more prompts
+                        if next_prompt_index < len(prompts):
+                            new_task = asyncio.create_task(safe_ainvoke(prompts[next_prompt_index]))
+                            pending_tasks.add(new_task)
+                            next_prompt_index += 1
+            finally:
+                # If the consumer stops early (e.g. circuit breaker -> aclose),
+                # cancel outstanding tasks so they don't keep hitting the API.
+                for t in pending_tasks:
+                    if not t.done():
+                        t.cancel()
+                await asyncio.gather(*pending_tasks, return_exceptions=True)
 
     def get_params(self) -> dict[str, Any]:
         return {

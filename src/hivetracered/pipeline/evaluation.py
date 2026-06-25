@@ -13,6 +13,12 @@ from hivetracered.evaluators import BaseEvaluator
 logger = logging.getLogger(__name__)
 
 RESPONSE_BLOCKED = "Response was blocked"
+RESPONSE_ERROR = "Request failed"
+
+
+def _skip_reason(response_data: dict[str, Any]) -> str:
+    """Reason a response was not sent to the evaluator: failed request vs blocked."""
+    return RESPONSE_ERROR if response_data.get("error") else RESPONSE_BLOCKED
 
 
 async def stream_evaluated_responses(
@@ -44,9 +50,10 @@ async def stream_evaluated_responses(
     unblocked_responses_data = []
     unblocked_responses_indices = []
 
-    # Identify which responses are not blocked and need evaluation
+    # Identify which responses need evaluation: not blocked and not a failed request.
+    # Failed requests (error key) carry empty content; scoring them would pollute results.
     for i, response_data in enumerate(responses):
-        if not response_data.get("is_blocked"):
+        if not response_data.get("is_blocked") and not response_data.get("error"):
             unblocked_responses_data.append(response_data)
             unblocked_responses_indices.append(i)
 
@@ -61,7 +68,7 @@ async def stream_evaluated_responses(
             **responses[i],
             "evaluation": {
                 "success": False,
-                "reason": RESPONSE_BLOCKED
+                "reason": _skip_reason(responses[i])
             },
             "evaluator": "",
             "success": False,

@@ -33,6 +33,7 @@ _KNOWN_TOP_LEVEL_KEYS = frozenset({
     "output_format",
     "report",
     "datasets",
+    "error_handling",
 })
 
 _KNOWN_STAGE_KEYS = frozenset({

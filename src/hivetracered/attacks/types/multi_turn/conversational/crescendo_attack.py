@@ -20,7 +20,7 @@ from collections.abc import AsyncGenerator
 from dataclasses import dataclass
 from typing import Any
 
-from hivetracered.attacks.base_attack import BaseAttack
+from hivetracered.attacks.base_attack import AttackModelError, BaseAttack
 from hivetracered.attacks.iterative_attack import LanguageConfig, RUSSIAN_LANGUAGE_CONFIG
 from hivetracered.evaluators.base_evaluator import BaseEvaluator
 from hivetracered.evaluators.keyword_evaluator import KeywordEvaluator
@@ -214,6 +214,14 @@ class CrescendoAttack(BaseAttack):
 
     # ── BaseAttack contract ───────────────────────────────────────────────
 
+    @staticmethod
+    def _content_or_raise(response: dict) -> str:
+        """Return the model response content, or raise AttackModelError if the
+        request failed (a global fault like a dead key aborts the whole run)."""
+        if response.get("error"):
+            raise AttackModelError(response["error"])
+        return response.get("content", "")
+
     def apply(self, prompt) -> tuple[str, dict[str, Any]]:
         """Apply the attack to a single prompt and return (transcript_json, metadata)."""
         goal = self._extract_goal(prompt)
@@ -231,17 +239,26 @@ class CrescendoAttack(BaseAttack):
 
         async def _run_task(idx: int, prompt):
             goal = self._extract_goal(prompt)
-            result = await self.run_attack_async(goal)
-            return idx, json.dumps(result.final_transcript, ensure_ascii=False)
+            try:
+                result = await self.run_attack_async(goal)
+                return idx, json.dumps(result.final_transcript, ensure_ascii=False), None
+            except AttackModelError as e:
+                # A model call failed mid-run; surface the error so create_dataset
+                # marks the record and Stage 2 skips it (no empty prompt to target).
+                return idx, "", e.error
 
         tasks = [asyncio.create_task(_run_task(i, p)) for i, p in enumerate(prompts)]
-        results: dict[int, str] = {}
+        results: dict[int, tuple] = {}
         cur_idx = 0
         for task in asyncio.as_completed(tasks):
-            idx, item = await task
-            results[idx] = item
+            idx, item, error = await task
+            results[idx] = (item, error)
             while cur_idx in results:
-                yield results.pop(cur_idx)
+                item, error = results.pop(cur_idx)
+                if error:
+                    yield (item, {"attack_error": error})
+                else:
+                    yield item
                 cur_idx += 1
 
     def get_name(self) -> str:
@@ -359,9 +376,11 @@ class CrescendoAttack(BaseAttack):
                         attacker_prompt = (
                             f"{system_content}\n\n{self._render_attacker_user_turn(H_A)}"
                         )
-                        raw = self.attacker_model.invoke(attacker_prompt)
-                        q = self._extract_json_field(raw["content"], "q")
-                        summary = self._extract_json_field(raw["content"], "summary")
+                        raw_content = self._content_or_raise(self.attacker_model.invoke(attacker_prompt))
+                        q = self._extract_json_field(raw_content, "q")
+                        summary = self._extract_json_field(raw_content, "summary")
+                    except AttackModelError:
+                        raise  # model fault: abort the run, surfaced by stream_abatch/apply
                     except Exception as e:
                         turns.append(ConversationTurnResult(
                             iteration=it, round=round_idx, q="",
@@ -394,8 +413,9 @@ class CrescendoAttack(BaseAttack):
                     # --- Target call ---
                     H_T.append({"role": "human", "content": q})
                     try:
-                        resp = self.target_model.invoke(H_T)
-                        r = resp["content"]
+                        r = self._content_or_raise(self.target_model.invoke(H_T))
+                    except AttackModelError:
+                        raise  # model fault: abort the run, surfaced by stream_abatch/apply
                     except Exception as e:
                         H_T.pop()
                         turns.append(ConversationTurnResult(
@@ -520,9 +540,11 @@ class CrescendoAttack(BaseAttack):
                         attacker_prompt = (
                             f"{system_content}\n\n{self._render_attacker_user_turn(H_A)}"
                         )
-                        raw = await self.attacker_model.ainvoke(attacker_prompt)
-                        q = self._extract_json_field(raw["content"], "q")
-                        summary = self._extract_json_field(raw["content"], "summary")
+                        raw_content = self._content_or_raise(await self.attacker_model.ainvoke(attacker_prompt))
+                        q = self._extract_json_field(raw_content, "q")
+                        summary = self._extract_json_field(raw_content, "summary")
+                    except AttackModelError:
+                        raise  # model fault: abort the run, surfaced by stream_abatch/apply
                     except Exception as e:
                         turns.append(ConversationTurnResult(
                             iteration=it, round=round_idx, q="",
@@ -555,8 +577,9 @@ class CrescendoAttack(BaseAttack):
                     # --- Target call ---
                     H_T.append({"role": "human", "content": q})
                     try:
-                        resp = await self.target_model.ainvoke(H_T)
-                        r = resp["content"]
+                        r = self._content_or_raise(await self.target_model.ainvoke(H_T))
+                    except AttackModelError:
+                        raise  # model fault: abort the run, surfaced by stream_abatch/apply
                     except Exception as e:
                         H_T.pop()
                         turns.append(ConversationTurnResult(

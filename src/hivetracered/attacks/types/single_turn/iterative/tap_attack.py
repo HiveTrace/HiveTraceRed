@@ -182,10 +182,10 @@ class TAPAttack(IterativeAttack):
             branch_index=branch_idx,
         )
 
-        attacker_response = (await self.attacker_model.ainvoke(branch_prompt))["content"]
+        attacker_response = self._content_or_raise(await self.attacker_model.ainvoke(branch_prompt))
         child_attack = self._extract_attack(attacker_response)
 
-        target_response = (await self.target_model.ainvoke(child_attack))["content"]
+        target_response = self._content_or_raise(await self.target_model.ainvoke(child_attack))
         eval_result = await self._evaluate_response_async(goal, target_response)
         child_score = eval_result["score"]
         child_success = eval_result["success"]
@@ -199,10 +199,10 @@ class TAPAttack(IterativeAttack):
 
     async def _initialize_root(self, goal: str) -> tuple[TreeNode, IterationResult]:
         initial_prompt = self._create_initial_prompt(goal)
-        attacker_response = (await self.attacker_model.ainvoke(initial_prompt))["content"]
+        attacker_response = self._content_or_raise(await self.attacker_model.ainvoke(initial_prompt))
         root_attack = self._extract_attack(attacker_response)
 
-        target_response = (await self.target_model.ainvoke(root_attack))["content"]
+        target_response = self._content_or_raise(await self.target_model.ainvoke(root_attack))
         eval_result = await self._evaluate_response_async(goal, target_response)
         root_score = eval_result["score"]
         root_success = eval_result["success"]

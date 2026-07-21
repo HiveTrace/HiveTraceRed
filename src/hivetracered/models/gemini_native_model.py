@@ -30,7 +30,7 @@ class GeminiNativeModel(Model):
     thinking budget, and rate limiting with both synchronous and asynchronous interfaces.
     """
     
-    def __init__(self, model: str = "gemini-2.5-flash-preview-04-17", max_concurrency: int | None = None, batch_size: int | None = None, thinking_budget: int = 0, rpm: int = 10, max_retries: int = 3, **kwargs):
+    def __init__(self, model: str = "gemini-2.5-flash", max_concurrency: int | None = None, batch_size: int | None = None, thinking_budget: int = 0, rpm: int = 10, max_retries: int = 3, **kwargs):
         """
         Initialize the Gemini model with the specified configuration.
 

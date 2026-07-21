@@ -181,7 +181,7 @@ def test_log_summary_logs_conditional_fields(caplog, eval_results, report_path, 
 def test_prepare_run_dir_creates_run_dir_and_writes_config_yaml(tmp_path):
     config = {"output_dir": str(tmp_path), "attacker_model": {"name": "X"}}
 
-    run_dir = asyncio.get_event_loop().run_until_complete(_prepare_run_dir(config))
+    run_dir = asyncio.run(_prepare_run_dir(config))
 
     assert os.path.isdir(run_dir)
     assert run_dir.startswith(str(tmp_path) + os.sep + "run_")
@@ -195,7 +195,7 @@ def test_prepare_run_dir_uses_default_output_dir_when_missing(tmp_path, monkeypa
     # Default is "results"; cd into tmp_path so we don't pollute the cwd.
     monkeypatch.chdir(tmp_path)
 
-    run_dir = asyncio.get_event_loop().run_until_complete(_prepare_run_dir({}))
+    run_dir = asyncio.run(_prepare_run_dir({}))
 
     assert run_dir.startswith("results" + os.sep + "run_")
     assert os.path.isdir(run_dir)

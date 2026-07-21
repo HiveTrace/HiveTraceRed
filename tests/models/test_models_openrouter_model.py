@@ -46,10 +46,10 @@ def _scrub_env(monkeypatch):
 # ── Defaults specific to OpenRouterModel ────────────────────────────
 
 
-def test_openrouter_default_model_name_is_nemotron(fake_chat_openai, fake_rate_limiter):
+def test_openrouter_default_model_name(fake_chat_openai, fake_rate_limiter):
     model = OpenRouterModel()
 
-    assert model.model_name == "nvidia/nemotron-nano-9b-v2"
+    assert model.model_name == "openai/gpt-4.1-nano"
     assert model.base_url == "https://openrouter.ai/api/v1"
 
 

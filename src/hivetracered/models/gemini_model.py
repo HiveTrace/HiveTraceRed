@@ -11,7 +11,7 @@ class GeminiModel(LangchainModel):
     and support for both synchronous and asynchronous operations.
     """
 
-    def __init__(self, model: str = "gemini-2.5-flash-preview-04-17", max_concurrency: int | None = None, batch_size: int | None = None, rpm: int = 10, max_retries: int = 3, **kwargs):
+    def __init__(self, model: str = "gemini-2.5-flash", max_concurrency: int | None = None, batch_size: int | None = None, rpm: int = 10, max_retries: int = 3, **kwargs):
         """
         Initialize the Gemini model client with the specified configuration.
 

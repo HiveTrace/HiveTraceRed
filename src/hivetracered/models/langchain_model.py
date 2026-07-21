@@ -9,7 +9,7 @@ from abc import abstractmethod
 from uuid import UUID
 from langchain_core.callbacks import BaseCallbackHandler
 from langchain_core.rate_limiters import InMemoryRateLimiter
-from langchain.schema import LLMResult
+from langchain_core.outputs import LLMResult
 
 logger = logging.getLogger(__name__)
 
@@ -87,16 +87,23 @@ class LangchainModel(Model):
         Returns:
             Client wrapped with retry policy
         """
+        retryable: tuple[type[BaseException], ...] = (ConnectionError, TimeoutError)
+        try:
+            # openai's exceptions do NOT subclass the builtins above; without these
+            # the policy never retries 5xx/429 from OpenAI-compatible providers
+            # (OpenAI, OpenRouter, CloudRu, vLLM)
+            import openai
+            retryable += (
+                openai.APIConnectionError,  # includes APITimeoutError
+                openai.InternalServerError,
+                openai.RateLimitError,
+            )
+        except ImportError:
+            pass
         return client.with_retry(
             stop_after_attempt=self.max_retries,
             wait_exponential_jitter=True,
-            retry_if_exception_type=(
-                # Network/connection errors
-                ConnectionError,
-                TimeoutError,
-                # # LangChain doesn't raise exceptions by default, but handle if they do
-                # Exception,
-            ),
+            retry_if_exception_type=retryable,
         )
 
     def invoke(self, prompt: str | list[dict[str, str]]) -> dict:

@@ -46,10 +46,10 @@ def _scrub_env(monkeypatch):
 # ── Defaults specific to CloudRuModel ────────────────────────────────
 
 
-def test_cloud_ru_default_model_is_gigachat_max(fake_chat_openai, fake_rate_limiter):
+def test_cloud_ru_default_model(fake_chat_openai, fake_rate_limiter):
     model = CloudRuModel()
 
-    assert model.model_name == "GigaChat/GigaChat-2-Max"
+    assert model.model_name == "openai/gpt-oss-120b"
 
 
 # ── ChatOpenAI wiring (default base_url + override) ─────────────────
@@ -60,7 +60,7 @@ def test_cloud_ru_passes_args_to_chatopenai(fake_chat_openai, fake_rate_limiter)
     # Default base_url branch
     CloudRuModel(max_tokens=256, top_p=0.9)
     init_kwargs = fake_chat_openai.call_args.kwargs
-    assert init_kwargs["model"] == "GigaChat/GigaChat-2-Max"
+    assert init_kwargs["model"] == "openai/gpt-oss-120b"
     assert init_kwargs["base_url"] == "https://foundation-models.api.cloud.ru/v1"
     assert init_kwargs["rate_limiter"] is fake_rate_limiter.return_value
     assert init_kwargs["max_tokens"] == 256

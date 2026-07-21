@@ -1,9 +1,9 @@
-from langchain_community.chat_models import ChatLlamaCpp
 from hivetracered.models.langchain_model import LangchainModel
 from dotenv import load_dotenv
 import os
 import multiprocessing
 from hivetracered.registry import Registry
+
 
 @Registry.model()
 class LlamaCppModel(LangchainModel):
@@ -27,7 +27,7 @@ class LlamaCppModel(LangchainModel):
         n_batch: int = 512,
         n_threads: int | None = None,
         max_retries: int = 3,
-        **kwargs
+        **kwargs,
     ):
         """
         Initialize the Llama.cpp model client with the specified configuration.
@@ -58,10 +58,10 @@ class LlamaCppModel(LangchainModel):
 
 
         Note:
-            Requires llama-cpp-python to be installed:
+            Requires optional dependencies langchain-community and llama-cpp-python:
 
             CPU-only:
-                pip install llama-cpp-python
+                pip install hivetracered[llamacpp]
 
             NVIDIA GPU (CUDA):
                 CMAKE_ARGS="-DGGML_CUDA=on" pip install llama-cpp-python
@@ -76,7 +76,9 @@ class LlamaCppModel(LangchainModel):
         self.model_name = f"llamacpp:{os.path.basename(model_path)}"
         self.max_retries = max_retries
 
-        self.max_concurrency = self._resolve_concurrency(max_concurrency, batch_size, default=1)
+        self.max_concurrency = self._resolve_concurrency(
+            max_concurrency, batch_size, default=1
+        )
         # Keep for backward compatibility in get_params()
         self.batch_size = self.max_concurrency
 
@@ -96,12 +98,23 @@ class LlamaCppModel(LangchainModel):
         # Auto-detect CPU threads if not specified
         if n_threads is None:
             n_threads = max(1, multiprocessing.cpu_count() - 1)
+
+        # Lazy import: langchain-community (and llama-cpp-python) are optional,
+        # required only when this model is actually instantiated.
+        try:
+            from langchain_community.chat_models import ChatLlamaCpp
+        except ImportError as e:
+            raise ImportError(
+                "LlamaCppModel requires optional dependencies: "
+                "pip install hivetracered[llamacpp]"
+            ) from e
+
         self.client = ChatLlamaCpp(
             model_path=model_path,
             n_ctx=n_ctx,
             n_gpu_layers=n_gpu_layers,
             n_batch=n_batch,
             n_threads=n_threads,
-            **self.kwargs
+            **self.kwargs,
         )
         self.client = self._add_retry_policy(self.client)

@@ -3,7 +3,7 @@
 # Models configuration
 attacker_model:
   model: GeminiModel
-  name: gemini-2.5-flash-preview-04-17  # Model used for generating model-based attacks
+  name: gemini-2.5-flash  # Model used for generating model-based attacks
 
 response_model:
   model: YandexGPTModel

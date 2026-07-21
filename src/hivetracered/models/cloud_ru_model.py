@@ -16,7 +16,7 @@ class CloudRuModel(LangchainModel):
 
     def __init__(
         self,
-        model: str = "GigaChat/GigaChat-2-Max",
+        model: str = "openai/gpt-oss-120b",
         max_concurrency: int | None = None,
         batch_size: int | None = None,
         rpm: int = 60,
@@ -29,7 +29,7 @@ class CloudRuModel(LangchainModel):
         Initialize the Sber Cloud LangChain client.
 
         Args:
-            model: Model identifier, e.g. "GigaChat/GigaChat-2-Max".
+            model: Model identifier, e.g. "openai/gpt-oss-120b".
             max_concurrency: Maximum number of concurrent requests (replaces batch_size)
             batch_size: (Deprecated) Use max_concurrency instead. Will be removed in v2.0.0
             rpm: Requests-per-minute soft limit enforced client-side.

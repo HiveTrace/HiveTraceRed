@@ -284,12 +284,12 @@ def test_build_request_returns_none_body_when_no_template():
 @pytest.mark.parametrize(
     ("response_json_field", "text", "expected"),
     [
-        (None, "raw text", {"content": "raw text"}),  # no jsonpath → text passthrough
-        ("$.x", "", {"content": ""}),  # empty text short-circuits before jsonpath
+        (None, "raw text", {"content": "raw text", "raw_response": "raw text"}),  # no jsonpath → text passthrough
+        ("$.x", "", {"content": "", "raw_response": ""}),  # empty text short-circuits before jsonpath
         (
             "$.choices[0].message.content",
             json.dumps({"choices": [{"message": {"content": "hello"}}]}),
-            {"content": "hello"},
+            {"content": "hello", "raw_response": json.dumps({"choices": [{"message": {"content": "hello"}}]})},
         ),  # jsonpath match
     ],
     ids=["no-jsonpath-text-passthrough", "empty-text-shortcircuit", "jsonpath-match"],
@@ -389,7 +389,7 @@ def test_invoke_success_extracts_jsonpath_field():
     ) as mock_req:
         out = model.invoke("hi")
 
-    assert out == {"content": "answer"}
+    assert out == {"content": "answer", "raw_response": json.dumps({"text": "answer"})}
     # Verify the HTTP boundary received the substituted body.
     call_kwargs = mock_req.call_args.kwargs
     assert json.loads(call_kwargs["data"].decode("utf-8")) == {"prompt": "hi"}
@@ -420,7 +420,7 @@ def test_invoke_retries_on_429_then_succeeds():
     ) as mock_req:
         out = model.invoke("hi")
 
-    assert out == {"content": "yo"}
+    assert out == {"content": "yo", "raw_response": "yo"}
     assert mock_req.call_count == 2  # 1 retry + 1 success
 
 
@@ -434,7 +434,7 @@ def test_invoke_retries_on_5xx_when_retry_5xx_true():
     ) as mock_req:
         out = model.invoke("hi")
 
-    assert out == {"content": "k"}
+    assert out == {"content": "k", "raw_response": "k"}
     assert mock_req.call_count == 3
 
 
@@ -534,7 +534,7 @@ def test_ainvoke_success_extracts_jsonpath_field(monkeypatch):
 
     out = asyncio.new_event_loop().run_until_complete(model.ainvoke("hi"))
 
-    assert out == {"content": "async-ok"}
+    assert out == {"content": "async-ok", "raw_response": json.dumps({"text": "async-ok"})}
     assert fake_session.requests_made[0]["method"] == "POST"
     assert fake_session.requests_made[0]["url"] == "http://x/y"
 
@@ -573,7 +573,7 @@ def test_ainvoke_retries_on_429_then_succeeds(monkeypatch):
 
     out = asyncio.new_event_loop().run_until_complete(model.ainvoke("hi"))
 
-    assert out == {"content": "ok"}
+    assert out == {"content": "ok", "raw_response": "ok"}
     assert len(sessions_built) == 2  # one per attempt
 
 
@@ -737,7 +737,7 @@ def test_invoke_block_code_returns_is_blocked_without_retry():
     ) as mock_req:
         out = model.invoke("hi")
 
-    assert out == {"content": "", "is_blocked": True, "status_code": 503}
+    assert out == {"content": "", "is_blocked": True, "status_code": 503, "raw_response": "denied by WAF"}
     assert "error" not in out
     assert mock_req.call_count == 1  # no retries despite retry_5xx=True
 
@@ -757,7 +757,7 @@ def test_ainvoke_block_code_returns_is_blocked_without_retry(monkeypatch):
 
     out = asyncio.new_event_loop().run_until_complete(model.ainvoke("hi"))
 
-    assert out == {"content": "", "is_blocked": True, "status_code": 503}
+    assert out == {"content": "", "is_blocked": True, "status_code": 503, "raw_response": "denied"}
     assert len(sessions_built) == 1  # single attempt
 
 

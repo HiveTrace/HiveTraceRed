@@ -763,12 +763,14 @@ def test_SPEC_008_global_system_prompt_propagated_to_both_datasets(tmp_path, mon
 
 
 # ---------------------------------------------------------------------------
-# SPEC-009: Iterative attack combined with datasets raises ValueError at preflight
+# Iterative attacks (PAIR/TAP) are accepted with the datasets: schema.
+# The former preflight guard that rejected them has been removed — the
+# pipeline builds and runs them like any other attack.
 # ---------------------------------------------------------------------------
 
 
-def test_SPEC_009_iterative_attack_with_datasets_raises_value_error(tmp_path):
-    """SPEC-009 (AC-09): _preflight_config raises ValueError when datasets + IterativeAttack."""
+def test_iterative_attack_with_datasets_not_rejected_at_preflight(tmp_path):
+    """Preflight must not reject an attack for being iterative (guard removed)."""
     from hivetracered.runner import _preflight_config
 
     config = _minimal_config(
@@ -780,35 +782,24 @@ def test_SPEC_009_iterative_attack_with_datasets_raises_value_error(tmp_path):
         attacks=[{"name": "PAIRAttack"}],
     )
 
-    with pytest.raises(ValueError) as exc_info:
+    # A missing attacker_model may still raise (unrelated); it must NOT be an
+    # "iterative not supported" rejection.
+    try:
         _preflight_config(
             config,
             enable_attacks=True,
             enable_responses=False,
             enable_eval=False,
         )
-
-    assert "iterative" in str(exc_info.value).lower() or "datasets" in str(exc_info.value).lower(), (
-        "ValueError message must reference iterative attacks and/or datasets: schema"
-    )
-
-
-# ---------------------------------------------------------------------------
-# SPEC-009b: Nested iterative attack via inner_attack chain is also rejected
-# ---------------------------------------------------------------------------
+    except ValueError as e:
+        assert "iterative" not in str(e).lower(), (
+            "iterative attacks should no longer be rejected at preflight"
+        )
 
 
-def test_SPEC_009b_nested_iterative_attack_via_inner_attack_also_rejected(tmp_path):
-    """SPEC-009b (AC-09): _preflight_config raises ValueError for nested IterativeAttack.
-
-    The new preflight Step 5 (design.md) recursively walks inner_attack chains via
-    _parse_attack_config and rejects any class satisfying issubclass(_, IterativeAttack).
-    PAIRAttack nested inside NoneAttack via inner_attack must be caught.
-
-    Imports DatasetSpec (not yet implemented) to fail with ImportError against current code.
-    """
+def test_nested_iterative_attack_via_inner_attack_not_rejected(tmp_path):
+    """A nested iterative inner_attack must also not be rejected for being iterative."""
     from hivetracered.runner import _preflight_config
-    from hivetracered.setup import DatasetSpec  # ImportError until implemented
 
     config = _minimal_config(
         tmp_path,
@@ -819,17 +810,17 @@ def test_SPEC_009b_nested_iterative_attack_via_inner_attack_also_rejected(tmp_pa
         attacks=[{"name": "NoneAttack", "inner_attack": {"name": "PAIRAttack"}}],
     )
 
-    with pytest.raises(ValueError) as exc_info:
+    try:
         _preflight_config(
             config,
             enable_attacks=True,
             enable_responses=False,
             enable_eval=False,
         )
-
-    assert "iterative" in str(exc_info.value).lower() or "datasets" in str(exc_info.value).lower(), (
-        "ValueError must reference iterative attacks and/or datasets: schema"
-    )
+    except ValueError as e:
+        assert "iterative" not in str(e).lower(), (
+            "nested iterative attacks should no longer be rejected at preflight"
+        )
 
 
 # ---------------------------------------------------------------------------

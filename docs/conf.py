@@ -10,37 +10,37 @@ import sys
 try:
     import hivetracered  # noqa: F401
 except ImportError:
-    sys.path.insert(0, os.path.abspath('../src'))
+    sys.path.insert(0, os.path.abspath("../src"))
 
 # -- Project information -----------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#project-information
 
-project = 'HiveTraceRed'
-copyright = '2025, HiveTrace'
-author = 'HiveTrace'
-release = '1.0.18'
+project = "HiveTraceRed"
+copyright = "2025, HiveTrace"
+author = "HiveTrace"
+release = "1.0.19"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
 
 extensions = [
-    'sphinx.ext.autodoc',
-    'sphinx.ext.autosummary',
-    'sphinx.ext.viewcode',
-    'sphinx.ext.napoleon',
-    'sphinx.ext.intersphinx',
-    'sphinx_autodoc_typehints',
+    "sphinx.ext.autodoc",
+    "sphinx.ext.autosummary",
+    "sphinx.ext.viewcode",
+    "sphinx.ext.napoleon",
+    "sphinx.ext.intersphinx",
+    "sphinx_autodoc_typehints",
 ]
 
-templates_path = ['_templates']
-exclude_patterns = ['_build', 'Thumbs.db', '.DS_Store']
+templates_path = ["_templates"]
+exclude_patterns = ["_build", "Thumbs.db", ".DS_Store"]
 
 # -- Options for HTML output -------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#options-for-html-output
 
-html_theme = 'furo'
-html_static_path = ['_static']
-html_title = 'HiveTraceRed Documentation'
+html_theme = "furo"
+html_static_path = ["_static"]
+html_title = "HiveTraceRed Documentation"
 
 # Furo theme options
 html_theme_options = {
@@ -59,37 +59,37 @@ html_theme_options = {
 
 # autodoc configuration
 autodoc_default_options = {
-    'members': True,
-    'undoc-members': True,
-    'show-inheritance': True,
-    'special-members': '__init__',
-    'imported-members': True,
+    "members": True,
+    "undoc-members": True,
+    "show-inheritance": True,
+    "special-members": "__init__",
+    "imported-members": True,
 }
 
-autodoc_typehints = 'description'
-autodoc_typehints_description_target = 'documented'
+autodoc_typehints = "description"
+autodoc_typehints_description_target = "documented"
 
 # Mock imports for optional dependencies
 autodoc_mock_imports = [
-    'cyrtranslit',
-    'langchain_gigachat',
-    'langchain_google_genai',
-    'langchain_openai',
-    'langchain_ollama',
-    'langchain_community',
-    'langchain',
-    'dotenv',
-    'tqdm',
-    'langchain_core',
-    'yandex_ai_studio_sdk',
-    'yandexcloud',
-    'aiohttp',
-    'requests',
-    'google',
-    'google.genai',
-    'tenacity',
-    'pandas',
-    'pyarrow',
+    "cyrtranslit",
+    "langchain_gigachat",
+    "langchain_google_genai",
+    "langchain_openai",
+    "langchain_ollama",
+    "langchain_community",
+    "langchain",
+    "dotenv",
+    "tqdm",
+    "langchain_core",
+    "yandex_ai_studio_sdk",
+    "yandexcloud",
+    "aiohttp",
+    "requests",
+    "google",
+    "google.genai",
+    "tenacity",
+    "pandas",
+    "pyarrow",
 ]
 
 # autosummary configuration
@@ -110,7 +110,7 @@ napoleon_use_rtype = True
 
 # Intersphinx mapping
 intersphinx_mapping = {
-    'python': ('https://docs.python.org/3', None),
-    'pandas': ('https://pandas.pydata.org/docs/', None),
-    'numpy': ('https://numpy.org/doc/stable/', None),
+    "python": ("https://docs.python.org/3", None),
+    "pandas": ("https://pandas.pydata.org/docs/", None),
+    "numpy": ("https://numpy.org/doc/stable/", None),
 }

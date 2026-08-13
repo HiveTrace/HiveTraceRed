@@ -11,7 +11,7 @@ Main Components:
 - pipeline: Orchestration tools for attack generation, testing, and evaluation
 """
 
-__version__ = "1.0.18"
+__version__ = "1.0.19"
 
 # Import core attack classes
 from hivetracered.attacks import (
@@ -19,7 +19,7 @@ from hivetracered.attacks import (
     TemplateAttack,
     ModelAttack,
     AlgoAttack,
-    ComposedAttack
+    ComposedAttack,
 )
 
 # Import core model classes
@@ -38,7 +38,7 @@ from hivetracered.pipeline import (
     stream_attack_prompts,
     stream_model_responses,
     stream_evaluated_responses,
-    save_pipeline_results
+    save_pipeline_results,
 )
 
 __all__ = [

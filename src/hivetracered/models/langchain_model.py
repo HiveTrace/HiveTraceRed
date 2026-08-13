@@ -69,6 +69,28 @@ class LangchainModel(Model):
             kwargs["max_bucket_size"] = max_bucket_size
         return InMemoryRateLimiter(**kwargs)
 
+    @staticmethod
+    def _httpx_clients(verify_ssl: bool | str) -> dict:
+        """
+        Build http_client/http_async_client kwargs for httpx-based SDK clients.
+
+        Args:
+            verify_ssl: True for default certificate verification (certifi bundle),
+                False to disable verification, or a path to a custom CA bundle.
+
+        Returns:
+            Dict with http_client/http_async_client entries, or an empty dict
+            when default verification is requested (SDK builds its own clients).
+        """
+        if verify_ssl is True:
+            return {}
+        import httpx
+        verify = LangchainModel._ssl_verify(verify_ssl)
+        return {
+            "http_client": httpx.Client(verify=verify),
+            "http_async_client": httpx.AsyncClient(verify=verify),
+        }
+
     def _add_retry_policy(self, client):
         """
         Wrap the LangChain client with retry policy for transient errors.

@@ -11,7 +11,7 @@ class GeminiModel(LangchainModel):
     and support for both synchronous and asynchronous operations.
     """
 
-    def __init__(self, model: str = "gemini-2.5-flash", max_concurrency: int | None = None, batch_size: int | None = None, rpm: int = 10, max_retries: int = 3, **kwargs):
+    def __init__(self, model: str = "gemini-2.5-flash", max_concurrency: int | None = None, batch_size: int | None = None, rpm: int = 10, max_retries: int = 3, verify_ssl: bool | str = True, **kwargs):
         """
         Initialize the Gemini model client with the specified configuration.
 
@@ -21,6 +21,8 @@ class GeminiModel(LangchainModel):
             batch_size: (Deprecated) Use max_concurrency instead. Will be removed in v2.0.0
             rpm: Rate limit in requests per minute
             max_retries: Maximum number of retry attempts on transient errors (default: 3)
+            verify_ssl: True (default) to verify TLS certificates, False to disable
+                verification, or a path to a custom CA bundle
             **kwargs: Additional parameters for model configuration:
                      - temperature: Sampling temperature (lower = more deterministic)
                      - top_p: Top-p sampling parameter for response diversity
@@ -39,6 +41,10 @@ class GeminiModel(LangchainModel):
 
         if not "temperature" in self.kwargs:
             self.kwargs["temperature"] = 0.000001
+
+        if verify_ssl is not True:
+            # client_args are forwarded to the underlying httpx clients
+            self.kwargs.setdefault("client_args", {"verify": self._ssl_verify(verify_ssl)})
 
         rate_limiter = self._make_rate_limiter(rpm)
         self.client = ChatGoogleGenerativeAI(model=model, rate_limiter=rate_limiter, **self.kwargs)

@@ -30,7 +30,7 @@ class GeminiNativeModel(Model):
     thinking budget, and rate limiting with both synchronous and asynchronous interfaces.
     """
     
-    def __init__(self, model: str = "gemini-2.5-flash", max_concurrency: int | None = None, batch_size: int | None = None, thinking_budget: int = 0, rpm: int = 10, max_retries: int = 3, **kwargs):
+    def __init__(self, model: str = "gemini-2.5-flash", max_concurrency: int | None = None, batch_size: int | None = None, thinking_budget: int = 0, rpm: int = 10, max_retries: int = 3, verify_ssl: bool | str = True, **kwargs):
         """
         Initialize the Gemini model with the specified configuration.
 
@@ -41,6 +41,8 @@ class GeminiNativeModel(Model):
             thinking_budget: Number of tokens allocated for model thinking/reasoning steps
             rpm: Rate limit in requests per minute (0 for unlimited)
             max_retries: Maximum number of retry attempts on transient errors (default: 3)
+            verify_ssl: True (default) to verify TLS certificates, False to disable
+                verification, or a path to a custom CA bundle
             **kwargs: Additional parameters for model configuration:
                      - temperature: Sampling temperature (lower = more deterministic)
                      - top_p, top_k: Sampling parameters for controlling response diversity
@@ -85,7 +87,15 @@ class GeminiNativeModel(Model):
         if not api_key:
             raise ValueError("GOOGLE_API_KEY environment variable not set")
 
-        self.client = genai.Client()
+        if verify_ssl is True:
+            self.client = genai.Client()
+        else:
+            # client_args/async_client_args are forwarded to the underlying httpx clients
+            verify = self._ssl_verify(verify_ssl)
+            self.client = genai.Client(http_options=types.HttpOptions(
+                client_args={"verify": verify},
+                async_client_args={"verify": verify},
+            ))
 
     def _create_retry_decorator(self):
         """

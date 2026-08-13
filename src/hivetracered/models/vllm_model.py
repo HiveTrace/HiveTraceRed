@@ -27,6 +27,7 @@ class VLLMModel(LangchainModel):
         max_concurrency: int | None = None,
         batch_size: int | None = None,
         max_retries: int = 3,
+        verify_ssl: bool | str = True,
         **kwargs,
     ):
         """
@@ -39,6 +40,8 @@ class VLLMModel(LangchainModel):
             max_concurrency: Maximum concurrent requests.
             batch_size: Deprecated. Use max_concurrency instead.
             max_retries: Number of retries on transient errors.
+            verify_ssl: True (default) to verify TLS certificates, False to disable
+                verification, or a path to a custom CA bundle.
             **kwargs: Additional arguments for ChatOpenAI (temperature, max_tokens, etc.).
         """
         load_dotenv(override=True)
@@ -60,6 +63,7 @@ class VLLMModel(LangchainModel):
             model=model,
             base_url=base_url,
             api_key=api_key,
+            **self._httpx_clients(verify_ssl),
             **self.kwargs,
         )
         self.client = self._add_retry_policy(self.client)

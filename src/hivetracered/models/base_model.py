@@ -111,6 +111,18 @@ class Model(ABC):
         return self.__dict__
     
     @staticmethod
+    def _ssl_verify(verify_ssl: bool | str):
+        """
+        Normalize a verify_ssl setting (bool or CA-bundle path) to an
+        httpx-compatible verify value. A path is converted to an SSLContext
+        because httpx>=0.28 deprecates passing paths directly.
+        """
+        if isinstance(verify_ssl, str):
+            import ssl
+            return ssl.create_default_context(cafile=verify_ssl)
+        return verify_ssl
+
+    @staticmethod
     def _resolve_concurrency(
         max_concurrency: int | None,
         batch_size: int | None,

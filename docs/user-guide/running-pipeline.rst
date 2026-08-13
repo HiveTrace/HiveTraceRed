@@ -394,7 +394,7 @@ Command Options
 .. code-block:: bash
 
    hivetracered-report --data-file <path_to_parquet>    # Input data file (required)
-   hivetracered-report --output <output.html>           # Output HTML file (default: report.html)
+   hivetracered-report --output <output.html>           # Output HTML file (default: Static_report.html)
    hivetracered-report --help                           # Show help message
 
 Report Contents

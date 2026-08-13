@@ -13,7 +13,7 @@ class OpenAIModel(LangchainModel):
     with rate limiting support and both synchronous and asynchronous processing capabilities.
     """
 
-    def __init__(self, model: str = "gpt-4.1-nano", base_url: str = "https://api.openai.com/v1", max_concurrency: int | None = None, batch_size: int | None = None, rpm: int = 300, api_key: str | None = None, max_retries: int = 3, **kwargs):
+    def __init__(self, model: str = "gpt-4.1-nano", base_url: str = "https://api.openai.com/v1", max_concurrency: int | None = None, batch_size: int | None = None, rpm: int = 300, api_key: str | None = None, max_retries: int = 3, verify_ssl: bool | str = True, **kwargs):
         """
         Initialize the OpenAI model client with the specified configuration.
 
@@ -25,6 +25,8 @@ class OpenAIModel(LangchainModel):
             rpm: Rate limit in requests per minute
             api_key: API key; defaults to OPENAI_API_KEY env var
             max_retries: Maximum number of retry attempts on transient errors (default: 3)
+            verify_ssl: True (default) to verify TLS certificates, False to disable
+                verification, or a path to a custom CA bundle
             **kwargs: Additional parameters to pass to the ChatOpenAI constructor
         """
         load_dotenv(override=True)
@@ -45,5 +47,5 @@ class OpenAIModel(LangchainModel):
         if "temperature" not in self.kwargs:
             self.kwargs["temperature"] = 0.000001
         rate_limiter = self._make_rate_limiter(rpm)
-        self.client = ChatOpenAI(model=model, rate_limiter=rate_limiter, base_url=base_url, api_key=api_key, **self.kwargs)
+        self.client = ChatOpenAI(model=model, rate_limiter=rate_limiter, base_url=base_url, api_key=api_key, **self._httpx_clients(verify_ssl), **self.kwargs)
         self.client = self._add_retry_policy(self.client)

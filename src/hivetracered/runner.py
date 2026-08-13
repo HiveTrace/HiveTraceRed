@@ -16,16 +16,13 @@ from typing import Any
 
 import yaml
 
-from hivetracered.attacks.iterative_attack import IterativeAttack
 from hivetracered.pipeline import (
-    ATTACK_CLASSES,
     save_pipeline_results,
     setup_attacks,
     stream_attack_prompts,
     stream_evaluated_responses,
     stream_model_responses,
 )
-from hivetracered.pipeline.create_dataset import _parse_attack_config
 from hivetracered.pipeline.model_responses import CONSECUTIVE_FAILURES_DEFAULT
 from hivetracered.pipeline.evaluation import RESPONSE_ERROR
 from hivetracered.report import (
@@ -251,9 +248,6 @@ def _preflight_config(
                 "Each dataset must have at least one prompt."
             )
 
-    for attack_cfg in config.get("attacks", []):
-        _check_no_iterative_attack(attack_cfg)
-
     if not enable_attacks and config.get("attack_prompts_file"):
         rows = load_records(config["attack_prompts_file"], "attack prompts")
         file_datasets: set[str] = {str(row["dataset"]) for row in rows if row.get("dataset")}
@@ -300,20 +294,6 @@ def _preflight_config(
                 )
 
     return specs
-
-
-def _check_no_iterative_attack(attack_cfg: Any) -> None:
-    """Raise ValueError if attack_cfg (or any nested inner_attack) is iterative."""
-    attack_name, _params, inner_attack_cfg = _parse_attack_config(attack_cfg)
-    if attack_name and attack_name in ATTACK_CLASSES:
-        attack_class = ATTACK_CLASSES[attack_name]["attack_class"]
-        if issubclass(attack_class, IterativeAttack):
-            raise ValueError(
-                f"Iterative attack '{attack_name}' is not supported with the "
-                "'datasets:' schema (FR-13). Use non-iterative attacks instead."
-            )
-    if inner_attack_cfg is not None:
-        _check_no_iterative_attack(inner_attack_cfg)
 
 
 async def _evaluate_dataset(

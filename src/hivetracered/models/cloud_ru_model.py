@@ -23,6 +23,7 @@ class CloudRuModel(LangchainModel):
         api_key: str | None = None,
         base_url: str = "https://foundation-models.api.cloud.ru/v1",
         max_retries: int = 3,
+        verify_ssl: bool | str = True,
         **kwargs: Any,
     ):
         """
@@ -36,6 +37,8 @@ class CloudRuModel(LangchainModel):
             api_key: API key; defaults to GIGACHAT_CLOUD_API_KEY env var.
             base_url: Override API base URL; defaults to Cloud.ru endpoint.
             max_retries: Maximum number of retry attempts on transient errors (default: 3)
+            verify_ssl: True (default) to verify TLS certificates, False to disable
+                verification, or a path to a custom CA bundle.
             **kwargs: Passed to ChatOpenAI (e.g., temperature, max_tokens, top_p).
         """
         load_dotenv(override=True)
@@ -64,6 +67,7 @@ class CloudRuModel(LangchainModel):
             api_key=api_key,
             base_url=base_url,
             rate_limiter=rate_limiter,
+            **self._httpx_clients(verify_ssl),
             **self.kwargs,
         )
         self.client = self._add_retry_policy(self.client)

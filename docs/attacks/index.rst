@@ -1,113 +1,331 @@
 Attack Types Reference
 ======================
 
-HiveTraceRed includes 80+ attack implementations organised into two sub-packages: ``single_turn/`` (one attack prompt per invocation, including PAIR/TAP) and ``multi_turn/`` (multi-message conversations with the target, currently just Crescendo). This section provides detailed information about each attack type.
+.. toctree::
+   :hidden:
 
-Multi-Turn Attacks
-------------------
+   crescendo
 
-Conversational attacks that drive a persistent multi-message dialogue with the target model within a single invocation:
+HiveTraceRed includes 92 attack implementations organised into two sub-packages: ``single_turn/`` (one attack prompt per invocation, including the iterative PAIR/TAP searches) and ``multi_turn/`` (multi-message conversations with the target, currently Crescendo). Each attack is selected in a pipeline config by its **config key**.
 
-**Crescendo** (arXiv:2404.01833)
-  A graduated multi-turn jailbreak attack that escalates a harmful request across conversation turns. An attacker LLM guides the target incrementally toward producing harmful content, with refusal-driven backtracking and per-turn success checking via two separate judges.
+Attacks That Need an Attacker Model
+-----------------------------------
 
-  For detailed information, see :doc:`crescendo`.
+Three attacks make more than one model call per prompt and require an ``attacker_model`` (and usually judges) in the config. They fall into two distinct kinds:
 
-Single-Turn Attack Categories Overview
---------------------------------------
+- **Conversational (multi-turn)** — ``CrescendoAttack`` (``conversational``). Drives a single persistent dialogue with the target, escalating across many turns and backtracking on refusal. See :doc:`crescendo`.
+- **Iterative single-prompt** — ``PAIRAttack`` and ``TAPAttack`` (``iterative``). These are *not* multi-turn: they repeatedly refine one attack prompt and send each candidate to the target as an independent single-turn request. PAIR follows a single refinement path; TAP explores a branch-and-prune tree.
 
-Roleplay Attacks
-~~~~~~~~~~~~~~~~
+All three run through the pipeline config as well as the Python API. Iterative attacks resolve their ``evaluator`` from a per-attack ``evaluator:`` block, the dataset's evaluator (if it is a ``ScoringJudgeEvaluator``), or a default judge built from ``evaluation_model``. See the multi-step example in :doc:`../getting-started/quickstart-api`.
 
-Attacks that use persona or roleplay techniques to bypass safety measures. Examples include DAN (Do Anything Now), AIM (Always Intelligent and Machiavellian), Evil Confidant, and other persona-based jailbreaks.
+Complete Attack Reference
+-------------------------
 
-Persuasion Attacks
-~~~~~~~~~~~~~~~~~~
+All 92 attacks grouped by category. The **config key** is the value you put under ``attacks: - name:`` in a pipeline YAML config; the **attack type** is the ``attack_type`` string shown in bracketed monospace next to each category heading.
 
-Attacks using persuasive techniques and social engineering.
+Conversational — multi-turn (``conversational``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* Authority persuasion
-* Emotional appeal
-* Urgency-based persuasion
-* 40+ persuasion variations
+.. list-table::
+   :header-rows: 1
+   :widths: 45 55
 
-Token Smuggling
-~~~~~~~~~~~~~~~
+   * - Config key (``name``)
+     - Attack
+   * - ``CrescendoAttack``
+     - Crescendo
 
-Attacks that use encoding, obfuscation, or special characters to hide malicious intent.
+Iterative — single-prompt refinement (``iterative``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* Base64 encoding
-* ROT13 encoding
-* Special character insertion
-* Unicode manipulation
-* Payload splitting
+.. list-table::
+   :header-rows: 1
+   :widths: 45 55
 
-Context Switching
-~~~~~~~~~~~~~~~~~
+   * - Config key (``name``)
+     - Attack
+   * - ``PAIRAttack``
+     - PAIR
+   * - ``TAPAttack``
+     - TAP
 
-Attacks that switch conversation context to confuse the model.
+Context Switching (``context_switching``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* Language switching
-* Topic switching
-* Format switching
-* Role switching
+.. list-table::
+   :header-rows: 1
+   :widths: 45 55
 
-In-Context Learning
-~~~~~~~~~~~~~~~~~~~
+   * - Config key (``name``)
+     - Attack
+   * - ``DashedDividerAttack``
+     - Dashed Divider
+   * - ``ForgetEverythingBeforeAttack``
+     - Forget Everything Before
+   * - ``IgnorePreviousInstructionsAttack``
+     - Ignore Previous Instructions
+   * - ``SymbolDividerAttack``
+     - Symbol Divider
 
-Attacks using few-shot examples to teach undesired behavior.
+In-Context Learning (``in_context_learning``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* Few-shot jailbreaking
-* Example-based attacks
-* Pattern completion
+.. list-table::
+   :header-rows: 1
+   :widths: 45 55
 
-Task Deflection
-~~~~~~~~~~~~~~~
+   * - Config key (``name``)
+     - Attack
+   * - ``FewShotJSONAttack``
+     - Few Shot JSON
+   * - ``ManyShotJailbreakAttack``
+     - Many Shot Jailbreak
 
-Attacks that reframe harmful requests as legitimate tasks.
+Irrelevant Information (``irrelevant_information``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* Code generation requests
-* Educational framing
-* Research framing
-* Translation requests
+.. list-table::
+   :header-rows: 1
+   :widths: 45 55
 
-Text Structure Modification
-~~~~~~~~~~~~~~~~~~~~~~~~~~~
+   * - Config key (``name``)
+     - Attack
+   * - ``DistractorsAttack``
+     - Distractors
+   * - ``DistractorsNegatedAttack``
+     - Distractors Negated
+   * - ``IrrelevantInformationAttack``
+     - Irrelevant Information
 
-Attacks that modify text structure to bypass detection.
+Output Formatting (``output_formatting``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* Character substitution
-* Word insertion
-* Sentence fragmentation
-* Formatting manipulation
+.. list-table::
+   :header-rows: 1
+   :widths: 45 55
 
-Output Formatting
-~~~~~~~~~~~~~~~~~
+   * - Config key (``name``)
+     - Attack
+   * - ``Base64OutputAttack``
+     - Base64 Output
+   * - ``CSVOutputAttack``
+     - CSV Output
+   * - ``GCGTransferHarmbenchAttack``
+     - GCG Transfer Harmbench
+   * - ``GCGTransferUniversalAttack``
+     - GCG Transfer Universal
+   * - ``JSONOutputAttack``
+     - JSON Output
+   * - ``LanguageOutputAttack``
+     - Language Output
+   * - ``PrefixInjectionAttack``
+     - Prefix Injection
+   * - ``PrefixInjectionOfCourseAttack``
+     - Prefix Injection Of Course
+   * - ``RefusalSuppressionAttack``
+     - Refusal Suppression
 
-Attacks that request specific output formats to bypass safety.
+Persuasion (``persuasion``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* JSON output requests
-* Code output requests
-* Table formatting
-* Structured data requests
+.. list-table::
+   :header-rows: 1
+   :widths: 45 55
 
-Irrelevant Information
-~~~~~~~~~~~~~~~~~~~~~~
+   * - Config key (``name``)
+     - Attack
+   * - ``AffirmationAttack``
+     - Affirmation
+   * - ``AllianceBuildingAttack``
+     - Alliance Building
+   * - ``AnchoringAttack``
+     - Anchoring
+   * - ``AuthorityEndorsementAttack``
+     - Authority Endorsement
+   * - ``CompensationAttack``
+     - Compensation
+   * - ``ComplimentingAttack``
+     - Complimenting
+   * - ``ConfirmationBiasAttack``
+     - Confirmation Bias
+   * - ``CreatingDependencyAttack``
+     - Creating Dependency
+   * - ``DiscouragementAttack``
+     - Discouragement
+   * - ``DoorInTheFaceAttack``
+     - Door In The Face
+   * - ``EncouragementAttack``
+     - Encouragement
+   * - ``EvidenceBasedPersuasionAttack``
+     - Evidence Based Persuasion
+   * - ``ExpertEndorsementAttack``
+     - Expert Endorsement
+   * - ``ExploitingWeaknessAttack``
+     - Exploiting Weakness
+   * - ``FalseInformationAttack``
+     - False Information
+   * - ``FalsePromisesAttack``
+     - False Promises
+   * - ``FavorAttack``
+     - Favor
+   * - ``FootInTheDoorAttack``
+     - Foot In The Door
+   * - ``FramingAttack``
+     - Framing
+   * - ``InjunctiveNormAttack``
+     - Injunctive Norm
+   * - ``LogicalAppealAttack``
+     - Logical Appeal
+   * - ``LoyaltyAppealsAttack``
+     - Loyalty Appeals
+   * - ``MisrepresentationAttack``
+     - Misrepresentation
+   * - ``NegativeEmotionAppealAttack``
+     - Negative Emotion Appeal
+   * - ``NegotiationAttack``
+     - Negotiation
+   * - ``NonExpertTestimonialAttack``
+     - Non Expert Testimonial
+   * - ``PositiveEmotionAppealAttack``
+     - Positive Emotion Appeal
+   * - ``PrimingAttack``
+     - Priming
+   * - ``PublicCommitmentAttack``
+     - Public Commitment
+   * - ``ReciprocityAttack``
+     - Reciprocity
+   * - ``ReflectiveThinkingAttack``
+     - Reflective Thinking
+   * - ``RelationshipLeverageAttack``
+     - Relationship Leverage
+   * - ``RumorsAttack``
+     - Rumors
+   * - ``SharedValuesAttack``
+     - Shared Values
+   * - ``SocialProofAttack``
+     - Social Proof
+   * - ``SocialPunishmentAttack``
+     - Social Punishment
+   * - ``StorytellingAttack``
+     - Storytelling
+   * - ``SupplyScarcityAttack``
+     - Supply Scarcity
+   * - ``ThreatsAttack``
+     - Threats
+   * - ``TimePressureAttack``
+     - Time Pressure
 
-Attacks that add irrelevant content to confuse safety filters.
+Roleplay (``roleplay``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* Padding with benign text
-* Context dilution
-* Noise injection
+.. list-table::
+   :header-rows: 1
+   :widths: 45 55
 
-Simple Instructions
-~~~~~~~~~~~~~~~~~~~
+   * - Config key (``name``)
+     - Attack
+   * - ``AIMAttack``
+     - AIM
+   * - ``DANAttack``
+     - DAN
+   * - ``EvilConfidantAttack``
+     - Evil Confidant
 
-Direct instruction-based attacks.
+Simple Instructions (``simple_instructions``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* Prefix injection
-* Suffix injection
-* System override attempts
+.. list-table::
+   :header-rows: 1
+   :widths: 45 55
+
+   * - Config key (``name``)
+     - Attack
+   * - ``NoneAttack``
+     - None
+
+Task Deflection (``task_deflection``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 45 55
+
+   * - Config key (``name``)
+     - Attack
+   * - ``CodeAttack``
+     - Code
+   * - ``FillSpacesAttack``
+     - Fill Spaces
+   * - ``PayloadSplittingAttack``
+     - Payload Splitting
+   * - ``TextContinuingAttack``
+     - Text Continuing
+   * - ``UnsafeWordVariableFullAttack``
+     - Unsafe Word Variable Full
+   * - ``VariablePromptAttack``
+     - Variable Prompt
+   * - ``WikipediaAttack``
+     - Wikipedia
+
+Text Structure Modification (``text_structure_modification``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 45 55
+
+   * - Config key (``name``)
+     - Attack
+   * - ``BackToFrontAttack``
+     - Back To Front
+   * - ``DisemvowelAttack``
+     - Disemvowel
+   * - ``JSONTransformAttack``
+     - JSON Transform
+   * - ``PastTenseAttack``
+     - Past Tense
+   * - ``TranslationAttack``
+     - Translation
+   * - ``TypoAttack``
+     - Typo
+   * - ``VerticalTextAttack``
+     - Vertical Text
+   * - ``WordDividerAttack``
+     - Word Divider
+   * - ``ZeroWidthAttack``
+     - Zero Width
+
+Token Smuggling (``token_smuggling``)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+.. list-table::
+   :header-rows: 1
+   :widths: 45 55
+
+   * - Config key (``name``)
+     - Attack
+   * - ``AtbashCipherAttack``
+     - Atbash Cipher
+   * - ``Base64InputOnlyAttack``
+     - Base64 Input Only
+   * - ``BinaryEncodingAttack``
+     - Binary Encoding
+   * - ``EncodingAttack``
+     - Encoding
+   * - ``HexEncodingAttack``
+     - Hex Encoding
+   * - ``HtmlEntityAttack``
+     - Html Entity
+   * - ``LeetspeakAttack``
+     - Leetspeak
+   * - ``MorseCodeAttack``
+     - Morse Code
+   * - ``RotCipherAttack``
+     - Rot Cipher
+   * - ``TransliterationAttack``
+     - Transliteration
+   * - ``UnicodeRussianStyleAttack``
+     - Unicode Russian Style
 
 Using Attacks
 -------------
@@ -129,7 +347,7 @@ For detailed usage examples, see :doc:`../user-guide/custom-attacks`.
 Attack Selection
 ----------------
 
-* **Basic Testing**: Start with NoneAttack (baseline) and DANAttack
+* **Basic Testing**: Start with ``NoneAttack`` (baseline) and ``DANAttack``
 * **Advanced Testing**: Use composed attacks and encoding techniques
 * **Robustness Testing**: Mix categories and test multilingual attacks
 

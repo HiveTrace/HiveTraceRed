@@ -22,6 +22,7 @@ class OllamaModel(LangchainModel):
         batch_size: int | None = None,
         base_url: str = "http://localhost:11434",
         max_retries: int = 3,
+        verify_ssl: bool | str = True,
         **kwargs
     ):
         """
@@ -36,6 +37,8 @@ class OllamaModel(LangchainModel):
             base_url: URL of the Ollama server (default: "http://localhost:11434")
                      Can be set to remote Ollama server if running elsewhere
             max_retries: Maximum number of retry attempts on transient errors (default: 3)
+            verify_ssl: True (default) to verify TLS certificates, False to disable
+                verification, or a path to a custom CA bundle (for remote HTTPS servers)
             **kwargs: Additional parameters to pass to the ChatOllama constructor:
                      - temperature: Sampling temperature (lower = more deterministic)
                      - top_p: Top-p sampling parameter
@@ -65,6 +68,11 @@ class OllamaModel(LangchainModel):
 
         if "temperature" not in self.kwargs:
             self.kwargs["temperature"] = 0.000001
+
+        if verify_ssl is not True:
+            # client_kwargs are forwarded to the underlying ollama httpx clients
+            self.kwargs.setdefault("client_kwargs", {"verify": self._ssl_verify(verify_ssl)})
+
         self.client = ChatOllama(
             model=model,
             base_url=base_url,

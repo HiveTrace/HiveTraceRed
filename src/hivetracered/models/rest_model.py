@@ -78,6 +78,7 @@ class RestModel(Model):
         verify_ssl: bool = True,
         ratelimit_codes: list[int] | None = None,
         skip_codes: list[int] | None = None,
+        block_codes: list[int] | None = None,
         retry_5xx: bool = True,
         max_retries: int = 3,
         max_concurrency: int | None = None,
@@ -95,6 +96,7 @@ class RestModel(Model):
         self.verify_ssl = verify_ssl
         self.ratelimit_codes = ratelimit_codes if ratelimit_codes is not None else [429]
         self.skip_codes = skip_codes if skip_codes is not None else []
+        self.block_codes = block_codes if block_codes is not None else []
         self.retry_5xx = retry_5xx
         self.max_retries = max_retries
         self.proxies = proxies
@@ -158,13 +160,13 @@ class RestModel(Model):
 
     def _parse_response(self, text: str) -> dict:
         if not self.response_json_field or not text or not text.strip():
-            return {"content": text or ""}
+            return {"content": text or "", "raw_response": text or ""}
 
         data = json.loads(text)
 
         matches = self._jsonpath_expr.find(data)
         if matches:
-            return {"content": str(matches[0].value)}
+            return {"content": str(matches[0].value), "raw_response": text}
         raise ValueError(
             f"JSONPath '{self.response_json_field}' matched nothing in response"
         )
@@ -208,6 +210,9 @@ class RestModel(Model):
                 if resp.status_code in self.skip_codes:
                     return {"content": ""}
 
+                if resp.status_code in self.block_codes:
+                    return {"content": "", "is_blocked": True, "status_code": resp.status_code, "raw_response": resp.text}
+
                 if self._should_retry(resp.status_code) and attempt < self.max_retries:
                     time.sleep(self._retry_delay(attempt))
                     continue
@@ -248,6 +253,9 @@ class RestModel(Model):
 
                             if resp.status in self.skip_codes:
                                 return {"content": ""}
+
+                            if resp.status in self.block_codes:
+                                return {"content": "", "is_blocked": True, "status_code": resp.status, "raw_response": text}
 
                             if self._should_retry(resp.status) and attempt < self.max_retries:
                                 await asyncio.sleep(self._retry_delay(attempt))
@@ -341,6 +349,9 @@ class RestModel(Model):
                         t.cancel()
                 await asyncio.gather(*tasks, return_exceptions=True)
 
+    def is_answer_blocked(self, answer: dict) -> bool:
+        return bool(answer.get("is_blocked", False))
+
     def get_params(self) -> dict:
         return {
             "model_name": self.model_name,
@@ -353,6 +364,7 @@ class RestModel(Model):
             "request_timeout": self.request_timeout,
             "retry_5xx": self.retry_5xx,
             "skip_codes": self.skip_codes,
+            "block_codes": self.block_codes,
             "verify_ssl": self.verify_ssl,
             **self.kwargs,
         }

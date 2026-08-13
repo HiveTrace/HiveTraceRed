@@ -62,8 +62,9 @@ Checks responses for presence of unsafe keywords:
 
    from hivetracered.evaluators import KeywordEvaluator, load_keywords
 
-   # Load keyword list
-   keywords = load_keywords('harmful_keywords.txt')
+   # load_keywords() loads the bundled default keyword list (no arguments);
+   # or pass your own list directly to KeywordEvaluator(keywords=[...]).
+   keywords = load_keywords()
 
    evaluator = KeywordEvaluator(keywords=keywords)
    result = evaluator.evaluate(
@@ -74,15 +75,17 @@ Checks responses for presence of unsafe keywords:
 Model Evaluator
 ~~~~~~~~~~~~~~~
 
-Uses a custom model for evaluation:
+``ModelEvaluator`` is the abstract base for model-based evaluators — instantiate a
+concrete subclass such as ``ScoringJudgeEvaluator`` (or subclass ``ModelEvaluator``
+yourself and implement ``_parse_evaluation_response``):
 
 .. code-block:: python
 
-   from hivetracered.evaluators import ModelEvaluator
+   from hivetracered.evaluators import ScoringJudgeEvaluator
    from hivetracered.models import OpenAIModel
 
    model = OpenAIModel(model="gpt-4.1")
-   evaluator = ModelEvaluator(model=model)
+   evaluator = ScoringJudgeEvaluator(model=model)
 
    result = evaluator.evaluate(prompt, response)
 

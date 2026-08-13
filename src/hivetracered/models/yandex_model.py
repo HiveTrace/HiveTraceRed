@@ -22,7 +22,7 @@ class YandexGPTModel(Model):
     and asynchronous operations, batched requests, and error handling.
     """
     
-    def __init__(self, model="yandexgpt", max_concurrency: int | None = None, batch_size: int | None = None, max_retries: int = 3, **kwargs):
+    def __init__(self, model="yandexgpt", max_concurrency: int | None = None, batch_size: int | None = None, max_retries: int = 3, folder_id: str | None = None, api_key: str | None = None, **kwargs):
         """
         Initialize the Yandex GPT model client with the specified configuration.
 
@@ -31,6 +31,8 @@ class YandexGPTModel(Model):
             max_concurrency: Maximum number of concurrent requests in batch operations (replaces batch_size)
             batch_size: (Deprecated) Use max_concurrency instead. Will be removed in v2.0.0
             max_retries: Maximum number of retry attempts on transient errors (default: 3)
+            folder_id: Yandex Cloud folder ID; defaults to YANDEX_FOLDER_ID env var
+            api_key: Yandex GPT API key; defaults to YANDEX_GPT_API_KEY env var
             **kwargs: Additional parameters for model configuration:
                      - temperature: Sampling temperature (lower = more deterministic)
                      - max_tokens: Maximum tokens in generated responses
@@ -55,8 +57,8 @@ class YandexGPTModel(Model):
         )
 
         sdk = AIStudio(
-            folder_id=os.getenv("YANDEX_FOLDER_ID"),
-            auth=os.getenv("YANDEX_GPT_API_KEY"),
+            folder_id=folder_id or os.getenv("YANDEX_FOLDER_ID"),
+            auth=api_key or os.getenv("YANDEX_GPT_API_KEY"),
             retry_policy=retry_policy,  # Pass retry policy to SDK
         )
         self.client = sdk.models.completions(self.model_name).configure(

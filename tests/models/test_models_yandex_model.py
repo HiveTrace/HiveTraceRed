@@ -175,6 +175,15 @@ def test_init_passes_env_credentials_to_aistudio(mock_sdk):
     assert kwargs["auth"] == "test-api-key-SECRET"
 
 
+def test_init_explicit_credentials_override_env(mock_sdk):
+    """Explicit folder_id/api_key ctor args take precedence over env vars."""
+    YandexGPTModel(folder_id="explicit-folder", api_key="explicit-key")
+
+    kwargs = mock_sdk.aistudio_cls.call_args.kwargs
+    assert kwargs["folder_id"] == "explicit-folder"
+    assert kwargs["auth"] == "explicit-key"
+
+
 def test_init_configures_retry_policy_with_max_retries(mock_sdk):
     YandexGPTModel(max_retries=7)
 

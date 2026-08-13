@@ -15,7 +15,7 @@ Coverage targets:
 - batch / abatch: config branching on max_concurrency, order preservation
 - stream_abatch: input-order yielding + per-prompt error capture
 - is_answer_blocked: finish_reason="blacklist" detection
-- get_params: merges client.dict() with max_concurrency + batch_size
+- get_params: merges client.model_dump() with max_concurrency + batch_size
 - BatchCallback: on_llm_end increments counter, sync + async context manager
 
 Async tests use ``asyncio.new_event_loop().run_until_complete(...)`` because the
@@ -281,9 +281,9 @@ def test_is_answer_blocked_returns_true_only_for_blacklist_finish_reason(answer,
 # ── get_params ──────────────────────────────────────────────────────
 
 
-def test_get_params_merges_client_dict_with_concurrency_fields():
+def test_get_params_merges_client_model_dump_with_concurrency_fields():
     client = MagicMock()
-    client.dict.return_value = {"model_name": "gpt-fake", "temperature": 0.7}
+    client.model_dump.return_value = {"model_name": "gpt-fake", "temperature": 0.7}
     model = _ConcreteLangchainModel(
         client=client, model_name="gpt-fake", max_concurrency=8
     )
@@ -294,14 +294,14 @@ def test_get_params_merges_client_dict_with_concurrency_fields():
     assert params["temperature"] == 0.7
     assert params["max_concurrency"] == 8
     assert params["batch_size"] == 8  # = max_concurrency by construction
-    client.dict.assert_called_once_with()
+    client.model_dump.assert_called_once_with()
 
 
 def test_get_params_overrides_client_concurrency_fields_with_model_attrs():
-    # If the client.dict() happens to include keys that collide with the
+    # If the client.model_dump() happens to include keys that collide with the
     # outer fields, the outer values win because they appear last in {**a, ...}.
     client = MagicMock()
-    client.dict.return_value = {"max_concurrency": 999, "batch_size": 999}
+    client.model_dump.return_value = {"max_concurrency": 999, "batch_size": 999}
     model = _ConcreteLangchainModel(client=client, max_concurrency=2)
 
     params = model.get_params()

@@ -108,14 +108,19 @@ To use Crescendo via the pipeline, add it to your YAML config:
          max_iterations: 10
          refusal_cap: 10
 
-   evaluator:
-     name: WildGuardGPTRuEvaluator
+   datasets:
+     - name: harmful
+       base_prompts:
+         - "Harmful request 1"
+         - "Harmful request 2"
+       evaluator:
+         name: WildGuardGPTRuEvaluator
 
-   base_prompts:
-     - "Harmful request 1"
-     - "Harmful request 2"
+   stages:
+     create_attack_prompts: true
+     get_model_responses: true
+     evaluate_responses: true
 
-   output_format: csv
    output_dir: results
 
 See :doc:`../getting-started/configuration` for full pipeline documentation.
@@ -188,13 +193,34 @@ Failure Modes
 
 Crescendo is designed to preserve all attempted iterations and turns, even under transient failures:
 
-| Site | Exception | Recorded as | Loop Effect |
-|------|-----------|-------------|------------|
-| Attacker model invoke | any ``Exception`` | Turn with ``q=""`, ``target_response=""`, ``error="attacker:..."``, ``committed=False`` | ``refusal_retries += 1``; if cap reached, move to next iteration; else retry round |
-| Attacker JSON missing ``q`` field | (explicit check, not exception) | Turn with ``q=""`` and ``error="attacker:missing-q-field"`` | same as above |
-| Target model invoke | any ``Exception`` | Turn with ``target_response=""`` and ``error="target:..."``, ``committed=False``, ``H_T`` backtracked | cap-aware retry |
-| Refusal judge raises | any ``Exception`` | Verdict synthesised as ``{"success": True, "error": "refusal_judge:..."}`` (treat-as-refused) | Backtrack ``H_T[-1]``; retry round |
-| Success judge raises | any ``Exception`` | Verdict synthesised as ``{"success": False, "error": "success_judge:..."}`` | Turn committed; iteration continues |
+.. list-table::
+   :header-rows: 1
+   :widths: 20 18 32 30
+
+   * - Site
+     - Exception
+     - Recorded as
+     - Loop Effect
+   * - Attacker model invoke
+     - any ``Exception``
+     - Turn with ``q=""``, ``target_response=""``, ``error="attacker:..."``, ``committed=False``
+     - ``refusal_retries += 1``; if cap reached, move to next iteration; else retry round
+   * - Attacker JSON missing ``q`` field
+     - (explicit check, not exception)
+     - Turn with ``q=""`` and ``error="attacker:missing-q-field"``
+     - same as above
+   * - Target model invoke
+     - any ``Exception``
+     - Turn with ``target_response=""`` and ``error="target:..."``, ``committed=False``, ``H_T`` backtracked
+     - cap-aware retry
+   * - Refusal judge raises
+     - any ``Exception``
+     - Verdict synthesised as ``{"success": True, "error": "refusal_judge:..."}`` (treat-as-refused)
+     - Backtrack ``H_T[-1]``; retry round
+   * - Success judge raises
+     - any ``Exception``
+     - Verdict synthesised as ``{"success": False, "error": "success_judge:..."}``
+     - Turn committed; iteration continues
 
 **Key principle:** No transient external call error will cause the attack to raise an exception. All failures are recorded as turn records with ``error`` fields set, allowing downstream analysis of what went wrong.
 
@@ -244,7 +270,7 @@ Example
 
 See :doc:`../examples/system_prompt_extraction` for an end-to-end example of running a conversational attack and analyzing results.
 
-For working YAML configs, see ``examples/crescendo_attack.yaml`` in the repository.
+For a runnable pipeline config, see :doc:`../getting-started/quickstart-api`.
 
 Performance Notes
 -----------------

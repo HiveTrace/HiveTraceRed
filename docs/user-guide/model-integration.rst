@@ -70,6 +70,8 @@ Yandex Models
 
    from hivetracered.models import YandexGPTModel
 
+   # Credentials can be passed explicitly, or omitted to fall back to the
+   # YANDEX_FOLDER_ID / YANDEX_GPT_API_KEY environment variables.
    model = YandexGPTModel(
        model="yandexgpt-lite",
        folder_id="YOUR_FOLDER_ID",

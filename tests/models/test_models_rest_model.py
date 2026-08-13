@@ -725,6 +725,65 @@ def test_batch_methods_handle_empty_prompts_list(method_name):
     assert out == []
 
 
+# ── block_codes / is_answer_blocked ─────────────────────────────────
+
+
+def test_invoke_block_code_returns_is_blocked_without_retry():
+    model = RestModel(uri="http://x/y", block_codes=[503], max_retries=3)
+    blocked = _make_sync_response(503, "denied by WAF")
+
+    with patch(
+        "hivetracered.models.rest_model.requests.request", return_value=blocked
+    ) as mock_req:
+        out = model.invoke("hi")
+
+    assert out == {"content": "", "is_blocked": True, "status_code": 503}
+    assert "error" not in out
+    assert mock_req.call_count == 1  # no retries despite retry_5xx=True
+
+
+def test_ainvoke_block_code_returns_is_blocked_without_retry(monkeypatch):
+    model = RestModel(uri="http://x/y", block_codes=[503], max_retries=3)
+    sessions_built = []
+
+    def session_factory(*a, **k):
+        s = _FakeAiohttpSession(lambda *aa, **kk: _FakeAiohttpResponse(503, "denied"))
+        sessions_built.append(s)
+        return s
+
+    monkeypatch.setattr(
+        "hivetracered.models.rest_model.aiohttp.ClientSession", session_factory
+    )
+
+    out = asyncio.new_event_loop().run_until_complete(model.ainvoke("hi"))
+
+    assert out == {"content": "", "is_blocked": True, "status_code": 503}
+    assert len(sessions_built) == 1  # single attempt
+
+
+def test_is_answer_blocked_reads_flag():
+    model = RestModel(uri="http://x/y")
+
+    assert model.is_answer_blocked({"is_blocked": True}) is True
+    assert model.is_answer_blocked({}) is False
+
+
+def test_invoke_503_not_in_block_codes_keeps_retry_then_error():
+    # Default block_codes=[] → old behavior: 503 retried, then error dict.
+    model = RestModel(uri="http://x/y", max_retries=1)
+    bad = _make_sync_response(503)
+
+    with patch(
+        "hivetracered.models.rest_model.requests.request", return_value=bad
+    ) as mock_req:
+        out = model.invoke("hi")
+
+    assert out["content"] == ""
+    assert "error" in out
+    assert "is_blocked" not in out
+    assert mock_req.call_count == 2  # initial + 1 retry
+
+
 # ── invoke through prompt_text extraction (integration with build_request) ──
 
 

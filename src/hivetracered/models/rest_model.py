@@ -160,13 +160,13 @@ class RestModel(Model):
 
     def _parse_response(self, text: str) -> dict:
         if not self.response_json_field or not text or not text.strip():
-            return {"content": text or ""}
+            return {"content": text or "", "raw_response": text or ""}
 
         data = json.loads(text)
 
         matches = self._jsonpath_expr.find(data)
         if matches:
-            return {"content": str(matches[0].value)}
+            return {"content": str(matches[0].value), "raw_response": text}
         raise ValueError(
             f"JSONPath '{self.response_json_field}' matched nothing in response"
         )
@@ -211,7 +211,7 @@ class RestModel(Model):
                     return {"content": ""}
 
                 if resp.status_code in self.block_codes:
-                    return {"content": "", "is_blocked": True, "status_code": resp.status_code}
+                    return {"content": "", "is_blocked": True, "status_code": resp.status_code, "raw_response": resp.text}
 
                 if self._should_retry(resp.status_code) and attempt < self.max_retries:
                     time.sleep(self._retry_delay(attempt))
@@ -255,7 +255,7 @@ class RestModel(Model):
                                 return {"content": ""}
 
                             if resp.status in self.block_codes:
-                                return {"content": "", "is_blocked": True, "status_code": resp.status}
+                                return {"content": "", "is_blocked": True, "status_code": resp.status, "raw_response": text}
 
                             if self._should_retry(resp.status) and attempt < self.max_retries:
                                 await asyncio.sleep(self._retry_delay(attempt))

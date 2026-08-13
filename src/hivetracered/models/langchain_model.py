@@ -213,7 +213,7 @@ class LangchainModel(Model):
             Dictionary with model parameters
         """
         return {
-            **self.client.dict(),
+            **self.client.model_dump(),
             "max_concurrency": self.max_concurrency,
             "batch_size": self.batch_size
         }

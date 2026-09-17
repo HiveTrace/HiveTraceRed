@@ -13,7 +13,7 @@ import logging
 
 import pytest
 
-from hivetracered.config import load_config
+from hivetracered.config import expand_env_vars, load_config
 
 
 # ── error paths ───────────────────────────────────────────────────────
@@ -106,3 +106,26 @@ def test_load_config_only_known_keys_emits_no_warning(tmp_path, caplog):
     assert "stages" in result and "report" in result
     warning_messages = [r.getMessage() for r in caplog.records if r.levelno == logging.WARNING]
     assert warning_messages == []  # = no unknown-key warnings expected
+
+
+def test_load_config_keeps_env_placeholders_unexpanded(tmp_path, monkeypatch):
+    # Expansion happens in setup_model/setup_evaluator, so the config dumped
+    # into the run directory never contains the secret.
+    monkeypatch.setenv("HTR_TEST_KEY", "sk-secret")
+    cfg = tmp_path / "c.yaml"
+    cfg.write_text("attacker_model:\n  params:\n    api_key: ${HTR_TEST_KEY}\n", encoding="utf-8")
+    assert load_config(str(cfg))["attacker_model"]["params"]["api_key"] == "${HTR_TEST_KEY}"
+
+
+def test_expand_env_vars_replaces_nested_strings(monkeypatch):
+    monkeypatch.setenv("HTR_TEST_KEY", "sk-secret")
+    params = {"api_key": "${HTR_TEST_KEY}", "urls": ["https://x/${HTR_TEST_KEY}/v1"], "n": 3}
+    assert expand_env_vars(params) == {
+        "api_key": "sk-secret", "urls": ["https://x/sk-secret/v1"], "n": 3,
+    }
+
+
+def test_expand_env_vars_unset_variable_raises_value_error(monkeypatch):
+    monkeypatch.delenv("HTR_MISSING_KEY", raising=False)
+    with pytest.raises(ValueError, match="HTR_MISSING_KEY"):
+        expand_env_vars({"api_key": "${HTR_MISSING_KEY}"})

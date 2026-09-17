@@ -13,6 +13,7 @@ from typing import Any, NamedTuple
 
 import pandas as pd
 
+from hivetracered.config import expand_env_vars
 from hivetracered.evaluators import BaseEvaluator, ModelEvaluator
 from hivetracered.models import Model
 from hivetracered.pipeline.constants import EVALUATOR_CLASSES, MODEL_CLASSES
@@ -61,7 +62,7 @@ def setup_model(model_config: dict[str, Any]) -> Model | None:
         return None
 
     model_class_name = model_config.get("model", None)
-    params = model_config.get("params", {})
+    params = expand_env_vars(model_config.get("params", {}))
 
     if model_name in MODEL_CLASSES:
         try:
@@ -93,7 +94,7 @@ def setup_evaluator(
     if not evaluator_name:
         return None
 
-    params = evaluator_config.get("params", {})
+    params = expand_env_vars(evaluator_config.get("params", {}))
 
     if evaluator_name not in EVALUATOR_CLASSES:
         logger.warning("Unknown evaluator '%s'.", evaluator_name)

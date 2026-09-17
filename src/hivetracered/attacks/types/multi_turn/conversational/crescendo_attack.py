@@ -15,6 +15,7 @@ system-only prompt.
 
 import asyncio
 import json
+import logging
 import re
 from collections.abc import AsyncGenerator
 from dataclasses import dataclass
@@ -26,6 +27,8 @@ from hivetracered.evaluators.base_evaluator import BaseEvaluator
 from hivetracered.evaluators.keyword_evaluator import KeywordEvaluator
 from hivetracered.models.base_model import Model
 from hivetracered.registry import Registry
+
+logger = logging.getLogger(__name__)
 
 
 DEFAULT_ATTACKER_SYSTEM_PROMPT: str = """\
@@ -232,8 +235,10 @@ class CrescendoAttack(BaseAttack):
         self,
         prompts: list,
     ) -> AsyncGenerator[str, None]:
-        """Apply the attack to a batch of prompts concurrently, yielding the final
-        transcript JSON for each prompt in input order. Metadata is not emitted yet."""
+        """Apply the attack to a batch of prompts concurrently, yielding
+        ``(transcript_json, metadata)`` for each prompt in input order.
+        ``metadata`` is ``_build_metadata(result)`` (full per-turn history) or
+        ``{"attack_error": ...}`` when a model call failed mid-run."""
         if not prompts:
             return
 
@@ -241,24 +246,20 @@ class CrescendoAttack(BaseAttack):
             goal = self._extract_goal(prompt)
             try:
                 result = await self.run_attack_async(goal)
-                return idx, json.dumps(result.final_transcript, ensure_ascii=False), None
+                return idx, json.dumps(result.final_transcript, ensure_ascii=False), self._build_metadata(result)
             except AttackModelError as e:
                 # A model call failed mid-run; surface the error so create_dataset
                 # marks the record and Stage 2 skips it (no empty prompt to target).
-                return idx, "", e.error
+                return idx, "", {"attack_error": e.error}
 
         tasks = [asyncio.create_task(_run_task(i, p)) for i, p in enumerate(prompts)]
         results: dict[int, tuple] = {}
         cur_idx = 0
         for task in asyncio.as_completed(tasks):
-            idx, item, error = await task
-            results[idx] = (item, error)
+            idx, item, metadata = await task
+            results[idx] = (item, metadata)
             while cur_idx in results:
-                item, error = results.pop(cur_idx)
-                if error:
-                    yield (item, {"attack_error": error})
-                else:
-                    yield item
+                yield results.pop(cur_idx)
                 cur_idx += 1
 
     def get_name(self) -> str:
@@ -489,6 +490,10 @@ class CrescendoAttack(BaseAttack):
             iterations.append(ConversationIterationResult(
                 iteration=it, success=iteration_success, turns=turns,
             ))
+            logger.info(
+                "Crescendo iter=%d/%d rounds=%d success=%s goal=%.60s",
+                it + 1, self.max_iterations, len(turns), iteration_success, goal,
+            )
 
             if iteration_success and first_success_transcript is None:
                 first_success_transcript = list(H_T)
@@ -652,6 +657,10 @@ class CrescendoAttack(BaseAttack):
             iterations.append(ConversationIterationResult(
                 iteration=it, success=iteration_success, turns=turns,
             ))
+            logger.info(
+                "Crescendo iter=%d/%d rounds=%d success=%s goal=%.60s",
+                it + 1, self.max_iterations, len(turns), iteration_success, goal,
+            )
 
             if iteration_success and first_success_transcript is None:
                 first_success_transcript = list(H_T)

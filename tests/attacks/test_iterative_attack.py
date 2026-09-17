@@ -17,7 +17,7 @@ from typing import Any, AsyncGenerator, Dict, Optional
 from hivetracered.attacks.iterative_attack import RUSSIAN_LANGUAGE_CONFIG
 from hivetracered.attacks.types.single_turn.iterative.tap_attack import TAPAttack
 from hivetracered.evaluators.base_evaluator import BaseEvaluator
-from tests.conftest import MockModel
+from tests.conftest import MockModel, async_collect
 
 
 # ── Minimal test double ─────────────────────────────────────────────
@@ -106,3 +106,39 @@ def test_apply_message_list_appends_best_attack_as_human_message():
     assert isinstance(out, list)
     assert out[0] == {"role": "system", "content": "sys"}
     assert out[-1] == {"role": "human", "content": "payload"}
+
+
+# ── stream_abatch metadata (iteration history) ──────────────────────
+
+
+def test_stream_abatch_yields_prompt_and_iteration_history():
+    attack = _make_tap()
+
+    results = async_collect(attack.stream_abatch(["goal A", "goal B"]))
+
+    assert len(results) == 2
+    for prompt, meta in results:
+        assert prompt == "attack"
+        assert meta["success"] is False
+        assert meta["best_score"] == 0.1
+        assert meta["total_iterations"] == 1
+        assert len(meta["iterations"]) == 1
+        it = meta["iterations"][0]
+        assert it["iteration"] == 0
+        assert it["attack_prompt"] == "attack"
+        assert it["target_response"] == "no"
+        assert it["success"] is False
+        assert it["score"] == 0.1
+        assert it["metadata"] == {"depth": 0, "node": "root"}
+        # TAP-specific result.metadata is merged in too.
+        assert meta["max_depth_reached"] == 0
+        json.dumps(meta)  # persisted into the results file → must be serializable
+
+
+def test_stream_abatch_model_error_yields_attack_error_metadata():
+    attack = _make_tap()
+    attack.attacker_model = MockModel(response={"error": "boom 502", "content": ""})
+
+    results = async_collect(attack.stream_abatch(["goal"]))
+
+    assert results == [("", {"attack_error": "boom 502"})]

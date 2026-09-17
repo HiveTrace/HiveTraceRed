@@ -31,11 +31,11 @@ class Model(ABC):
         """
         if self.max_concurrency == 0:
             return contextlib.nullcontext()
-        sem = getattr(self, "_concurrency_sem", None)
-        if sem is None:
-            sem = asyncio.Semaphore(self.max_concurrency)
-            self._concurrency_sem = sem
-        return sem
+        loop = asyncio.get_running_loop()
+        if getattr(self, "_concurrency_sem_loop", None) is not loop:
+            self._concurrency_sem = asyncio.Semaphore(self.max_concurrency)
+            self._concurrency_sem_loop = loop
+        return self._concurrency_sem
 
     @abstractmethod
     def invoke(self, prompt: str | list[dict[str, str]]) -> dict:

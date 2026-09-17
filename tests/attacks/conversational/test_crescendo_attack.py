@@ -714,11 +714,11 @@ def test_SPEC_021_conversation_attack_apply_returns_2_tuple(minimal_attack):
 
 
 def test_SPEC_022_stream_abatch_yields_one_transcript_json_per_input():
-    """SPEC-022 (AC-14, AC-08): stream_abatch yields exactly one JSON transcript string per input prompt.
+    """SPEC-022 (AC-14, AC-08): stream_abatch yields exactly one
+    ``(transcript_json, metadata)`` tuple per input prompt, in input order.
 
-    Metadata is not yielded — it will be reintroduced through a separate channel.
-    Input-order is asserted by the per-prompt count contract here; the goal-by-goal
-    ordering assertion will return once metadata is plumbed back through.
+    ``metadata`` is the same dict ``apply()`` returns (``_build_metadata``), so
+    the per-turn history reaches the pipeline's ``metadata`` column.
     """
     attacker = MockModel(response=_VALID_ATK_RESPONSE)
     target = MockModel(response=_VALID_TARGET_RESPONSE)
@@ -738,15 +738,18 @@ def test_SPEC_022_stream_abatch_yields_one_transcript_json_per_input():
     input_goals = ["goal A", "goal B", "goal C"]
     results = async_collect(attack.stream_abatch(input_goals))
 
-    parsed_shapes = [
-        (isinstance(r, str), isinstance(json.loads(r), list))
-        for r in results
-    ]
-
     assert len(results) == 3, "stream_abatch must yield exactly 3 elements"
-    assert parsed_shapes == [(True, True)] * 3, (
-        "every element must be a JSON string parsing to a list of message dicts"
-    )
+    for r in results:
+        assert isinstance(r, tuple) and len(r) == 2, "each element must be (transcript, metadata)"
+        transcript, metadata = r
+        assert isinstance(transcript, str) and isinstance(json.loads(transcript), list), (
+            "transcript must be a JSON string parsing to a list of message dicts"
+        )
+        assert isinstance(metadata, dict)
+        assert "iterations" in metadata and len(metadata["iterations"]) == 1
+        assert metadata["iterations"][0]["turns"], "per-turn history must be present"
+        json.dumps(metadata)  # must be serializable for the results file
+    assert [m["goal"] for _, m in results] == input_goals, "metadata must follow input order"
 
 
 # ── SPEC-023 ─────────────────────────────────────────────────────────

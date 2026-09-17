@@ -13,6 +13,7 @@ import re
 from typing import Any
 
 import yaml
+from dotenv import load_dotenv
 
 logger = logging.getLogger(__name__)
 
@@ -87,6 +88,35 @@ def load_config(config_path: str) -> dict[str, Any]:
     _warn_unknown_keys(config.get("report"), _KNOWN_REPORT_KEYS, "'report'")
 
     return config
+
+
+_ENV_VAR_RE = re.compile(r"\$\{([A-Za-z_][A-Za-z0-9_]*)\}")
+
+
+def expand_env_vars(value: Any) -> Any:
+    """Recursively replace ``${VAR}`` in string values with the environment
+    variable ``VAR`` (``.env`` is loaded first). Lets secrets such as API keys
+    stay out of the YAML file. An unset variable raises ValueError.
+
+    Applied to model/evaluator ``params`` at construction time (see
+    ``hivetracered.setup``), not in ``load_config``, so the config dumped into
+    the run directory keeps the ``${VAR}`` placeholder instead of the secret.
+    """
+    load_dotenv()
+    if isinstance(value, dict):
+        return {k: expand_env_vars(v) for k, v in value.items()}
+    if isinstance(value, list):
+        return [expand_env_vars(v) for v in value]
+    if isinstance(value, str):
+        def _sub(match: re.Match) -> str:
+            name = match.group(1)
+            if name not in os.environ:
+                raise ValueError(
+                    f"Config references environment variable '{name}' which is not set."
+                )
+            return os.environ[name]
+        return _ENV_VAR_RE.sub(_sub, value)
+    return value
 
 
 def _validate_datasets_block(config: dict) -> None:

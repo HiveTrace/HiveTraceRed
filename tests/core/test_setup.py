@@ -300,3 +300,22 @@ def test_load_records_csv_returns_row_dicts(tmp_path):
     # rather than a literal type to keep the test robust to pandas version drift.
     assert int(result[0]["score"]) == 1
     assert int(result[1]["score"]) == 2
+
+
+def test_setup_model_expands_env_vars_in_params(monkeypatch):
+    """`${VAR}` inside params is resolved from the environment at construction."""
+    monkeypatch.setenv("HTR_TEST_KEY", "sk-secret")
+    captured = {}
+
+    class FakeModel:
+        def __init__(self, model, **params):
+            captured["params"] = params
+
+    Registry._models["FakeModelEnv"] = FakeModel
+    try:
+        result = setup_model({"name": "FakeModelEnv", "params": {"api_key": "${HTR_TEST_KEY}"}})
+    finally:
+        Registry._models.pop("FakeModelEnv", None)
+
+    assert isinstance(result, FakeModel)
+    assert captured["params"] == {"api_key": "sk-secret"}

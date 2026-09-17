@@ -181,6 +181,30 @@ def test_stream_attack_maps_attack_error_metadata_to_record_error():
         Registry._attacks.pop("_PartialFailAttack", None)
 
 
+def test_stream_attack_keeps_iteration_history_in_metadata_column():
+    # Iterative attacks yield (best_prompt, {"iterations": [...], ...});
+    # stream_attack must store that dict as the record's metadata column.
+    history = {"success": True, "iterations": [{"iteration": 0, "score": 0.9}]}
+
+    class _HistoryAttack(TemplateAttack):
+        async def stream_abatch(self, prompts):
+            for p in prompts:
+                yield (f"{p}-best", dict(history))
+
+    from hivetracered.registry import Registry
+    Registry._attacks["_HistoryAttack"] = {"class": _HistoryAttack, "category": "test"}
+    attack = _HistoryAttack(template="{prompt}")
+
+    try:
+        results = async_collect(stream_attack(attack, ["a"]))
+
+        assert results[0]["prompt"] == "a-best"
+        assert results[0]["error"] == ""
+        assert results[0]["metadata"] == history
+    finally:
+        Registry._attacks.pop("_HistoryAttack", None)
+
+
 def test_stream_attack_failure_yields_error_dicts_for_each_input():
     class _BatchBoomAttack(TemplateAttack):
         async def stream_abatch(self, prompts):

@@ -5,15 +5,18 @@ Supports TAP (Tree of Attacks with Pruning) and PAIR (Prompt Automatic Iterative
 
 import asyncio
 import json
+import logging
 import re
 from abc import abstractmethod
-from dataclasses import dataclass, field
+from dataclasses import asdict, dataclass, field
 from typing import Any
 from collections.abc import AsyncGenerator
 
 from hivetracered.attacks.base_attack import AttackModelError, BaseAttack
 from hivetracered.evaluators.base_evaluator import BaseEvaluator
 from hivetracered.models.base_model import Model
+
+logger = logging.getLogger(__name__)
 
 
 @dataclass
@@ -180,6 +183,18 @@ class IterativeAttack(BaseAttack):
             raise ValueError("No human message found in prompt list")
         raise ValueError(f"Unsupported prompt type: {type(prompt)}")
 
+    @staticmethod
+    def _build_metadata(result: IterativeAttackResult) -> dict[str, Any]:
+        """Serialize the full iteration history so create_dataset can persist it
+        in the record's ``metadata`` column (JSON-serializable dict)."""
+        return {
+            "success": result.success,
+            "best_score": result.best_score,
+            "total_iterations": result.total_iterations,
+            "iterations": [asdict(it) for it in result.iterations],
+            **result.metadata,
+        }
+
     def _format_result(
         self,
         prompt: str | list[dict[str, str]],
@@ -202,7 +217,9 @@ class IterativeAttack(BaseAttack):
         self,
         prompts: list[str | list[dict[str, str]]]
     ) -> AsyncGenerator[str | list[dict[str, str]], None]:
-        """Run the attack on each prompt concurrently; yield best-attack outputs in input order."""
+        """Run the attack on each prompt concurrently; yield ``(best_attack, metadata)``
+        tuples in input order. ``metadata`` carries the full iteration history
+        (see ``_build_metadata``) or ``{"attack_error": ...}`` on model failure."""
         if not prompts:
             return
 
@@ -210,25 +227,21 @@ class IterativeAttack(BaseAttack):
             goal = self._extract_goal(prompt)
             try:
                 result = await self.run_attack_async(goal)
-                return idx, self._format_result(prompt, result.best_attack_prompt), None
+                return idx, self._format_result(prompt, result.best_attack_prompt), self._build_metadata(result)
             except AttackModelError as e:
                 # A model call failed mid-run; surface the error so create_dataset
                 # marks the record and Stage 2 skips it (no empty prompt to target).
-                return idx, self._format_result(prompt, ""), e.error
+                return idx, self._format_result(prompt, ""), {"attack_error": e.error}
 
         tasks = [asyncio.create_task(_run_task(i, p)) for i, p in enumerate(prompts)]
 
         results: dict[int, Any] = {}
         cur_idx = 0
         for task in asyncio.as_completed(tasks):
-            idx, formatted, error = await task
-            results[idx] = (formatted, error)
+            idx, formatted, metadata = await task
+            results[idx] = (formatted, metadata)
             while cur_idx in results:
-                formatted, error = results.pop(cur_idx)
-                if error:
-                    yield (formatted, {"attack_error": error})
-                else:
-                    yield formatted
+                yield results.pop(cur_idx)
                 cur_idx += 1
 
     def get_name(self) -> str:

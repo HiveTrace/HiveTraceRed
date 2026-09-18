@@ -45,9 +45,6 @@ class OpenRouterModel(LangchainModel):
         self.batch_size = self.max_concurrency
 
         self.kwargs = kwargs or {}
-
-        if not "temperature" in self.kwargs:
-            self.kwargs["temperature"] = 0.000001
         rate_limiter = self._make_rate_limiter(rpm)
         self.client = ChatOpenAI(model=model, rate_limiter=rate_limiter, base_url=base_url, openai_api_key=api_key, **self._httpx_clients(verify_ssl), **self.kwargs)
         self.client = self._add_retry_policy(self.client)

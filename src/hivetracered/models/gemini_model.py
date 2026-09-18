@@ -39,9 +39,6 @@ class GeminiModel(LangchainModel):
 
         self.kwargs = kwargs or {}
 
-        if not "temperature" in self.kwargs:
-            self.kwargs["temperature"] = 0.000001
-
         if verify_ssl is not True:
             # client_args are forwarded to the underlying httpx clients
             self.kwargs.setdefault("client_args", {"verify": self._ssl_verify(verify_ssl)})

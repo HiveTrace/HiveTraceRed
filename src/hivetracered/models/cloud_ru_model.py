@@ -56,8 +56,6 @@ class CloudRuModel(LangchainModel):
 
         # Defaults
         self.kwargs = kwargs or {}
-        if "temperature" not in self.kwargs:
-            self.kwargs["temperature"] = 0.000001
 
         rate_limiter = self._make_rate_limiter(rpm, max_bucket_size=self.max_concurrency)
 

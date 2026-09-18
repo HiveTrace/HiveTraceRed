@@ -91,10 +91,6 @@ class LlamaCppModel(LangchainModel):
 
         self.kwargs = kwargs or {}
 
-        # Set default temperature if not provided
-        if "temperature" not in self.kwargs:
-            self.kwargs["temperature"] = 0.000001
-
         # Auto-detect CPU threads if not specified
         if n_threads is None:
             n_threads = max(1, multiprocessing.cpu_count() - 1)

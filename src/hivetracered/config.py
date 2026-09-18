@@ -83,6 +83,7 @@ def load_config(config_path: str) -> dict[str, Any]:
         )
 
     _validate_datasets_block(config)
+    _force_judge_temperature(config)
     _warn_unknown_keys(config, _KNOWN_TOP_LEVEL_KEYS, "top level")
     _warn_unknown_keys(config.get("stages"), _KNOWN_STAGE_KEYS, "'stages'")
     _warn_unknown_keys(config.get("report"), _KNOWN_REPORT_KEYS, "'report'")
@@ -117,6 +118,35 @@ def expand_env_vars(value: Any) -> Any:
             return os.environ[name]
         return _ENV_VAR_RE.sub(_sub, value)
     return value
+
+
+def _force_judge_temperature(config: dict) -> None:
+    """Default the judge to a deterministic temperature (0, or an epsilon for
+    providers that reject 0). An explicit value is kept, with a warning if it
+    is not that default — a judge sampled at T>0 swings ASR by tens of pp."""
+    from hivetracered.models.base_model import TEMPERATURE_EPSILON
+    from hivetracered.pipeline.constants import MODEL_CLASSES
+
+    em = config.get("evaluation_model")
+    if not isinstance(em, dict):
+        return
+
+    model_class = MODEL_CLASSES.get(em.get("name")) or MODEL_CLASSES.get(em.get("model"))
+    deterministic = (
+        0.0 if getattr(model_class, "SUPPORTS_ZERO_TEMPERATURE", True)
+        else TEMPERATURE_EPSILON
+    )
+
+    params = em["params"] = em.get("params") or {}
+    if "temperature" in params:
+        if params["temperature"] != deterministic:
+            logger.warning(
+                "evaluation_model temperature is %s; a non-deterministic judge "
+                "swings ASR by tens of pp (recommended: %s)",
+                params["temperature"], deterministic,
+            )
+        return
+    params["temperature"] = deterministic
 
 
 def _validate_datasets_block(config: dict) -> None:

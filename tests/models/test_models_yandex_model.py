@@ -155,15 +155,16 @@ def test_init_deprecated_batch_size_emits_warning_and_back_propagates(mock_sdk):
 @pytest.mark.parametrize(
     ("ctor_kwargs", "expected"),
     [
-        ({}, 0.000001),  # lines 71-72: default injected
+        ({}, None),  # nothing injected — the provider's own default applies
         ({"temperature": 0.5}, 0.5),
     ],
-    ids=["default-injected", "user-supplied-preserved"],
+    ids=["omitted-left-to-provider", "user-supplied-preserved"],
 )
 def test_init_temperature_resolution(mock_sdk, ctor_kwargs, expected):
     model = YandexGPTModel(**ctor_kwargs)
 
-    assert model.kwargs["temperature"] == pytest.approx(expected)
+    assert model.kwargs.get("temperature") == (expected if expected is None else pytest.approx(expected))
+
 
 
 def test_init_passes_env_credentials_to_aistudio(mock_sdk):

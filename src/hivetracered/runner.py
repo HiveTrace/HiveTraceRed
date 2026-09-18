@@ -575,6 +575,10 @@ async def run_pipeline(config: dict[str, Any]) -> bool:
     Returns True if the run is degraded (request failure rate above
     error_handling.max_failure_rate), so the CLI can exit non-zero.
     """
+    # load_config() already did this; repeat for hand-built configs (library use).
+    from hivetracered.config import _force_judge_temperature
+    _force_judge_temperature(config)
+
     run_dir = await _prepare_run_dir(config)
     output_format = config.get("output_format", "csv")
 

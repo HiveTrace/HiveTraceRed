@@ -21,7 +21,10 @@ class YandexGPTModel(Model):
     Provides access to Yandex's Russian language models with support for synchronous 
     and asynchronous operations, batched requests, and error handling.
     """
-    
+
+    # Yandex rejects temperature=0; the judge gets TEMPERATURE_EPSILON instead.
+    SUPPORTS_ZERO_TEMPERATURE = False
+
     def __init__(self, model="yandexgpt", max_concurrency: int | None = None, batch_size: int | None = None, max_retries: int = 3, folder_id: str | None = None, api_key: str | None = None, **kwargs):
         """
         Initialize the Yandex GPT model client with the specified configuration.
@@ -47,9 +50,6 @@ class YandexGPTModel(Model):
         self.batch_size = self.max_concurrency
 
         self.kwargs = kwargs or {}
-
-        if not "temperature" in self.kwargs:
-            self.kwargs["temperature"] = 0.000001
 
         # Configure retry policy with exponential backoff and jitter
         retry_policy = RetryPolicy(

@@ -31,6 +31,7 @@ from hivetracered.pipeline.evaluation import RESPONSE_ERROR
 from hivetracered.report import (
     build_html_report,
     calculate_metrics,
+    collapse_k_repeats,
     create_charts,
     generate_data_tables,
     load_data,
@@ -195,11 +196,13 @@ def generate_report(
         logger.warning("Evaluation file not found: %s", evaluation_file)
         return None
 
-    df = load_data(evaluation_file)
+    df = load_data(evaluation_file, collapse=False)
     if df.empty:
         logger.warning("No data loaded from evaluation file.")
         return None
 
+    per_request = df
+    df = collapse_k_repeats(per_request.copy())
     logger.info("Loaded %d evaluation results for report", len(df))
 
     report_config = config.get("report", {})
@@ -213,14 +216,14 @@ def generate_report(
     else:
         report_path = os.path.join(config.get("output_dir", "results"), output_filename)
 
-    if "dataset" in df.columns and df["dataset"].nunique() > 1:
-        for ds_name in df["dataset"].unique():
-            logger.info("Dataset '%s': %d records", ds_name, len(df[df["dataset"] == ds_name]))
-        html = build_html_report(df, metrics=None, charts=None, data_tables=None)
+    if "dataset" in per_request.columns and per_request["dataset"].nunique() > 1:
+        for ds_name in per_request["dataset"].unique():
+            logger.info("Dataset '%s': %d records", ds_name, len(per_request[per_request["dataset"] == ds_name]))
+        html = build_html_report(per_request, metrics=None, charts=None, data_tables=None)
     else:
-        metrics = calculate_metrics(df)
-        charts = create_charts(df)
-        data_tables = generate_data_tables(df)
+        metrics = calculate_metrics(df, per_request=per_request)
+        charts = create_charts(df, per_request=per_request)
+        data_tables = generate_data_tables(df, per_request=per_request)
         html = build_html_report(df, metrics, charts, data_tables)
         logger.info(
             "  Total: %d | Success rate: %.1f%% | Best attack: %s (%.1f%%)",

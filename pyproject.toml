@@ -114,6 +114,7 @@ exclude_lines = [
 
 [tool.setuptools.package-data]
 hivetracered = [
+    "report_ui.js",
     "evaluators/data/*.csv",
     "attacks/types/**/*.yaml",
 ]

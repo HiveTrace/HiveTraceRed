@@ -9,11 +9,14 @@ response_model:
   model: YandexGPTModel
   name: yandexgpt-lite  # Model being tested
   params:
-    temperature: 0.000001
+    temperature: 0.7
 
 evaluation_model:
   model: OpenAIModel
   name: gpt-4.1-nano
+
+K: 1   # send each attack prompt to the target K times (needs response_model temperature > 0); K and N must be >= 1
+N: 1   # re-run each model/random-based attack N times; deterministic attacks run once unless given their own N: {name: PAIRAttack, N: 10}
 
 # Attacks configuration - can be simple strings or objects with params
 attacks:

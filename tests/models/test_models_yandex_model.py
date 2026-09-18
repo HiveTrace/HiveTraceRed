@@ -324,11 +324,11 @@ def test_ainvoke_returns_blocked_sentinel_on_aio_rpc_error(mock_sdk):
 
 
 def test_batch_returns_one_result_per_prompt_in_order(mock_sdk):
-    mock_sdk.client.run.side_effect = [
-        _fake_response(text="r0"),
-        _fake_response(text="r1"),
-        _fake_response(text="r2"),
-    ]
+    # Reply from the prompt itself: a side_effect list is consumed in call
+    # order, which is a thread race when max_concurrency > 1.
+    mock_sdk.client.run.side_effect = lambda messages: _fake_response(
+        text="r" + str(messages)[str(messages).index("p") + 1]
+    )
     model = YandexGPTModel(max_concurrency=2)
 
     results = model.batch(["p0", "p1", "p2"])

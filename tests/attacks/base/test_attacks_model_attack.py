@@ -142,7 +142,7 @@ def test_model_attack_batch_processes_mixed_str_and_list_prompts_with_post_proce
         [{"role": "human", "content": "second"}],
     ]
 
-    results = asyncio.get_event_loop().run_until_complete(attack.batch(prompts))
+    results = asyncio.run(attack.batch(prompts))
 
     assert results[0] == "out1"
     assert results[1] == [{"role": "human", "content": "out2"}]
@@ -152,7 +152,7 @@ def test_model_attack_batch_with_invalid_prompt_type_raises_valueerror():
     attack = ModelAttack(model=MockModel(), attacker_prompt="X{prompt}")
 
     with pytest.raises(ValueError, match=r"string or a list with the last message from human"):
-        asyncio.get_event_loop().run_until_complete(attack.batch([{"bad": "dict"}]))
+        asyncio.run(attack.batch([{"bad": "dict"}]))
 
 
 # ── stream_abatch ──────────────────────────────────────────────────────

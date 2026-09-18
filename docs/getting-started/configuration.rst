@@ -138,7 +138,7 @@ Model Configuration
 
 Every model block (``attacker_model``, ``response_model``, ``evaluation_model``) needs two keys:
 
-- ``model`` — the model **class**. Valid values: ``OpenAIModel``, ``OpenRouterModel``, ``GeminiModel``, ``GeminiNativeModel``, ``YandexGPTModel``, ``GigaChatModel``, ``CloudRuModel``, ``OllamaModel``, ``VLLMModel``, ``LlamaCppModel``, ``RestModel``.
+- ``model`` — the model **class**. Valid values: ``OpenAIModel``, ``OpenRouterModel``, ``GeminiModel``, ``YandexGPTModel``, ``GigaChatModel``, ``CloudRuModel``, ``OllamaModel``, ``VLLMModel``, ``LlamaCppModel``, ``RestModel``.
 - ``name`` — the provider's model identifier (e.g. ``gpt-4.1-nano``, ``gemini-2.5-flash-preview-04-17``).
 
 An optional ``params`` block is forwarded to the model constructor (``temperature``, ``max_tokens``, ``max_concurrency``, etc.).

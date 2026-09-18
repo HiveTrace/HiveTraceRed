@@ -86,7 +86,6 @@ autodoc_mock_imports = [
     "aiohttp",
     "requests",
     "google",
-    "google.genai",
     "tenacity",
     "pandas",
     "pyarrow",

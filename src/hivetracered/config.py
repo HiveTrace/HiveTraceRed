@@ -20,6 +20,8 @@ logger = logging.getLogger(__name__)
 # Top-level keys the runner understands. Used to surface typos via a warning;
 # not used as a source of defaults.
 _KNOWN_TOP_LEVEL_KEYS = frozenset({
+    "K",
+    "N",
     "stages",
     "attacker_model",
     "response_model",
@@ -83,6 +85,7 @@ def load_config(config_path: str) -> dict[str, Any]:
         )
 
     _validate_datasets_block(config)
+    _validate_repeats(config)
     _force_judge_temperature(config)
     _warn_unknown_keys(config, _KNOWN_TOP_LEVEL_KEYS, "top level")
     _warn_unknown_keys(config.get("stages"), _KNOWN_STAGE_KEYS, "'stages'")
@@ -118,6 +121,18 @@ def expand_env_vars(value: Any) -> Any:
             return os.environ[name]
         return _ENV_VAR_RE.sub(_sub, value)
     return value
+
+
+def _validate_repeats(config: dict) -> None:
+    """K, N and per-attack N must be integers >= 1: 0 would silently run nothing."""
+    found = [(key, config.get(key, 1)) for key in ("K", "N")]
+    found += [
+        (f"attacks[{a.get('name')}].N", a["N"])
+        for a in config.get("attacks") or [] if isinstance(a, dict) and "N" in a
+    ]
+    for key, value in found:
+        if isinstance(value, bool) or not isinstance(value, int) or value < 1:
+            raise ValueError(f"{key} must be an integer >= 1, got {value!r}")
 
 
 def _force_judge_temperature(config: dict) -> None:

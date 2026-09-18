@@ -17,6 +17,7 @@ from typing import Any
 import yaml
 
 from hivetracered.pipeline import (
+    attack_repeats,
     save_pipeline_results,
     setup_attacks,
     stream_attack_prompts,
@@ -86,8 +87,9 @@ async def create_attack_prompts(
 
     system_prompt = config.get("system_prompt", None)
 
+    repeats = attack_repeats(attack_configs, config.get("N", 1))
     attack_prompts: list[dict[str, Any]] = []
-    async for ap in stream_attack_prompts(attacks, base_prompts, system_prompt):
+    async for ap in stream_attack_prompts(attacks, base_prompts, system_prompt, repeats):
         attack_prompts.append(ap)
 
     if not attack_prompts:
@@ -115,7 +117,7 @@ async def get_model_responses(
 
     model_responses: list[dict[str, Any]] = []
     async for response in stream_model_responses(
-        response_model, attack_prompts, _consecutive_failures(config)
+        response_model, attack_prompts, _consecutive_failures(config), config.get("K", 1)
     ):
         model_responses.append(response)
 
@@ -386,6 +388,7 @@ async def _run_pipeline_for_datasets(
         attacker_model = setup_model(config.get("attacker_model", {}))
         response_model_for_attacks = setup_model(config.get("response_model", {}))
         evaluation_model = setup_model(config.get("evaluation_model", {}))
+        repeats = attack_repeats(config.get("attacks", []), config.get("N", 1))
         for spec in dataset_specs:
             # Attacks are re-built per dataset so that each dataset's own
             # evaluator (spec.evaluator) flows into attack-internal judge
@@ -400,7 +403,9 @@ async def _run_pipeline_for_datasets(
                 setup_evaluator_fn=setup_evaluator,
             )
             records: list[dict[str, Any]] = []
-            async for record in stream_attack_prompts(attacks, spec.prompts, system_prompt):
+            async for record in stream_attack_prompts(
+                attacks, spec.prompts, system_prompt, repeats
+            ):
                 record["dataset"] = spec.name
                 records.append(record)
             save_pipeline_results(
@@ -423,7 +428,7 @@ async def _run_pipeline_for_datasets(
             if response_model is not None:
                 async for record in stream_model_responses(
                     response_model, attacks_by_dataset.get(spec.name, []),
-                    _consecutive_failures(config),
+                    _consecutive_failures(config), config.get("K", 1),
                 ):
                     records.append(record)
             save_pipeline_results(

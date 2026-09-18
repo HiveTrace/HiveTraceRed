@@ -335,7 +335,9 @@ def test_create_attack_prompts_no_prompts_streamed_returns_empty(monkeypatch, tm
     monkeypatch.setattr(runner, "load_base_prompts", lambda cfg: ["p1"])
     monkeypatch.setattr(runner, "setup_evaluator", lambda cfg, m: MagicMock())
     monkeypatch.setattr(runner, "setup_attacks", lambda *a, **k: {"A": MagicMock()})
-    monkeypatch.setattr(runner, "stream_attack_prompts", lambda attacks, prompts, sysp: _aiter([]))
+    monkeypatch.setattr(
+        runner, "stream_attack_prompts", lambda attacks, prompts, sysp, repeats=None: _aiter([])
+    )
 
     saved = []
     monkeypatch.setattr(

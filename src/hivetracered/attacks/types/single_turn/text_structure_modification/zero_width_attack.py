@@ -12,6 +12,8 @@ class ZeroWidthAttack(AlgoAttack):
     Attack that inserts zero-width (invisible) Unicode characters between visible ones,
     potentially bypassing content filters while preserving readability.
     """
+
+    DETERMINISTIC = False  # uses random
     
     # Zero-width characters
     ZERO_WIDTH_CHARS = [

@@ -29,6 +29,30 @@ def _parse_attack_config(attack_config):
     return attack_name, params, inner_attack_cfg
 
 
+def attack_repeats(attack_configs: list, global_n: int = 1) -> dict[str, int]:
+    """Per-attack N (how many times the attack is re-run over the dataset).
+
+    A per-attack ``N`` always wins. Without it, deterministic attacks
+    (``DETERMINISTIC = True``) run once — repeating them gives identical rows —
+    and the rest take ``global_n``.
+    """
+    repeats = {}
+    for attack_config in attack_configs:
+        name, _, _ = _parse_attack_config(attack_config)
+        attack_class = ATTACK_CLASSES.get(name, {}).get("attack_class")
+        deterministic = getattr(attack_class, "DETERMINISTIC", False)
+        explicit_n = None if isinstance(attack_config, str) else attack_config.get("N")
+        if explicit_n is not None:
+            if deterministic and explicit_n > 1:
+                logger.warning(
+                    f"Attack '{name}' is deterministic: N={explicit_n} will produce identical prompts"
+                )
+            repeats[name] = explicit_n
+        else:
+            repeats[name] = 1 if deterministic else global_n
+    return repeats
+
+
 def _resolve_iterative_evaluator(attack_config, attack_name, evaluator,
                                  evaluation_model, setup_evaluator_fn):
     attack_evaluator = None
@@ -281,9 +305,9 @@ async def stream_attack(attack: BaseAttack,
     # Format all prompts
     formatted_prompts = [create_prompt(prompt, system_prompt) for prompt in base_prompts]
     attack_name = attack.__class__.__name__
+    i = 0
     try:
         # Apply the attack to all prompts at once
-        i = 0
         async for attack_prompt in attack.stream_abatch(formatted_prompts):
             # Multi-turn attacks (e.g. CrescendoAttack) yield (prompt_str, metadata_dict);
             # single-turn attacks yield just the prompt. Split here so the row schema is uniform.
@@ -306,6 +330,7 @@ async def stream_attack(attack: BaseAttack,
             yield {
                     **base_fields,  # Preserve all original columns
                     "base_prompt": extract_prompt_text(base_prompts[i]),
+                    "base_prompt_id": i,
                     "prompt": prompt_value,
                     "metadata": prompt_metadata,
                     "attack_name": attack_name,
@@ -316,7 +341,8 @@ async def stream_attack(attack: BaseAttack,
             i += 1
     except Exception as e:
         logger.error(f"Error generating prompts for model attack {attack_name}: {str(e)}")
-        for base_prompt in base_prompts:
+        # Only the prompts not yielded yet: the first i already have their row.
+        for failed_index, base_prompt in enumerate(base_prompts[i:], start=i):
             # Extract base fields if base_prompt is a dict
             base_fields = {}
             if isinstance(base_prompt, dict):
@@ -325,6 +351,7 @@ async def stream_attack(attack: BaseAttack,
             yield {
                 **base_fields,  # Preserve all original columns
                 "base_prompt": extract_prompt_text(base_prompt),
+                "base_prompt_id": failed_index,
                 "prompt": "",
                 "metadata": {},
                 "attack_name": attack_name,
@@ -335,7 +362,8 @@ async def stream_attack(attack: BaseAttack,
 
 
 async def stream_attack_prompts(attacks: dict[str, BaseAttack],
-                                base_prompts: list[Any], system_prompt: str | None = None) -> AsyncGenerator[dict[str, Any], None]:
+                                base_prompts: list[Any], system_prompt: str | None = None,
+                                repeats: dict[str, int] | None = None) -> AsyncGenerator[dict[str, Any], None]:
     """
     Process all attacks on all base prompts and stream results.
 
@@ -343,17 +371,15 @@ async def stream_attack_prompts(attacks: dict[str, BaseAttack],
         attacks: Dictionary of attack instances
         base_prompts: List of original prompts (strings or dicts with columns)
         system_prompt: Optional system instructions
+        repeats: Per-attack N; missing attacks run once. Rows are tagged 'n_index'.
 
     Yields:
         Attack result dictionaries with metadata (preserves all base_prompt columns)
     """
-
-    # Initialize result list
-    attack_prompts = []
-
-    if attacks:
-        # Process regular attacks with tqdm for progress tracking
-        for i, (name, attack) in tqdm(enumerate(attacks.items()), total=len(attacks), desc="Processing Attacks"):
+    repeats = repeats or {}
+    # Process regular attacks with tqdm for progress tracking
+    for name, attack in tqdm(attacks.items(), total=len(attacks), desc="Processing Attacks"):
+        for n_index in range(repeats.get(name, 1)):
             async for attack_prompt_data in stream_attack(attack, base_prompts, system_prompt):
-                attack_prompts.append(attack_prompt_data)
+                attack_prompt_data["n_index"] = n_index
                 yield attack_prompt_data

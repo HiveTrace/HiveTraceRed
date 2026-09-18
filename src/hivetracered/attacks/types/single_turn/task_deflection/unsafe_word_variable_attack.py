@@ -16,6 +16,8 @@ class UnsafeWordVariableAttack(BaseAttack):
     assigns it to a variable, and then asks the model to answer
     using that variable, potentially bypassing content filters.
     """
+
+    DETERMINISTIC = True
     
     def __init__(
         self,

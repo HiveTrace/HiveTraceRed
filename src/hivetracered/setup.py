@@ -235,7 +235,8 @@ def load_records(file_path: str, label: str = "records") -> list[dict[str, Any]]
                 )
             records = data
         else:
-            records = _read_tabular(file_path).to_dict("records")
+            table = _read_tabular(file_path)
+            records = table.astype(object).where(table.notna(), None).to_dict("records")
 
         logger.info("Loaded %d %s from %s", len(records), label, file_path)
         return records

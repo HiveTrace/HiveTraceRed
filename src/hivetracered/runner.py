@@ -15,6 +15,8 @@ from datetime import datetime
 from typing import Any
 
 import yaml
+import pandas as pd
+from hivetracered.statistics import error_mask, valid_results
 
 from hivetracered.pipeline import (
     attack_repeats,
@@ -129,6 +131,15 @@ async def get_model_responses(
     return model_responses
 
 
+def _success_summary(evaluation_results: list[dict[str, Any]]) -> tuple[int, float]:
+    """(successes, ASR in percent) over rows with a verdict: request and judge
+    errors are missing observations, not failed attacks."""
+    valid = valid_results(pd.DataFrame(evaluation_results))
+    if "success" not in valid or valid.empty:
+        return 0, 0.0
+    return int(valid["success"].sum()), float(valid["success"].mean() * 100)
+
+
 async def evaluate_responses(
     config: dict[str, Any],
     model_responses: list[dict[str, Any]],
@@ -158,8 +169,7 @@ async def evaluate_responses(
     )
     evaluation_file = output.get("path")
 
-    success_count = sum(1 for r in evaluation_results if r.get("success", False))
-    success_rate = (success_count / len(evaluation_results)) * 100
+    success_count, success_rate = _success_summary(evaluation_results)
     logger.info(
         "Evaluation: %d total, %d successful (%.2f%%)",
         len(evaluation_results), success_count, success_rate,
@@ -313,12 +323,12 @@ async def _evaluate_dataset(
     try:
         # Skip failed requests (error field): scoring their empty content would
         # pollute results. Evaluate only the rest, then weave back in order.
-        eval_indices = [i for i, r in enumerate(responses) if not r.get("error")]
+        eval_indices = [i for i, r in enumerate(responses) if not r.get("error") and not r.get("is_blocked")]
         eval_inputs = [responses[i] for i in eval_indices]
         prompts = [r.get("base_prompt", "") for r in eval_inputs]
 
         scored_by_index: dict[int, dict[str, Any]] = {}
-        async for batch_result in spec.evaluator.stream_abatch(prompts, eval_inputs):
+        async for batch_result in spec.evaluator.stream_abatch(prompts, [r.get("response", "") for r in eval_inputs]):
             orig_idx = eval_indices[len(scored_by_index)]
             scored_by_index[orig_idx] = batch_result
 
@@ -329,16 +339,19 @@ async def _evaluate_dataset(
                     **source,
                     "success": batch_result.get("success", False),
                     "evaluation": batch_result,
+                    "evaluation_error": batch_result.get("evaluation_error", batch_result.get("error", "")),
                     "evaluator": spec.evaluator.__class__.__name__,
                 })
             else:
                 evaluation_results.append({
                     **source,
                     "success": False,
-                    "evaluation": {"success": False, "reason": RESPONSE_ERROR},
+                    "evaluation": {"success": False, "reason": RESPONSE_ERROR if source.get("error") else "Response was blocked"},
+                    "evaluation_error": "" if source.get("error") or source.get("is_blocked") else "Missing evaluator result",
                     "evaluator": "",
                 })
     except Exception as e:
+        evaluation_results.clear()
         logger.error("Stage 3 failed for dataset '%s': %s", spec.name, e, exc_info=True)
         if len(responses) == 0:
             evaluation_results.append({
@@ -551,7 +564,7 @@ def _error_rate(records: list[dict[str, Any]]) -> float:
     """Fraction of records whose request failed (non-empty 'error' field)."""
     if not records:
         return 0.0
-    failed = sum(1 for r in records if r.get("error"))
+    failed = int(error_mask(pd.DataFrame(records)).sum())
     return failed / len(records)
 
 
@@ -567,8 +580,7 @@ def _log_summary(
         len(attack_prompts), len(model_responses), len(evaluation_results),
     )
     if evaluation_results:
-        success_count = sum(1 for r in evaluation_results if r.get("success", False))
-        logger.info("Attack success rate: %.2f%%", (success_count / len(evaluation_results)) * 100)
+        logger.info("Attack success rate: %.2f%%", _success_summary(evaluation_results)[1])
     logger.info("Results saved to: %s", run_dir)
     if report_path:
         logger.info("Report: %s", report_path)

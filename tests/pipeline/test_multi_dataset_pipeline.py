@@ -361,22 +361,9 @@ def test_SPEC_001_evaluator_routing_routes_records_to_correct_mock(tmp_path):
         )
     )
 
-    # Every record that mock_wildguard received must belong to 'harmful_ru';
-    # every record that mock_sysprompt received must belong to 'sys_extract'.
-    # received_responses contains the response dicts passed to stream_abatch,
-    # each of which has a 'dataset' field stamped by _run_pipeline_for_datasets (Stage 1).
-    assert all(
-        r.get("dataset") == "harmful_ru" for r in mock_wildguard.received_responses
-    ), (
-        "mock_wildguard must receive ONLY records with dataset='harmful_ru'; "
-        f"got datasets: {[r.get('dataset') for r in mock_wildguard.received_responses]}"
-    )
-    assert all(
-        r.get("dataset") == "sys_extract" for r in mock_sysprompt.received_responses
-    ), (
-        "mock_sysprompt must receive ONLY records with dataset='sys_extract'; "
-        f"got datasets: {[r.get('dataset') for r in mock_sysprompt.received_responses]}"
-    )
+    # Judges receive actual response text, routed to the matching dataset.
+    assert mock_wildguard.received_responses == ["r1", "r2"]
+    assert mock_sysprompt.received_responses == ["r3", "r4"]
 
 
 # ---------------------------------------------------------------------------

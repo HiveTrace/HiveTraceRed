@@ -84,6 +84,7 @@ async def stream_evaluated_responses(
                 **responses[i],
                 "success": batch_result["success"],
                 "evaluation": batch_result,
+                "evaluation_error": batch_result.get("evaluation_error", batch_result.get("error", "")),
                 "evaluator": evaluator.__class__.__name__,
                 "evaluator_params": evaluator.get_params(),
             }
@@ -95,7 +96,7 @@ async def stream_evaluated_responses(
                 **responses[i],
                 "evaluation": {
                     "success": False,
-                    "reason": RESPONSE_BLOCKED
+                    "reason": _skip_reason(responses[i])
                 },
                 "evaluator": "",
                 "success": False,
@@ -103,3 +104,20 @@ async def stream_evaluated_responses(
                 "evaluation_error": "",
             }
             i += 1
+
+    # The evaluator stopped early: every input row still gets an output row.
+    # An unscored response is a missing observation, not a failed attack.
+    while i < total_responses:
+        unscored = i in unblocked_responses_indices
+        yield {
+            **responses[i],
+            "evaluation": {
+                "success": False,
+                "reason": "Missing evaluator result" if unscored else _skip_reason(responses[i]),
+            },
+            "evaluator": evaluator.__class__.__name__ if unscored else "",
+            "success": False,
+            "evaluator_params": evaluator.get_params() if unscored else {},
+            "evaluation_error": "Missing evaluator result" if unscored else "",
+        }
+        i += 1

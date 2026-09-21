@@ -8,7 +8,6 @@ from hivetracered.models.gigachat_model import GigaChatModel
 from hivetracered.models.openai_model import OpenAIModel
 from hivetracered.models.yandex_model import YandexGPTModel
 from hivetracered.models.gemini_model import GeminiModel
-from hivetracered.models.gemini_native_model import GeminiNativeModel
 from hivetracered.models.cloud_ru_model import CloudRuModel
 from hivetracered.models.openrouter_model import OpenRouterModel
 from hivetracered.models.ollama_model import OllamaModel
@@ -32,7 +31,6 @@ __all__ = [
     "OpenAIModel",
     "YandexGPTModel",
     "GeminiModel",
-    "GeminiNativeModel",
     "CloudRuModel",
     "OpenRouterModel",
     "OllamaModel",

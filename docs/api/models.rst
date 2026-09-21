@@ -54,12 +54,6 @@ Google Gemini Models
    :show-inheritance:
    :special-members: __init__
 
-.. autoclass:: hivetracered.models.gemini_native_model.GeminiNativeModel
-   :members:
-   :undoc-members:
-   :show-inheritance:
-   :special-members: __init__
-
 Sber Cloud Models
 ~~~~~~~~~~~~~~~~~
 

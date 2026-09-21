@@ -155,15 +155,16 @@ def test_init_deprecated_batch_size_emits_warning_and_back_propagates(mock_sdk):
 @pytest.mark.parametrize(
     ("ctor_kwargs", "expected"),
     [
-        ({}, 0.000001),  # lines 71-72: default injected
+        ({}, None),  # nothing injected — the provider's own default applies
         ({"temperature": 0.5}, 0.5),
     ],
-    ids=["default-injected", "user-supplied-preserved"],
+    ids=["omitted-left-to-provider", "user-supplied-preserved"],
 )
 def test_init_temperature_resolution(mock_sdk, ctor_kwargs, expected):
     model = YandexGPTModel(**ctor_kwargs)
 
-    assert model.kwargs["temperature"] == pytest.approx(expected)
+    assert model.kwargs.get("temperature") == (expected if expected is None else pytest.approx(expected))
+
 
 
 def test_init_passes_env_credentials_to_aistudio(mock_sdk):
@@ -324,11 +325,11 @@ def test_ainvoke_returns_blocked_sentinel_on_aio_rpc_error(mock_sdk):
 
 
 def test_batch_returns_one_result_per_prompt_in_order(mock_sdk):
-    mock_sdk.client.run.side_effect = [
-        _fake_response(text="r0"),
-        _fake_response(text="r1"),
-        _fake_response(text="r2"),
-    ]
+    # Reply from the prompt itself: a side_effect list is consumed in call
+    # order, which is a thread race when max_concurrency > 1.
+    mock_sdk.client.run.side_effect = lambda messages: _fake_response(
+        text="r" + str(messages)[str(messages).index("p") + 1]
+    )
     model = YandexGPTModel(max_concurrency=2)
 
     results = model.batch(["p0", "p1", "p2"])

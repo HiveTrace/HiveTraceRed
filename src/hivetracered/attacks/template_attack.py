@@ -6,7 +6,9 @@ class TemplateAttack(BaseAttack):
     A base class for template-based attacks.
     Allows creating new attacks by defining a template string with a '{prompt}' placeholder where the original prompt will be inserted.
     """
-    
+
+    DETERMINISTIC = True
+
     def __init__(self, template: str = "{prompt}", name: str | None = None, description: str | None = None):
         """
         Initialize the template attack with a specific template string.

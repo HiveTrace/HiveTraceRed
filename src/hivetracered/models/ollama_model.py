@@ -66,9 +66,6 @@ class OllamaModel(LangchainModel):
 
         self.kwargs = kwargs or {}
 
-        if "temperature" not in self.kwargs:
-            self.kwargs["temperature"] = 0.000001
-
         if verify_ssl is not True:
             # client_kwargs are forwarded to the underlying ollama httpx clients
             self.kwargs.setdefault("client_kwargs", {"verify": self._ssl_verify(verify_ssl)})

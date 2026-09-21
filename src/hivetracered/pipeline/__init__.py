@@ -12,7 +12,7 @@ from hivetracered.pipeline.constants import (
     EVALUATOR_CLASSES
 )
 
-from hivetracered.pipeline.create_dataset import setup_attacks, stream_attack_prompts
+from hivetracered.pipeline.create_dataset import attack_repeats, setup_attacks, stream_attack_prompts
 from hivetracered.pipeline.model_responses import stream_model_responses
 from hivetracered.pipeline.evaluation import stream_evaluated_responses
 from hivetracered.pipeline.utils import save_pipeline_results
@@ -29,6 +29,7 @@ __all__ = [
     "ATTACK_TYPES",
     "ATTACK_CLASSES",
     "EVALUATOR_CLASSES",
+    "attack_repeats",
     "setup_attacks",
     "stream_attack_prompts",
     "stream_model_responses",

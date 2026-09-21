@@ -18,6 +18,8 @@ class TypoAttack(AlgoAttack):
     
     Supports both English and Russian keyboard layouts.
     """
+
+    DETERMINISTIC = False  # uses random
     
     # Keyboard adjacency map for common QWERTY layout
     ENGLISH_KEYBOARD = {

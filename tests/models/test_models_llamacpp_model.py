@@ -5,7 +5,7 @@ Tests focus on SUBCLASS-specific behavior in __init__:
   * model_name format: "llamacpp:<basename>" (line 81),
   * forwarding of n_ctx / n_gpu_layers / n_batch / n_threads to ChatLlamaCpp,
   * multiprocessing.cpu_count() used for default n_threads (lines 117-118),
-  * default temperature injection 0.000001 when omitted (lines 113-114),
+  * temperature is not injected when omitted (left to the provider),
   * batch_size deprecation warning + back-propagation (lines 85-93),
   * default max_concurrency=1 fallback (lines 96-97),
   * batch_size alias preservation (line 101),
@@ -173,21 +173,21 @@ def test_init_explicit_n_threads_skips_cpu_count_branch(fake_model_file, monkeyp
     assert _FakeChatLlamaCpp.instances[0].init_kwargs["n_threads"] == 4
 
 
-# ── Default temperature injection (lines 113-114) ───────────────────
+# ── Temperature is left to the provider ─────────────────────────────
 
 
 @pytest.mark.parametrize(
     ("ctor_kwargs", "expected"),
     [
-        ({}, 0.000001),  # default injected (lines 113-114)
+        ({}, None),  # nothing injected — the provider's own default applies
         ({"temperature": 0.7}, 0.7),  # user value preserved
     ],
-    ids=["default-injected", "user-supplied-preserved"],
+    ids=["omitted-left-to-provider", "user-supplied-preserved"],
 )
 def test_init_temperature_resolution(fake_model_file, ctor_kwargs, expected):
     model = LlamaCppModel(model_path=fake_model_file, **ctor_kwargs)
 
-    assert model.kwargs["temperature"] == pytest.approx(expected)
+    assert model.kwargs.get("temperature") == (expected if expected is None else pytest.approx(expected))
 
 
 # ── max_concurrency / batch_size ────────────────────────────────────

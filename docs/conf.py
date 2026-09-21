@@ -18,7 +18,7 @@ except ImportError:
 project = "HiveTraceRed"
 copyright = "2025, HiveTrace"
 author = "HiveTrace"
-release = "1.0.20"
+release = "1.0.21"
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
@@ -86,7 +86,6 @@ autodoc_mock_imports = [
     "aiohttp",
     "requests",
     "google",
-    "google.genai",
     "tenacity",
     "pandas",
     "pyarrow",

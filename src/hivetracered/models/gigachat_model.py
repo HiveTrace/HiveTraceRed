@@ -11,7 +11,10 @@ class GigaChatModel(LangchainModel):
     Provides standardized access to Sber's GigaChat models with support for
     both synchronous and asynchronous request processing.
     """
-    
+
+    # GigaChat requires temperature > 0; the judge gets TEMPERATURE_EPSILON instead.
+    SUPPORTS_ZERO_TEMPERATURE = False
+
     def __init__(self, model: str = "GigaChat", max_concurrency: int | None = None, batch_size: int | None = None, scope: str | None = None, credentials: str | None = None, verify_ssl_certs: bool = False, max_retries: int = 3, **kwargs):
         """
         Initialize the GigaChat model client with the specified configuration.
@@ -45,8 +48,6 @@ class GigaChatModel(LangchainModel):
         self.batch_size = self.max_concurrency
 
         self.kwargs = kwargs or {}
-        if not "temperature" in self.kwargs:
-            self.kwargs["temperature"] = 0.000001
         self.client = GigaChat(credentials=credentials, model=model, scope=scope, verify_ssl_certs=verify_ssl_certs, **self.kwargs)
         self.client = self._add_retry_policy(self.client)
 

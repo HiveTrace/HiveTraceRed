@@ -217,7 +217,7 @@ def test_generate_report_missing_file_returns_none_and_warns(tmp_path, caplog):
 def test_generate_report_empty_dataframe_returns_none(tmp_path, monkeypatch):
     eval_file = tmp_path / "eval.csv"
     eval_file.write_text("", encoding="utf-8")  # exists, but load_data returns empty df
-    monkeypatch.setattr(runner, "load_data", lambda p: pd.DataFrame())
+    monkeypatch.setattr(runner, "load_data", lambda *a, **k: pd.DataFrame())
 
     result = generate_report({}, str(tmp_path), str(eval_file))
 
@@ -234,10 +234,10 @@ def test_generate_report_writes_html_and_returns_path(tmp_path, monkeypatch):
         "best_attack_name": "BA",
         "best_attack_rate": 100.0,
     }
-    monkeypatch.setattr(runner, "load_data", lambda p: fake_df)
-    monkeypatch.setattr(runner, "calculate_metrics", lambda df: fake_metrics)
-    monkeypatch.setattr(runner, "create_charts", lambda df: {"chart": "<div/>"})
-    monkeypatch.setattr(runner, "generate_data_tables", lambda df: {"table": "<table/>"})
+    monkeypatch.setattr(runner, "load_data", lambda *a, **k: fake_df)
+    monkeypatch.setattr(runner, "calculate_metrics", lambda df, **kwargs: fake_metrics)
+    monkeypatch.setattr(runner, "create_charts", lambda df, **k: {"chart": "<div/>"})
+    monkeypatch.setattr(runner, "generate_data_tables", lambda df, **k: {"table": "<table/>"})
     monkeypatch.setattr(runner, "build_html_report", lambda df, m, c, t: "<html>x</html>")
 
     config = {"output_dir": str(tmp_path), "report": {"output_filename": "out.html"}}
@@ -254,12 +254,12 @@ def test_generate_report_uses_output_dir_when_include_in_run_dir_false(tmp_path,
     out_dir.mkdir()
     run_dir = tmp_path / "rundir"
     run_dir.mkdir()
-    monkeypatch.setattr(runner, "load_data", lambda p: pd.DataFrame({"a": [1]}))
-    monkeypatch.setattr(runner, "calculate_metrics", lambda df: {
+    monkeypatch.setattr(runner, "load_data", lambda *a, **k: pd.DataFrame({"a": [1]}))
+    monkeypatch.setattr(runner, "calculate_metrics", lambda df, **kwargs: {
         "total_tests": 1, "success_rate": 0.0, "best_attack_name": "B", "best_attack_rate": 0.0,
     })
-    monkeypatch.setattr(runner, "create_charts", lambda df: {})
-    monkeypatch.setattr(runner, "generate_data_tables", lambda df: {})
+    monkeypatch.setattr(runner, "create_charts", lambda df, **k: {})
+    monkeypatch.setattr(runner, "generate_data_tables", lambda df, **k: {})
     monkeypatch.setattr(runner, "build_html_report", lambda *a, **k: "<html/>")
 
     cfg = {
@@ -275,12 +275,12 @@ def test_generate_report_uses_output_dir_when_include_in_run_dir_false(tmp_path,
 def test_generate_report_uses_timestamp_default_filename_when_missing(tmp_path, monkeypatch):
     eval_file = tmp_path / "eval.csv"
     eval_file.write_text("x", encoding="utf-8")
-    monkeypatch.setattr(runner, "load_data", lambda p: pd.DataFrame({"a": [1]}))
-    monkeypatch.setattr(runner, "calculate_metrics", lambda df: {
+    monkeypatch.setattr(runner, "load_data", lambda *a, **k: pd.DataFrame({"a": [1]}))
+    monkeypatch.setattr(runner, "calculate_metrics", lambda df, **kwargs: {
         "total_tests": 1, "success_rate": 0.0, "best_attack_name": "B", "best_attack_rate": 0.0,
     })
-    monkeypatch.setattr(runner, "create_charts", lambda df: {})
-    monkeypatch.setattr(runner, "generate_data_tables", lambda df: {})
+    monkeypatch.setattr(runner, "create_charts", lambda df, **k: {})
+    monkeypatch.setattr(runner, "generate_data_tables", lambda df, **k: {})
     monkeypatch.setattr(runner, "build_html_report", lambda *a, **k: "<html/>")
 
     # No "report.output_filename" in config triggers the timestamp branch.
@@ -335,7 +335,9 @@ def test_create_attack_prompts_no_prompts_streamed_returns_empty(monkeypatch, tm
     monkeypatch.setattr(runner, "load_base_prompts", lambda cfg: ["p1"])
     monkeypatch.setattr(runner, "setup_evaluator", lambda cfg, m: MagicMock())
     monkeypatch.setattr(runner, "setup_attacks", lambda *a, **k: {"A": MagicMock()})
-    monkeypatch.setattr(runner, "stream_attack_prompts", lambda attacks, prompts, sysp: _aiter([]))
+    monkeypatch.setattr(
+        runner, "stream_attack_prompts", lambda attacks, prompts, sysp, repeats=None: _aiter([])
+    )
 
     saved = []
     monkeypatch.setattr(

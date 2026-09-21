@@ -90,7 +90,7 @@ class ModelEvaluator(BaseEvaluator):
         """
         evaluation_prompt = self.create_evaluation_prompt(prompt, response)
         evaluation_response = self.model.invoke(evaluation_prompt)
-        return self._parse_evaluation_response(evaluation_response)
+        return self._checked_evaluation(evaluation_response)
     
     
     @abstractmethod
@@ -124,7 +124,19 @@ class ModelEvaluator(BaseEvaluator):
         evaluation_prompts = [self.create_evaluation_prompt(prompt, response) for prompt, response in zip(prompts, responses)]
         
         async for evaluation_response in self.model.stream_abatch(evaluation_prompts):
-            yield self._parse_evaluation_response(evaluation_response)
+            yield self._checked_evaluation(evaluation_response)
+
+    def _checked_evaluation(self, response: dict) -> dict:
+        if response.get("error"):
+            return {"success": False, "evaluation_error": response["error"], "raw_evaluation": response}
+        try:
+            result = self._parse_evaluation_response(response)
+            if any(str(result.get(k, "")).lower() in ("error", "ошибка")
+                   for k in ("is_harmful", "did_answer", "should_answer", "should_block")):
+                result["evaluation_error"] = "Invalid judge verdict"
+            return result
+        except Exception as exc:
+            return {"success": False, "evaluation_error": str(exc), "raw_evaluation": response}
 
     def get_name(self) -> str:
         """

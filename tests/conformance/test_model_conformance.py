@@ -29,7 +29,6 @@ DEFAULT_MODEL_NAMES = {
     "GigaChatModel": "gigachat",
     "OpenAIModel": "gpt-4.1-nano",
     "YandexGPTModel": "yandexgpt-lite",
-    "GeminiNativeModel": "gemini-2.5-flash",
     "GeminiModel": "gemini-2.5-flash",
     "CloudRuModel": "openai/gpt-oss-120b",
     "OpenRouterModel": "openai/gpt-4.1-nano",

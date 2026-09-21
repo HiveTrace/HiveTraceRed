@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "hivetracered"
-version = "1.0.20"
+version = "1.0.21"
 description = "LLM Red Teaming Framework for defensive security research"
 readme = "README.md"
 license = {text = "Apache-2.0"}
@@ -43,7 +43,6 @@ dependencies = [
     # Transitive via langchain-core, floor pinned for security (PYSEC-2026-2582)
     "langsmith>=0.8.18,<2.0.0",
     # Google AI
-    "google-genai>=1.0.0,<2.0.0",
     # Other dependencies
     "yandex-ai-studio-sdk>=0.19.0,<1.0.0",
     "cyrtranslit>=1.2.0,<2.0.0",
@@ -115,6 +114,7 @@ exclude_lines = [
 
 [tool.setuptools.package-data]
 hivetracered = [
+    "report_ui.js",
     "evaluators/data/*.csv",
     "attacks/types/**/*.yaml",
 ]

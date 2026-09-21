@@ -148,7 +148,7 @@ def test_ainvoke_awaits_client_ainvoke_and_dict_converts():
 
 def test_invoke_returns_error_dict_when_client_raises():
     # A failed request (404, no balance, etc.) must not propagate — it becomes an
-    # error dict, matching RestModel/GeminiNativeModel, so direct callers don't crash.
+    # error dict, matching RestModel, so direct callers don't crash.
     client = MagicMock()
     client.invoke.side_effect = RuntimeError("boom")
     model = _ConcreteLangchainModel(client=client)

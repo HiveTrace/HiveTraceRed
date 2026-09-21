@@ -15,6 +15,7 @@ class UnicodeStyleAttack(AlgoAttack):
     
     https://arxiv.org/pdf/2405.14490
     """
+
     
     # Define the unicode character ranges for different styles
     UNICODE_STYLES = {
@@ -218,6 +219,8 @@ class UnicodeRussianStyleAttack(AlgoAttack):
     Attack that transforms Cyrillic text by replacing characters with similar-looking
     Unicode alternatives, with an explanatory Russian prompt.
     """
+
+    DETERMINISTIC = False  # random replacement strategy
     
     russian_similar_chars = {
         'а': ['а', 'ɑ', 'α', 'а', 'ａ'],

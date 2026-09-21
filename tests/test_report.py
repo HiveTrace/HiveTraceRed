@@ -36,16 +36,15 @@ from hivetracered.report import (
     _bfmt,
     _build_attack_type_html,
     _build_attacks_html,
+    _build_top_attacks_html,
+    clopper_pearson_upper,
     _expand_evaluation,
-    _explorer_row_html,
     _explorer_table_html,
     _framework_categories,
     _merge_mappings,
     _per_type_stats,
     _read_dataframe,
     _safe_get,
-    _sample_block_html,
-    _samples_html,
     _vulnerable_attack_types,
     _vulnerable_prompts,
     build_html_report,
@@ -289,17 +288,36 @@ def test_load_data_expands_evaluation_column_when_present(tmp_path):
 def test_basic_rates_for_empty_dataframe_returns_zeroes():
     total, sr, br, er = _basic_rates(pd.DataFrame())
 
-    assert (total, sr, br, er) == (0, 0.0, 0.0, 0.0)
+    assert total == 0 and er == 0
+    assert pd.isna(sr) and pd.isna(br)
 
 
 def test_basic_rates_computes_percentages_for_sample(sample_df):
     total, sr, br, er = _basic_rates(sample_df)
 
-    # 4 rows, 2 successes => 50.0%, 1 blocked => 25.0%, 1 error => 25.0%.
+    # 4 rows, 1 error. Rates over the 3 answered rows: 2 successes => 66.7%,
+    # 1 blocked => 33.3%. error_rate over all rows: 1/4 => 25.0%.
     assert total == 4  # = len(sample_df)
-    assert sr == pytest.approx(50.0)
-    assert br == pytest.approx(25.0)
+    assert sr == pytest.approx(200 / 3)
+    assert br == pytest.approx(100 / 3)
     assert er == pytest.approx(25.0)
+
+
+def test_basic_rates_excludes_error_rows_from_asr_denominator():
+    # 7 answered (4 success), 3 errored: ASR must be 4/7, not 4/10.
+    df = pd.DataFrame(
+        {
+            "success": [True] * 4 + [False] * 6,
+            "is_blocked": [False] * 10,
+            "error": [""] * 7 + ["FAIL", "429", "boom"],
+        }
+    )
+
+    total, sr, br, er = _basic_rates(df)
+
+    assert total == 10
+    assert sr == pytest.approx(400 / 7)
+    assert er == pytest.approx(30.0)
 
 
 # ── _best_attack ────────────────────────────────────────────────────
@@ -436,7 +454,7 @@ def test_calculate_metrics_handles_empty_dataframe_gracefully():
 
     # Spec: empty df produces structurally complete dict with zero metrics.
     assert out["total_tests"] == 0
-    assert out["success_rate"] == 0.0
+    assert pd.isna(out["success_rate"])
     assert out["model_name"] == "Unknown"
     assert out["best_attack_name"] == "-"
     assert out["prioritized_mitigations"] == []  # = no vulnerable_attack_types
@@ -449,13 +467,16 @@ def test_calculate_metrics_aggregates_sample_dataframe(sample_df):
     assert out["model_name"] == "test-model"
     assert out["n_attack_types"] == 2  # = ContextSwitch type + simple_instructions type
     assert out["n_attacks"] == 2  # = ContextSwitch + NoneAttack
-    assert out["success_rate"] == pytest.approx(50.0)
+    # 1 of 4 rows errored: rate over the 3 answered rows, 2 successes.
+    assert out["success_rate"] == pytest.approx(200 / 3)
+    assert out["error_rate"] == pytest.approx(25.0)
     assert out["base_category"] == "Harmful Content Generation"
     # Mitigations are produced because both types have successes.
     assert isinstance(out["prioritized_mitigations"], list)
     assert len(out["prioritized_mitigations"]) > 0
     assert "framework_mappings" in out
     assert "framework_categories" in out
+    assert "success_rate_upper" not in out
 
 
 # ── _per_type_stats ─────────────────────────────────────────────────
@@ -464,10 +485,12 @@ def test_calculate_metrics_aggregates_sample_dataframe(sample_df):
 def test_per_type_stats_computes_unique_prompt_success_rate(sample_df):
     out = _per_type_stats(sample_df)
 
-    # Each attack_type has 2 unique prompts; each has 1 successful unique prompt.
+    # context_switching: 2 answered unique prompts, 1 successful => 0.5.
+    # simple_instructions: P1 only errored (excluded), so 1 answered unique
+    # prompt (P2) and it succeeded => 1.0.
     rates = {entry["attack_type"]: entry[SUCCESS_RATE] for entry in out}
     assert rates["context_switching"] == pytest.approx(0.5)
-    assert rates["simple_instructions"] == pytest.approx(0.5)
+    assert rates["simple_instructions"] == pytest.approx(1.0)
 
 
 def test_per_type_stats_with_block_rate_returns_percent_and_block(sample_df):
@@ -518,6 +541,25 @@ def test_build_attacks_html_returns_no_data_message_when_below_threshold():
     assert "No individual attacks" in out
 
 
+def test_attack_charts_mark_one_sided_upper_bound():
+    df = pd.DataFrame(
+        {
+            "attack_name": ["PAIR"] * 4,
+            "base_prompt": [f"p{i}" for i in range(4)],
+            "success": [1.0, 0.0, 0.0, 0.0],
+            "is_blocked": [False] * 4,
+        }
+    )
+    upper = "{:.1f}".format(clopper_pearson_upper(1, 4))
+    attacks = _build_attacks_html(df)
+    top = _build_top_attacks_html(df, include_plotlyjs=False)
+
+    assert '"barmode":"overlay"' in attacks.replace(" ", "") or "overlay" in attacks
+    assert "95% upper" in attacks and f"≤{upper}%" in attacks
+    assert "95% upper" in top and f"≤{upper}%" in top
+    assert attacks.count("0.6") >= 2 and top.count("0.6") >= 2
+
+
 # ── create_charts ───────────────────────────────────────────────────
 
 
@@ -564,35 +606,18 @@ def test_bfmt_formats_booleans_with_emoji_and_others_via_str(value, expected):
     assert _bfmt(value) == expected
 
 
-def test_explorer_row_html_emits_data_attributes_and_cells():
-    row = pd.Series(
-        {
-            "attack_type": "context_switching",
-            "success": True,
-            "is_blocked": False,
-            "attack_name": "X",
-        }
-    )
-
-    html = _explorer_row_html(row, ["attack_name", "attack_type", "success", "is_blocked"])
-
-    assert 'data-attack-type="context_switching"' in html
-    assert 'data-success="true"' in html
-    assert 'data-blocked="false"' in html
-    assert "<td>X</td>" in html
-    assert "<td>✅</td>" in html  # success bool
-    assert "<td>❌</td>" in html  # is_blocked bool
-
-
 def test_explorer_table_html_renders_rows_for_each_record(sample_df):
     cols = ["attack_name", "attack_type", "success", "is_blocked"]
 
     html = _explorer_table_html(sample_df, cols)
 
-    assert html.count("<tr ") == len(sample_df)
-    # Header per column.
-    for c in cols:
-        assert f"<th>{c}</th>" in html
+    import json, re
+    payload = json.loads(re.search(r'<script[^>]+>(.*?)</script>', html, re.S).group(1))
+    assert len(payload["rows"]) == len(sample_df)
+    assert 'class="explorer-expand"' not in html
+    assert "<tbody></tbody>" in html
+    for header in ("Attack", "Type", "Success", "Blocked"):
+        assert f"<th>{header}</th>" in html
 
 
 def test_explorer_table_html_with_empty_columns_renders_empty_table(sample_df):
@@ -603,55 +628,69 @@ def test_explorer_table_html_with_empty_columns_renders_empty_table(sample_df):
     assert "<tr " not in html
 
 
-# ── _sample_block_html / _samples_html ──────────────────────────────
+# ── explorer detail ─────────────────────────────────────────────────
 
 
-def test_sample_block_html_includes_attack_name_and_response_text():
-    row = {
-        "attack_name": "MyAttack",
-        "success": True,
-        "base_prompt": "BASE",
-        "prompt": "ATK",
-        "response": "RESP",
-    }
-
-    html = _sample_block_html(row)
-
-    assert "MyAttack" in html
-    assert "✅ Success" in html
-    assert "BASE" in html and "ATK" in html and "RESP" in html
-
-
-def test_sample_block_html_marks_failure_when_success_false():
-    html = _sample_block_html(
-        {"attack_name": "A", "success": False, "base_prompt": "b", "prompt": "p", "response": "r"}
+def test_explorer_expand_lists_each_k_response():
+    raw = pd.DataFrame(
+        [
+            {
+                "attack_name": "DAN",
+                "attack_type": "persona",
+                "base_prompt": "bomb",
+                "prompt": "DAN: bomb",
+                "response": f"r{k}",
+                "success": k < 2,
+                "is_blocked": False,
+                "error": "",
+                "k_index": k,
+            }
+            for k in range(3)
+        ]
     )
 
-    assert "❌ Failed" in html
-
-
-def test_samples_html_uses_full_df_when_no_successes():
-    df = pd.DataFrame(
-        {
-            "attack_name": ["A", "B"],
-            "success": [False, False],
-            "base_prompt": ["bp1", "bp2"],
-            "prompt": ["p1", "p2"],
-            "response": ["r1", "r2"],
-        }
+    html = _explorer_table_html(
+        raw, ["attack_name", "k_index", "base_prompt", "success"]
     )
 
-    out = _samples_html(df)
+    import json, re
+    payload = json.loads(re.search(r'<script[^>]+>(.*?)</script>', html, re.S).group(1))
+    row, = payload["rows"]
+    assert row["valid"] == 3 and row["successes"] == 2
+    assert [payload["texts"][r[1]] for r in row["responses"]] == ["r0", "r1", "r2"]
+    assert payload["texts"][row["prompt"]] == "DAN: bomb"
 
-    # Falls back to full df when no successes; deterministic via random_state.
-    assert "❌ Failed" in out
 
+def test_generate_data_tables_explorer_groups_k_repeats():
+    raw = pd.DataFrame(
+        [
+            {
+                "attack_name": "DAN",
+                "attack_type": "persona",
+                "base_prompt": "bomb",
+                "prompt": "DAN: bomb",
+                "response": "jailbroken",
+                "success": True,
+                "is_blocked": False,
+                "error": "",
+                "k_index": k,
+            }
+            for k in range(3)
+        ]
+    )
+    collapsed = raw.assign(success=1.0, K=3).drop(columns=["k_index"]).head(1)
 
-def test_samples_html_emits_one_block_per_sample_for_small_df(sample_df):
-    out = _samples_html(sample_df)
+    out = generate_data_tables(collapsed, per_request=raw)
 
-    # Both successes < 5; sample size = min(5, n_successes) = 2.
-    assert out.count("<details") == 2
+    html = out["explorer_table_html"]
+    import json, re
+    payload = json.loads(re.search(r'<script[^>]+>(.*?)</script>', html, re.S).group(1))
+    assert len(payload["rows"]) == 1
+    assert len(payload["rows"][0]["responses"]) == 3
+    assert "<th>Requests / valid</th>" in html
+    assert "jailbroken" in html
+    assert out["samples_html"] == ""
+    assert "k_index" in out["display_columns"]
 
 
 # ── _attack_detailed_html ───────────────────────────────────────────
@@ -664,6 +703,7 @@ def test_attack_detailed_html_renders_table_with_percentage_strings(sample_df):
     assert "<table" in out
     assert "%</td>" in out  # success/block rate strings end with %
     assert "ContextSwitch" in out and "NoneAttack" in out
+    assert "95% Upper" in out
 
 
 # ── generate_data_tables ────────────────────────────────────────────
@@ -674,11 +714,15 @@ def test_generate_data_tables_returns_expected_keys_for_sample(sample_df):
 
     assert set(out.keys()) == {
         "attack_detailed_html",
+        "attack_type_risk_html",
         "explorer_table_html",
         "samples_html",
+        "paired_test_html",
+        "paired_test_title",
+        "paired_test_note",
         "display_columns",
     }
-    assert out["display_columns"] == ["attack_name", "attack_type", "success", "is_blocked"]
+    assert out["display_columns"] == ["attack_name", "attack_type", "base_prompt", "success", "is_blocked"]
 
 
 def test_generate_data_tables_handles_empty_dataframe():
@@ -845,7 +889,7 @@ def test_main_reports_empty_when_data_file_missing(tmp_path, monkeypatch, capsys
 
 def test_main_handles_unexpected_exception_and_prints_traceback(tmp_path, monkeypatch, capsys):
     # Force load_data to raise unexpectedly to exercise the except branch.
-    def _boom(_path):
+    def _boom(_path, **kwargs):
         raise RuntimeError("kaboom")
 
     monkeypatch.setattr(report, "load_data", _boom)
@@ -860,3 +904,26 @@ def test_main_handles_unexpected_exception_and_prints_traceback(tmp_path, monkey
     captured = capsys.readouterr()
     assert "Error processing data" in captured.out
     assert "kaboom" in captured.out or "kaboom" in captured.err
+
+
+def test_summary_missing_control_is_not_reported_as_zero():
+    rendered = build_html_report(pd.DataFrame(), _minimal_metrics(), _empty_charts(), _empty_data_tables())
+    summary = rendered.split('<!-- Executive Summary -->')[1].split('<!-- Attack Analysis -->')[0]
+    assert summary.count('Not measured') == 3
+    assert 'No assessed pairs with the control' in summary
+    assert 'Increase over control' not in summary
+
+
+@pytest.mark.parametrize('method', ['paired bootstrap', 'exact McNemar'])
+def test_summary_counts_only_significant_increases_with_assessed_pairs(monkeypatch, method):
+    comparisons = pd.DataFrame({
+        'n pairs': [10, 10, 10, 0],
+        'significant': [True, True, False, True],
+        'Δ (pp)': [30, -30, 5, 20],
+    })
+    monkeypatch.setattr(report, 'paired_test_vs_baseline', lambda df: (comparisons, method))
+    rendered = build_html_report(pd.DataFrame(), _minimal_metrics(), _empty_charts(), _empty_data_tables())
+    summary = rendered.split('<!-- Executive Summary -->')[1].split('<!-- Attack Analysis -->')[0]
+    assert '>1<span' in summary and '> / 3</span>' in summary
+    assert ('One-sided test for ASR increase' if method == 'paired bootstrap' else 'Two-sided test · higher ASR only') in summary
+    assert 'BH FDR 5%' not in summary

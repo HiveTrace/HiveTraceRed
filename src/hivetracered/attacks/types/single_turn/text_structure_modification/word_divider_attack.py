@@ -13,6 +13,8 @@ class WordDividerAttack(AlgoAttack):
     Attack that inserts characters (dots by default) between letters in words, 
     potentially bypassing content filters while keeping the text readable.
     """
+
+    DETERMINISTIC = False  # uses random
     
     def __init__(self, divider_char: str = "+", density: float = 1.0, 
                  apply_to_words_longer_than: int = 1, raw: bool = True, 

@@ -5,6 +5,9 @@ from collections.abc import AsyncGenerator
 from contextlib import AbstractAsyncContextManager
 from abc import ABC, abstractmethod
 
+# Near-zero temperature for providers whose API rejects a literal 0.
+TEMPERATURE_EPSILON = 1e-6
+
 
 class Model(ABC):
     """
@@ -14,6 +17,10 @@ class Model(ABC):
     """
     model_name: str
     max_concurrency: int = 0
+
+    # False for providers whose temperature range excludes 0 (the judge then
+    # gets TEMPERATURE_EPSILON instead of 0.0). See config._force_judge_temperature.
+    SUPPORTS_ZERO_TEMPERATURE: bool = True
 
     def _concurrency_slot(self) -> AbstractAsyncContextManager:
         """Acquire one concurrency slot for an async call.

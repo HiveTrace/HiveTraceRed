@@ -14,7 +14,7 @@ HiveTraceRed provides the following model classes for various LLM providers:
 * **OpenAIModel**: OpenAI models
 * **GigaChatModel**: Sber's GigaChat models
 * **YandexGPTModel**: Yandex GPT models
-* **GeminiNativeModel**: Google Gemini models
+* **GeminiModel**: Google Gemini models
 * **OpenRouterModel**: Access to multiple model providers
 * **CloudRuModel**: Cloud.ru ML models
 * **OllamaModel**: Local models via Ollama server
@@ -85,12 +85,10 @@ Google Gemini Models
 
 .. code-block:: python
 
-   from hivetracered.models import GeminiNativeModel
+   from hivetracered.models import GeminiModel
 
-   model = GeminiNativeModel(
-       model="gemini-2.5-flash-preview-04-17",
-       api_key="YOUR_API_KEY"
-   )
+   # Reads GOOGLE_API_KEY from the environment
+   model = GeminiModel(model="gemini-2.5-flash")
 
    response = await model.ainvoke("Explain quantum computing")
 

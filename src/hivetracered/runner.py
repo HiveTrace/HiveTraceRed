@@ -15,8 +15,11 @@ from datetime import datetime
 from typing import Any
 
 import yaml
+import pandas as pd
+from hivetracered.statistics import error_mask, valid_results
 
 from hivetracered.pipeline import (
+    attack_repeats,
     save_pipeline_results,
     setup_attacks,
     stream_attack_prompts,
@@ -28,6 +31,7 @@ from hivetracered.pipeline.evaluation import RESPONSE_ERROR
 from hivetracered.report import (
     build_html_report,
     calculate_metrics,
+    collapse_k_repeats,
     create_charts,
     generate_data_tables,
     load_data,
@@ -86,8 +90,9 @@ async def create_attack_prompts(
 
     system_prompt = config.get("system_prompt", None)
 
+    repeats = attack_repeats(attack_configs, config.get("N", 1))
     attack_prompts: list[dict[str, Any]] = []
-    async for ap in stream_attack_prompts(attacks, base_prompts, system_prompt):
+    async for ap in stream_attack_prompts(attacks, base_prompts, system_prompt, repeats):
         attack_prompts.append(ap)
 
     if not attack_prompts:
@@ -115,7 +120,7 @@ async def get_model_responses(
 
     model_responses: list[dict[str, Any]] = []
     async for response in stream_model_responses(
-        response_model, attack_prompts, _consecutive_failures(config)
+        response_model, attack_prompts, _consecutive_failures(config), config.get("K", 1)
     ):
         model_responses.append(response)
 
@@ -125,6 +130,15 @@ async def get_model_responses(
 
     save_pipeline_results(model_responses, run_dir, "model_responses", format=output_format)
     return model_responses
+
+
+def _success_summary(evaluation_results: list[dict[str, Any]]) -> tuple[int, float]:
+    """(successes, ASR in percent) over rows with a verdict: request and judge
+    errors are missing observations, not failed attacks."""
+    valid = valid_results(pd.DataFrame(evaluation_results))
+    if "success" not in valid or valid.empty:
+        return 0, 0.0
+    return int(valid["success"].sum()), float(valid["success"].mean() * 100)
 
 
 async def evaluate_responses(
@@ -156,8 +170,7 @@ async def evaluate_responses(
     )
     evaluation_file = output.get("path")
 
-    success_count = sum(1 for r in evaluation_results if r.get("success", False))
-    success_rate = (success_count / len(evaluation_results)) * 100
+    success_count, success_rate = _success_summary(evaluation_results)
     logger.info(
         "Evaluation: %d total, %d successful (%.2f%%)",
         len(evaluation_results), success_count, success_rate,
@@ -183,11 +196,13 @@ def generate_report(
         logger.warning("Evaluation file not found: %s", evaluation_file)
         return None
 
-    df = load_data(evaluation_file)
+    df = load_data(evaluation_file, collapse=False)
     if df.empty:
         logger.warning("No data loaded from evaluation file.")
         return None
 
+    per_request = df
+    df = collapse_k_repeats(per_request.copy())
     logger.info("Loaded %d evaluation results for report", len(df))
 
     report_config = config.get("report", {})
@@ -201,14 +216,14 @@ def generate_report(
     else:
         report_path = os.path.join(config.get("output_dir", "results"), output_filename)
 
-    if "dataset" in df.columns and df["dataset"].nunique() > 1:
-        for ds_name in df["dataset"].unique():
-            logger.info("Dataset '%s': %d records", ds_name, len(df[df["dataset"] == ds_name]))
-        html = build_html_report(df, metrics=None, charts=None, data_tables=None)
+    if "dataset" in per_request.columns and per_request["dataset"].nunique() > 1:
+        for ds_name in per_request["dataset"].unique():
+            logger.info("Dataset '%s': %d records", ds_name, len(per_request[per_request["dataset"] == ds_name]))
+        html = build_html_report(per_request, metrics=None, charts=None, data_tables=None)
     else:
-        metrics = calculate_metrics(df)
-        charts = create_charts(df)
-        data_tables = generate_data_tables(df)
+        metrics = calculate_metrics(df, per_request=per_request)
+        charts = create_charts(df, per_request=per_request)
+        data_tables = generate_data_tables(df, per_request=per_request)
         html = build_html_report(df, metrics, charts, data_tables)
         logger.info(
             "  Total: %d | Success rate: %.1f%% | Best attack: %s (%.1f%%)",
@@ -311,12 +326,12 @@ async def _evaluate_dataset(
     try:
         # Skip failed requests (error field): scoring their empty content would
         # pollute results. Evaluate only the rest, then weave back in order.
-        eval_indices = [i for i, r in enumerate(responses) if not r.get("error")]
+        eval_indices = [i for i, r in enumerate(responses) if not r.get("error") and not r.get("is_blocked")]
         eval_inputs = [responses[i] for i in eval_indices]
         prompts = [r.get("base_prompt", "") for r in eval_inputs]
 
         scored_by_index: dict[int, dict[str, Any]] = {}
-        async for batch_result in spec.evaluator.stream_abatch(prompts, eval_inputs):
+        async for batch_result in spec.evaluator.stream_abatch(prompts, [r.get("response", "") for r in eval_inputs]):
             orig_idx = eval_indices[len(scored_by_index)]
             scored_by_index[orig_idx] = batch_result
 
@@ -327,16 +342,19 @@ async def _evaluate_dataset(
                     **source,
                     "success": batch_result.get("success", False),
                     "evaluation": batch_result,
+                    "evaluation_error": batch_result.get("evaluation_error", batch_result.get("error", "")),
                     "evaluator": spec.evaluator.__class__.__name__,
                 })
             else:
                 evaluation_results.append({
                     **source,
                     "success": False,
-                    "evaluation": {"success": False, "reason": RESPONSE_ERROR},
+                    "evaluation": {"success": False, "reason": RESPONSE_ERROR if source.get("error") else "Response was blocked"},
+                    "evaluation_error": "" if source.get("error") or source.get("is_blocked") else "Missing evaluator result",
                     "evaluator": "",
                 })
     except Exception as e:
+        evaluation_results.clear()
         logger.error("Stage 3 failed for dataset '%s': %s", spec.name, e, exc_info=True)
         if len(responses) == 0:
             evaluation_results.append({
@@ -386,6 +404,7 @@ async def _run_pipeline_for_datasets(
         attacker_model = setup_model(config.get("attacker_model", {}))
         response_model_for_attacks = setup_model(config.get("response_model", {}))
         evaluation_model = setup_model(config.get("evaluation_model", {}))
+        repeats = attack_repeats(config.get("attacks", []), config.get("N", 1))
         for spec in dataset_specs:
             # Attacks are re-built per dataset so that each dataset's own
             # evaluator (spec.evaluator) flows into attack-internal judge
@@ -400,7 +419,9 @@ async def _run_pipeline_for_datasets(
                 setup_evaluator_fn=setup_evaluator,
             )
             records: list[dict[str, Any]] = []
-            async for record in stream_attack_prompts(attacks, spec.prompts, system_prompt):
+            async for record in stream_attack_prompts(
+                attacks, spec.prompts, system_prompt, repeats
+            ):
                 record["dataset"] = spec.name
                 records.append(record)
             save_pipeline_results(
@@ -423,7 +444,7 @@ async def _run_pipeline_for_datasets(
             if response_model is not None:
                 async for record in stream_model_responses(
                     response_model, attacks_by_dataset.get(spec.name, []),
-                    _consecutive_failures(config),
+                    _consecutive_failures(config), config.get("K", 1),
                 ):
                     records.append(record)
             save_pipeline_results(
@@ -546,7 +567,7 @@ def _error_rate(records: list[dict[str, Any]]) -> float:
     """Fraction of records whose request failed (non-empty 'error' field)."""
     if not records:
         return 0.0
-    failed = sum(1 for r in records if r.get("error"))
+    failed = int(error_mask(pd.DataFrame(records)).sum())
     return failed / len(records)
 
 
@@ -562,8 +583,7 @@ def _log_summary(
         len(attack_prompts), len(model_responses), len(evaluation_results),
     )
     if evaluation_results:
-        success_count = sum(1 for r in evaluation_results if r.get("success", False))
-        logger.info("Attack success rate: %.2f%%", (success_count / len(evaluation_results)) * 100)
+        logger.info("Attack success rate: %.2f%%", _success_summary(evaluation_results)[1])
     logger.info("Results saved to: %s", run_dir)
     if report_path:
         logger.info("Report: %s", report_path)
@@ -575,6 +595,10 @@ async def run_pipeline(config: dict[str, Any]) -> bool:
     Returns True if the run is degraded (request failure rate above
     error_handling.max_failure_rate), so the CLI can exit non-zero.
     """
+    # load_config() already did this; repeat for hand-built configs (library use).
+    from hivetracered.config import _force_judge_temperature
+    _force_judge_temperature(config)
+
     run_dir = await _prepare_run_dir(config)
     output_format = config.get("output_format", "csv")
 

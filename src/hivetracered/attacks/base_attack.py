@@ -20,6 +20,11 @@ class BaseAttack(ABC):
     Abstract base class for all attack implementations.
     Defines the standard interface for applying attacks to prompts in both synchronous and asynchronous contexts.
     """
+
+    # True when apply() always gives the same output for the same input (no model,
+    # no randomness). Re-running such an attack N times is pointless, so the
+    # pipeline runs it once unless the config asks otherwise per attack.
+    DETERMINISTIC = False
     
     @abstractmethod
     def apply(self, prompt: str | list[dict[str, str]]) -> str | list[dict[str, str]]:

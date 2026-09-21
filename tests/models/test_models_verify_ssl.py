@@ -89,20 +89,3 @@ def test_ollama_model_passes_client_kwargs(monkeypatch):
     cls.reset_mock()
     om.OllamaModel()
     assert "client_kwargs" not in cls.call_args.kwargs
-
-
-def test_gemini_native_model_passes_http_options(monkeypatch):
-    from hivetracered.models import gemini_native_model as gnm
-    client_cls = MagicMock()
-    monkeypatch.setattr(gnm.genai, "Client", client_cls)
-    monkeypatch.setattr(gnm, "load_dotenv", lambda *a, **kw: False)
-    monkeypatch.setenv("GOOGLE_API_KEY", "k")
-
-    gnm.GeminiNativeModel(verify_ssl=False)
-    http_options = client_cls.call_args.kwargs["http_options"]
-    assert http_options.client_args == {"verify": False}
-    assert http_options.async_client_args == {"verify": False}
-
-    client_cls.reset_mock()
-    gnm.GeminiNativeModel()
-    assert client_cls.call_args.kwargs == {}

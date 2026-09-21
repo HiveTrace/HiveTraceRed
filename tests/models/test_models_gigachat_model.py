@@ -5,7 +5,7 @@ Tests focus on SUBCLASS-specific behavior in __init__:
     GIGACHAT_API_SCOPE per source lines 38-41),
   * model-name default and override (line 17 default = "GigaChat"),
   * verify_ssl_certs forwarding (default False, line 17),
-  * default temperature injection (lines 65-66 inject 0.000001 when omitted),
+  * temperature is not injected when omitted (left to the provider),
   * batch_size deprecation warning + back-propagation to max_concurrency
     (lines 46-54),
   * default max_concurrency=1 when neither provided (lines 57-58),
@@ -171,23 +171,23 @@ def test_init_verify_ssl_certs_forwarded(ctor_kwargs, expected):
     assert _FakeGigaChat.instances[0].init_kwargs["verify_ssl_certs"] is expected
 
 
-# ── Default temperature injection (lines 65-66) ─────────────────────
+# ── Temperature is left to the provider ─────────────────────────────
 
 
-@pytest.mark.parametrize(
-    ("ctor_kwargs", "expected"),
-    [
-        ({}, 0.000001),  # default injected (lines 65-66)
-        ({"temperature": 0.5}, 0.5),  # user value preserved
-    ],
-    ids=["default-injected", "user-supplied-preserved"],
-)
-def test_init_temperature_resolution(ctor_kwargs, expected):
-    """Lines 65-66: kwargs gets a near-zero temperature only when omitted."""
-    model = GigaChatModel(credentials="cred", **ctor_kwargs)
+def test_init_omits_temperature_when_not_configured():
+    """No temperature is injected: the provider's own default applies."""
+    model = GigaChatModel(credentials="cred")
 
-    assert model.kwargs["temperature"] == pytest.approx(expected)
-    assert _FakeGigaChat.instances[0].init_kwargs["temperature"] == pytest.approx(expected)
+    assert "temperature" not in model.kwargs
+    assert "temperature" not in _FakeGigaChat.instances[0].init_kwargs
+
+
+def test_init_preserves_user_supplied_temperature():
+    model = GigaChatModel(credentials="cred", temperature=0.5)
+
+    assert model.kwargs["temperature"] == pytest.approx(0.5)
+    assert _FakeGigaChat.instances[0].init_kwargs["temperature"] == pytest.approx(0.5)
+
 
 
 # ── Deprecation: batch_size ─────────────────────────────────────────

@@ -20,6 +20,7 @@ async def stream_model_responses(
     model: Model,
     attack_prompts: list[dict[str, Any]],
     consecutive_failures: int = CONSECUTIVE_FAILURES_DEFAULT,
+    k: int = 1,
 ) -> AsyncGenerator[dict[str, Any], None]:
     """
     Process attack prompts through a model and stream responses as they become available.
@@ -27,6 +28,8 @@ async def stream_model_responses(
     Args:
         model: Language model instance to query
         attack_prompts: List of attack prompt dictionaries with at least a 'prompt' field
+        consecutive_failures: Circuit-breaker threshold; 0 disables it
+        k: Send each prompt K times; every repeat is its own row tagged 'k_index'
 
     Yields:
         Response dictionaries containing:
@@ -36,8 +39,16 @@ async def stream_model_responses(
         - 'response': Text response content from the model
         - 'raw_response': Complete response object from the model
         - 'is_blocked': Whether the response was blocked by safety mechanisms
+        - 'k_index': Index of this repeat, 0..K-1
         - 'error': Error message if request failed (only present on error)
     """
+    # K repeats = K copies of the prompt row; the loop below stays unaware of K.
+    # Rows that already failed in Stage 1 are never sent, so they get one copy.
+    attack_prompts = [
+        {**pd, "k_index": i}
+        for pd in attack_prompts
+        for i in range(1 if pd.get("error") else k)
+    ]
     total_prompts = len(attack_prompts)
     logger.info(f"Processing {total_prompts} prompts for model {model.__class__.__name__}...")
 

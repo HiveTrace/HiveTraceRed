@@ -56,8 +56,6 @@ class VLLMModel(LangchainModel):
         api_key = api_key or os.getenv("VLLM_API_KEY")
 
         self.kwargs = kwargs or {}
-        if "temperature" not in self.kwargs:
-            self.kwargs["temperature"] = 0.000001
 
         self.client = ChatOpenAI(
             model=model,

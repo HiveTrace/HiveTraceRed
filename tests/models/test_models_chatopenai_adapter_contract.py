@@ -95,10 +95,10 @@ def test_default_max_concurrency_is_one(
 @pytest.mark.parametrize(
     ("extra_kwargs", "expected_temp"),
     [
-        ({}, 0.000001),  # default near-zero injected when omitted
+        ({}, None),  # nothing injected — the provider's own default applies
         ({"temperature": 0.42}, 0.42),  # user value preserved
     ],
-    ids=["default-injected", "user-supplied-preserved"],
+    ids=["omitted-left-to-provider", "user-supplied-preserved"],
 )
 def test_temperature_resolution(
     monkeypatch, model_cls, module, env_var, key_kwarg_name, has_rate_limiter,
@@ -108,7 +108,10 @@ def test_temperature_resolution(
 
     model = model_cls(**ctor_required_kwargs, **extra_kwargs)
 
-    assert model.kwargs["temperature"] == pytest.approx(expected_temp, abs=1e-12)
+    if expected_temp is None:
+        assert "temperature" not in model.kwargs
+    else:
+        assert model.kwargs["temperature"] == pytest.approx(expected_temp, abs=1e-12)
 
 
 # ── api_key_resolution: env-var fallback + explicit override ───────────

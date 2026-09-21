@@ -142,7 +142,9 @@ def _write_records_csv(path: Path, records: list[dict]) -> str:
     return str(path)
 
 
-async def _fake_stream_attack_prompts_str_only(attacks, base_prompts, system_prompt=None):
+async def _fake_stream_attack_prompts_str_only(
+    attacks, base_prompts, system_prompt=None, repeats=None
+):
     """Fake stream_attack_prompts for SPEC-014 and SPEC-017.
 
     Each base_prompt must already be a plain string (no branching needed).
@@ -156,7 +158,9 @@ async def _fake_stream_attack_prompts_str_only(attacks, base_prompts, system_pro
         }
 
 
-async def _fake_stream_model_responses_passthrough(response_model, attack_prompts, consecutive_failures=None):
+async def _fake_stream_model_responses_passthrough(
+    response_model, attack_prompts, consecutive_failures=None, k=1
+):
     """Fake stream_model_responses for SPEC-014.
 
     Passes through all attack_prompt fields unchanged and adds response columns.
@@ -166,7 +170,7 @@ async def _fake_stream_model_responses_passthrough(response_model, attack_prompt
 
 
 async def _capturing_stream_attack_prompts_with_system_prompt(
-    attacks, base_prompts, system_prompt=None
+    attacks, base_prompts, system_prompt=None, repeats=None
 ):
     """Fake stream_attack_prompts for SPEC-008.
 
@@ -184,7 +188,7 @@ async def _capturing_stream_attack_prompts_with_system_prompt(
 
 
 async def _capturing_stream_model_responses_recording_system_prompt(
-    response_model, attack_prompts, consecutive_failures=None, *, _seen: list
+    response_model, attack_prompts, consecutive_failures=None, k=1, *, _seen: list
 ):
     """Fake stream_model_responses for SPEC-008.
 
@@ -357,22 +361,9 @@ def test_SPEC_001_evaluator_routing_routes_records_to_correct_mock(tmp_path):
         )
     )
 
-    # Every record that mock_wildguard received must belong to 'harmful_ru';
-    # every record that mock_sysprompt received must belong to 'sys_extract'.
-    # received_responses contains the response dicts passed to stream_abatch,
-    # each of which has a 'dataset' field stamped by _run_pipeline_for_datasets (Stage 1).
-    assert all(
-        r.get("dataset") == "harmful_ru" for r in mock_wildguard.received_responses
-    ), (
-        "mock_wildguard must receive ONLY records with dataset='harmful_ru'; "
-        f"got datasets: {[r.get('dataset') for r in mock_wildguard.received_responses]}"
-    )
-    assert all(
-        r.get("dataset") == "sys_extract" for r in mock_sysprompt.received_responses
-    ), (
-        "mock_sysprompt must receive ONLY records with dataset='sys_extract'; "
-        f"got datasets: {[r.get('dataset') for r in mock_sysprompt.received_responses]}"
-    )
+    # Judges receive actual response text, routed to the matching dataset.
+    assert mock_wildguard.received_responses == ["r1", "r2"]
+    assert mock_sysprompt.received_responses == ["r3", "r4"]
 
 
 # ---------------------------------------------------------------------------

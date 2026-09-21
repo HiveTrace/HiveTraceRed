@@ -904,3 +904,26 @@ def test_main_handles_unexpected_exception_and_prints_traceback(tmp_path, monkey
     captured = capsys.readouterr()
     assert "Error processing data" in captured.out
     assert "kaboom" in captured.out or "kaboom" in captured.err
+
+
+def test_summary_missing_control_is_not_reported_as_zero():
+    rendered = build_html_report(pd.DataFrame(), _minimal_metrics(), _empty_charts(), _empty_data_tables())
+    summary = rendered.split('<!-- Executive Summary -->')[1].split('<!-- Attack Analysis -->')[0]
+    assert summary.count('Not measured') == 3
+    assert 'No assessed pairs with the control' in summary
+    assert 'Increase over control' not in summary
+
+
+@pytest.mark.parametrize('method', ['paired bootstrap', 'exact McNemar'])
+def test_summary_counts_only_significant_increases_with_assessed_pairs(monkeypatch, method):
+    comparisons = pd.DataFrame({
+        'n pairs': [10, 10, 10, 0],
+        'significant': [True, True, False, True],
+        'Δ (pp)': [30, -30, 5, 20],
+    })
+    monkeypatch.setattr(report, 'paired_test_vs_baseline', lambda df: (comparisons, method))
+    rendered = build_html_report(pd.DataFrame(), _minimal_metrics(), _empty_charts(), _empty_data_tables())
+    summary = rendered.split('<!-- Executive Summary -->')[1].split('<!-- Attack Analysis -->')[0]
+    assert '>1<span' in summary and '> / 3</span>' in summary
+    assert ('One-sided test for ASR increase' if method == 'paired bootstrap' else 'Two-sided test · higher ASR only') in summary
+    assert 'BH FDR 5%' not in summary

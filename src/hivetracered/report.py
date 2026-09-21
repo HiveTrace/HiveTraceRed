@@ -1232,6 +1232,18 @@ _REPORT_STYLES = """
       display: inline-block; padding: 4px 10px; margin: 3px 4px 3px 0; font-size: 12px;
       background: #102116; border: 1px solid #1b3a26; color: #9be3b4; border-radius: 8px;
     }
+
+.dataset-tabs{display:flex;flex-wrap:wrap;gap:6px;margin:20px 0 18px;padding:5px;background:#121620;border:1px solid var(--border);border-radius:10px;width:fit-content;max-width:100%}
+.dataset-tablink{appearance:none;font:inherit;font-size:14px;line-height:1.4;font-weight:500;padding:9px 15px;border:1px solid transparent;border-radius:7px;background:transparent;color:var(--muted);cursor:pointer;overflow-wrap:anywhere;transition:background .15s,color .15s,border-color .15s}
+.dataset-tablink:hover{background:#1c2330;color:var(--text)}
+.dataset-tablink.active{background:#273347;border-color:#465b79;color:#f0f4fb;box-shadow:0 1px 3px #0003}
+.dataset-tablink:focus-visible{outline:2px solid #91b0ff;outline-offset:2px}
+@media(prefers-reduced-motion:reduce){.dataset-tablink{transition:none}}
+.summary-results{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:20px 0 18px}
+.summary-results .metric{padding:16px 18px}.summary-results .value{font-size:28px;line-height:1.25;letter-spacing:-.4px;margin:7px 0 5px;font-variant-numeric:tabular-nums}.summary-results .delta{font-size:13px;line-height:1.45}.summary-results .attack-value{color:var(--accent2)}
+.summary-volume{display:flex;gap:12px;align-items:baseline;flex-wrap:wrap;font-size:14px;margin:18px 0 8px}.summary-volume strong{font-size:18px;font-variant-numeric:tabular-nums}.summary-arrow{color:var(--muted)}
+.summary-quality{display:flex;align-items:center;gap:10px 22px;flex-wrap:wrap;border-top:1px solid var(--border);padding:14px 0;margin-top:14px;font-size:14px}.summary-quality button{font:inherit;color:var(--text)}.summary-help{color:var(--muted);font-size:13px;margin:8px 0 18px}.summary-help summary{cursor:pointer;width:fit-content}.summary-help p{line-height:1.6;max-width:850px}.summary-help ul{line-height:1.8;padding-left:20px}.summary-observed{font-size:13px;color:var(--muted);margin-top:18px}
+@media(max-width:700px){.summary-results{grid-template-columns:1fr}.summary-results .value{font-size:26px}.summary-volume{gap:8px}.summary-quality{gap:12px}}
     </style>
     """
 
@@ -1250,6 +1262,28 @@ def _build_body_html(df, metrics, charts, data_tables, ns, generated_at):
     """
     sfx = f"_{ns}" if ns else ""
     k_repeats = metrics.get("k_repeats", 1)
+
+    assessed = _answered(df) if "success" in df.columns else pd.DataFrame()
+    names = set(assessed["attack_name"]) if "attack_name" in assessed else set()
+    control = f"{metrics.get('asr_none_attack', 0):.1f}%" if "NoneAttack" in names else "Not measured"
+    attack = f"{metrics.get('asr_max_attack', 0):.1f}%" if names - {"NoneAttack"} else "Not measured"
+    best = metrics.get("best_attack_name_detailed", "-")
+    comparisons, method = paired_test_vs_baseline(df)
+    comparisons = comparisons[comparisons["n pairs"] > 0] if not comparisons.empty else comparisons
+    compared = len(comparisons)
+    significant = int(((comparisons["significant"]) & (comparisons["Δ (pp)"] > 0)).sum()) if compared else 0
+    significance_value = f'{significant}<span style="font-size:18px;color:var(--muted);letter-spacing:0"> / {compared}</span>' if compared else "Not measured"
+    significance_note = "One-sided test for ASR increase" if method == "paired bootstrap" else "Two-sided test · higher ASR only"
+    if not compared:
+        significance_note = "No assessed pairs with the control"
+    examples = metrics.get("example_count", metrics["total_prompts"])
+    variants = metrics.get("variant_count", metrics["total_tests"])
+    requests = metrics.get("request_count", metrics["total_tests"])
+    valid = metrics.get("valid_tests", 0)
+    blocked = metrics.get("blocked_count", 0)
+    req, judge, unscored = (metrics.get(k, 0) for k in ("request_errors", "judge_errors", "unscored"))
+    repeats = k_repeats
+    error_label = " · ".join(f"{v} {label}" for v, label in [(req, "request errors"), (judge, "judge errors"), (unscored, "unscored")] if v) or "0 errors"
 
     fw_short = {
         "OWASP_LLM_TOP_10": "OWASP LLM Top 10",
@@ -1344,49 +1378,15 @@ def _build_body_html(df, metrics, charts, data_tables, ns, generated_at):
       <!-- Executive Summary -->
       <div id="tab1{sfx}" class="section">
         <h2>🎯 Executive Summary</h2>
-        <p>Each original example is transformed into one or more attack variants.
-        Each variant is sent to the model repeatedly to measure how consistently it succeeds.
-        This report contains up to {k_repeats} requests per variant; the attack table shows variants per example.</p>
-        <div class="grid-4">
-          <div class="metric"><div class="label">Original examples</div><div class="value">{metrics.get('example_count', metrics['total_prompts'])}</div></div>
-          <div class="metric"><div class="label">Attack variants</div><div class="value">{metrics.get('variant_count', metrics['total_tests'])}</div></div>
-          <div class="metric"><div class="label">Model requests</div><div class="value">{metrics.get('request_count', metrics['total_tests'])}</div></div>
-          <div class="metric"><div class="label">Valid observations</div><div class="value">{metrics.get('valid_tests', 0)}</div></div>
-          <div class="metric"><div class="label">Observations with errors</div>
-            <button class="value metric-link" onclick="showErrors('{ns}','any')">{metrics.get('error_count', 0)} · {metrics['error_rate']:.2f}%</button>
-            <div class="delta">Excluded from attack success estimates</div></div>
-          <div class="metric"><div class="label">Request errors / judge errors / unscored</div>
-            <div class="value">{metrics.get('request_errors', 0)} / {metrics.get('judge_errors', 0)} / {metrics.get('unscored', 0)}</div></div>
-          <div class="metric"><div class="label">Blocked requests</div><div class="value">{metrics.get('blocked_count', 0)} · {_fmt_rate(metrics['blocked_rate'])}</div>
-            <div class="delta">Of requests without a target error. A block is an unsuccessful attack, not an error.</div></div>
+        <div class="summary-results">
+          <div class="metric"><div class="label">ASR without transformation</div><div class="value">{control}</div><div class="delta">Original request · NoneAttack control</div></div>
+          <div class="metric"><div class="label">Highest attack ASR</div><div class="value attack-value">{attack}</div><div class="delta">{best}</div></div>
+          <div class="metric"><div class="label">Attacks significantly above baseline</div><div class="value">{significance_value}</div><div class="delta">{significance_note}</div></div>
         </div>
-
-        <h3>🔍 Key Findings</h3>
-        <div class="kf">
-          <div class="badge">Most Effective Attack: <strong>{metrics['best_attack_name']}</strong> ({metrics['best_attack_rate']:.1f}% ASR)</div>
-          <div class="badge warn">Vulnerable Prompts: <strong>{metrics['vulnerable_prompts']}/{metrics['total_prompts'] or 0}</strong> ({metrics['vulnerable_prompts_rate']:.1f}%)</div>
-        </div>
-
-        <h3>📊 Security Framework Coverage</h3>
-        <div style="background:#0f1420; border:1px solid var(--border); padding:16px; border-radius:12px; margin-bottom:16px;">
-          <div style="margin-bottom:12px;"><strong>Category:</strong> <span style="color:var(--accent2);">{metrics.get('base_category', 'Unknown')}</span></div>
-          {framework_badges_html if framework_badges_html else '<div style="color:var(--muted);">No framework categories mapped</div>'}
-        </div>
-
-        <h3>🎯 Attack Success Rate (ASR) Analysis</h3>
-        <div class="grid-2">
-          <div class="metric">
-            <div class="label">ASR without Prompt Injections</div>
-            <div class="value" style="color:var(--good);">{metrics.get('asr_none_attack', 0.0):.1f}%</div>
-            <div class="delta">Average for NoneAttack - baseline vulnerability</div>
-          </div>
-          <div class="metric">
-            <div class="label">ASR with Prompt Injections</div>
-            <div class="value" style="color:var(--accent);">{metrics.get('asr_max_attack', 0.0):.1f}%</div>
-            <div class="delta">Average for {metrics.get('best_attack_name_detailed', '-')}</div>
-          </div>
-        </div>
-
+        <div class="summary-volume"><span><strong>{examples}</strong> original examples</span><span class="summary-arrow">→</span><span><strong>{variants}</strong> attack variants</span><span class="summary-arrow">→</span><span><strong>{requests}</strong> model requests</span></div>
+        <div class="summary-help">Up to {repeats} requests per variant. Repeats do not increase the number of independent examples.</div>
+        <div class="summary-quality"><span><strong>{valid} / {requests}</strong> requests assessed</span><button class="metric-link" onclick="showErrors('{ns}','any')">{error_label}</button><span>{blocked} blocked requests</span></div>
+        <details class="summary-help"><summary>How this run is counted</summary><p>Each original example is transformed into attack variants, then each variant is sent repeatedly. ASR averages valid responses within each variant, variants within each original example, and then examples equally. Errors are excluded. A blocked request is an unsuccessful attack, not an error.</p><ul><li>Request errors: {req}</li><li>Judge errors: {judge}</li><li>Unscored responses: {unscored}</li></ul><p>Upper confidence bounds are shown in the attack charts. Paired differences and significance are available in Attack Analysis.</p></details>
         <h3>Top 3 Attack Types</h3>
         <div style="color:var(--muted); font-size:13px; margin-bottom:8px;">Share of unique prompts with success &gt; 0 in at least one attack of this type</div>
         {charts['fig_top_types_html']}
@@ -1394,6 +1394,14 @@ def _build_body_html(df, metrics, charts, data_tables, ns, generated_at):
         <h3>Top 3 Attacks</h3>
         <div style="color:var(--muted); font-size:13px; margin-bottom:8px;">Attack success rate: average valid responses within each variant, then variants within each original example, then examples equally; {_bound_caption(df)}</div>
         {charts['fig_top_attacks_html']}
+        <p class="summary-observed">{metrics['vulnerable_prompts']}/{metrics['total_prompts']} original examples had at least one successful response across the tested attacks and repeats. This is not a per-request success rate.</p>
+        <h3>📊 Security Framework Coverage</h3>
+        <div style="background:#0f1420; border:1px solid var(--border); padding:16px; border-radius:12px; margin-bottom:16px;">
+          <div style="margin-bottom:12px;"><strong>Category:</strong> <span style="color:var(--accent2);">{metrics.get('base_category', 'Unknown')}</span></div>
+          {framework_badges_html if framework_badges_html else '<div style="color:var(--muted);">No framework categories mapped</div>'}
+        </div>
+
+
 
       </div>
 
@@ -1598,7 +1606,8 @@ def main():
         data_tables = generate_data_tables(df, per_request=per_request)
 
         # Use the shared HTML builder
-        html = build_html_report(df, metrics, charts, data_tables)
+        report_df = per_request if "dataset" in per_request and per_request["dataset"].nunique() > 1 else df
+        html = build_html_report(report_df, metrics, charts, data_tables)
 
         with open(args.output, "w", encoding="utf-8") as f:
             f.write(html)

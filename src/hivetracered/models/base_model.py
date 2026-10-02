@@ -1,5 +1,7 @@
 import asyncio
 import contextlib
+import inspect
+from hivetracered.models.resources import register_model
 import warnings
 from collections.abc import AsyncGenerator
 from contextlib import AbstractAsyncContextManager
@@ -22,27 +24,90 @@ class Model(ABC):
     # gets TEMPERATURE_EPSILON instead of 0.0). See config._force_judge_temperature.
     SUPPORTS_ZERO_TEMPERATURE: bool = True
 
-    def _concurrency_slot(self) -> AbstractAsyncContextManager:
-        """Acquire one concurrency slot for an async call.
+    # Stateful SDK transports may only be used and closed on one event loop.
+    _loop_affine_resources = False
 
-        Lazily constructs a per-instance ``asyncio.Semaphore`` capped at
-        ``self.max_concurrency``. The semaphore binds to the running event loop
-        on first acquire; if the model is reused across event loops, the slot
-        is reconstructed for the new loop.
+    def __new__(cls, *args, **kwargs):
+        instance = super().__new__(cls)
+        instance._closed = False
+        instance._request_loop = None
+        instance._pending_requests = set()
+        instance._cleanup_callbacks = []
+        # Register before __init__: a constructor may allocate clients and then fail.
+        register_model(instance)
+        return instance
 
-        Returns ``contextlib.nullcontext()`` when ``max_concurrency == 0``
-        (unlimited). Subclasses' ``ainvoke`` implementations must wrap their
-        outbound request with ``async with self._concurrency_slot():`` so that
-        every async entry point (``ainvoke``, ``abatch``, ``stream_abatch``)
-        observes the per-model cap.
+    def _ensure_open(self):
+        if self._closed:
+            raise RuntimeError("Model is closed; create a new model for another run")
+
+    def _add_cleanup(self, callback):
+        self._cleanup_callbacks.append(callback)
+
+    async def _cancel_requests(self):
+        current = asyncio.current_task()
+        pending = [task for task in self._pending_requests if task is not current and not task.done()]
+        for task in pending:
+            task.cancel()
+        if pending:
+            await asyncio.gather(*pending, return_exceptions=True)
+
+    async def aclose(self):
+        """Cancel pending requests and close owned resources before their loop exits.
+
+        Caller-supplied transports are not owned and are never closed here.
+        Repeated calls are safe. Models must not be used after closing.
         """
-        if self.max_concurrency == 0:
-            return contextlib.nullcontext()
+        if self._closed:
+            return
         loop = asyncio.get_running_loop()
+        if self._loop_affine_resources and self._request_loop is not None and self._request_loop is not loop:
+            raise RuntimeError("Close the model on the event loop where it was used")
+        self._closed = True
+        await self._cancel_requests()
+        errors = []
+        callbacks, self._cleanup_callbacks = self._cleanup_callbacks, []
+        for callback in reversed(callbacks):
+            try:
+                result = callback()
+                if inspect.isawaitable(result):
+                    await result
+            except Exception as exc:
+                errors.append(exc)
+        if errors:
+            raise errors[0]
+
+    async def __aenter__(self):
+        self._ensure_open()
+        return self
+
+    async def __aexit__(self, exc_type, exc, tb):
+        await self.aclose()
+
+    @contextlib.asynccontextmanager
+    async def _concurrency_slot(self) -> AbstractAsyncContextManager:
+        """Track queued and active requests and enforce the per-model cap.
+
+        Semaphores are rebuilt when the loop changes. Stateful SDK transports
+        additionally reject reuse in another loop: rebuilding a semaphore cannot
+        make a live HTTP connection safe to transfer.
+        """
+        self._ensure_open()
+        loop = asyncio.get_running_loop()
+        if self._loop_affine_resources:
+            if self._request_loop is not None and self._request_loop is not loop:
+                raise RuntimeError("Model belongs to another event loop; create a new model")
+            self._request_loop = loop
         if getattr(self, "_concurrency_sem_loop", None) is not loop:
-            self._concurrency_sem = asyncio.Semaphore(self.max_concurrency)
+            self._concurrency_sem = asyncio.Semaphore(self.max_concurrency) if self.max_concurrency else None
             self._concurrency_sem_loop = loop
-        return self._concurrency_sem
+        task = asyncio.current_task()
+        self._pending_requests.add(task)
+        try:
+            async with self._concurrency_sem if self._concurrency_sem is not None else contextlib.nullcontext():
+                yield
+        finally:
+            self._pending_requests.discard(task)
 
     @abstractmethod
     def invoke(self, prompt: str | list[dict[str, str]]) -> dict:

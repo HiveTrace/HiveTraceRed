@@ -75,4 +75,7 @@ class OllamaModel(LangchainModel):
             base_url=base_url,
             **self.kwargs
         )
+        # The Ollama SDK owns httpx clients but exposes no close method itself.
+        self._add_cleanup(self.client._client._client.close)
+        self._add_cleanup(self.client._async_client._client.aclose)
         self.client = self._add_retry_policy(self.client)

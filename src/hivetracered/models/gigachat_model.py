@@ -49,6 +49,13 @@ class GigaChatModel(LangchainModel):
 
         self.kwargs = kwargs or {}
         self.client = GigaChat(credentials=credentials, model=model, scope=scope, verify_ssl_certs=verify_ssl_certs, **self.kwargs)
+        raw_client = self.client
+        async def close_sdk():
+            # GigaChat initializes its SDK lazily; do not create it just to close it.
+            sdk = raw_client.__dict__.get("_client")
+            if sdk is not None:
+                await sdk.aclose()
+        self._add_cleanup(close_sdk)
         self.client = self._add_retry_policy(self.client)
 
     

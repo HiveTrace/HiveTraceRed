@@ -45,4 +45,16 @@ class GeminiModel(LangchainModel):
 
         rate_limiter = self._make_rate_limiter(rpm)
         self.client = ChatGoogleGenerativeAI(model=model, rate_limiter=rate_limiter, **self.kwargs)
+        if "client" not in self.kwargs:
+            raw_client = self.client
+            close = getattr(raw_client, "aclose", None)
+            if callable(close):
+                self._add_cleanup(close)
+            else:
+                # langchain-google-genai 4.2/4.3 only has destructor cleanup,
+                # which may create a different loop after the run has finished.
+                sdk = raw_client.client
+                self._add_cleanup(lambda: setattr(raw_client, "client", None))
+                self._add_cleanup(sdk.aio.aclose)
+                self._add_cleanup(sdk.close)
         self.client = self._add_retry_policy(self.client)

@@ -65,7 +65,7 @@ class CloudRuModel(LangchainModel):
             api_key=api_key,
             base_url=base_url,
             rate_limiter=rate_limiter,
-            **self._httpx_clients(verify_ssl),
+            **self._httpx_clients(verify_ssl, self.kwargs),
             **self.kwargs,
         )
         self.client = self._add_retry_policy(self.client)

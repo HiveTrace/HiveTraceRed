@@ -1,6 +1,5 @@
 """PAIR (Prompt Automatic Iterative Refinement) attack — arXiv:2310.08419."""
 
-import asyncio
 import logging
 from typing import Any
 
@@ -138,7 +137,8 @@ class PAIRAttack(IterativeAttack):
         )
 
     def run_attack(self, goal: str) -> IterativeAttackResult:
-        return asyncio.run(self.run_attack_async(goal))
+        """Reuse the synchronous loop; use ``with attack`` or close after the last goal."""
+        return self._run_attack_sync(goal)
 
     async def run_attack_async(self, goal: str) -> IterativeAttackResult:
         iterations: list[IterationResult] = []

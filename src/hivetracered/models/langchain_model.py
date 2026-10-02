@@ -69,27 +69,30 @@ class LangchainModel(Model):
             kwargs["max_bucket_size"] = max_bucket_size
         return InMemoryRateLimiter(**kwargs)
 
-    @staticmethod
-    def _httpx_clients(verify_ssl: bool | str) -> dict:
-        """
-        Build http_client/http_async_client kwargs for httpx-based SDK clients.
+    _loop_affine_resources = True
 
-        Args:
-            verify_ssl: True for default certificate verification (certifi bundle),
-                False to disable verification, or a path to a custom CA bundle.
+    def _httpx_clients(self, verify_ssl: bool | str, kwargs: dict | None = None) -> dict:
+        """Provide per-model transports for every TLS mode, bypassing SDK caches.
 
-        Returns:
-            Dict with http_client/http_async_client entries, or an empty dict
-            when default verification is requested (SDK builds its own clients).
+        Injected clients stay caller-owned. Remove them from kwargs to avoid
+        duplicate constructor keywords. Proxy routing moves to these transports
+        because ChatOpenAI forbids combining openai_proxy with explicit clients.
         """
-        if verify_ssl is True:
-            return {}
+        import os
         import httpx
-        verify = LangchainModel._ssl_verify(verify_ssl)
-        return {
-            "http_client": httpx.Client(verify=verify),
-            "http_async_client": httpx.AsyncClient(verify=verify),
-        }
+        kwargs = kwargs if kwargs is not None else {}
+        proxy = kwargs.pop("openai_proxy", os.getenv("OPENAI_PROXY")) or None
+        verify = self._ssl_verify(verify_ssl)
+        clients = {}
+        for key, cls in (("http_client", httpx.Client), ("http_async_client", httpx.AsyncClient)):
+            client = kwargs.pop(key, None)
+            if client is None:
+                client = cls(verify=verify, proxy=proxy,
+                             limits=httpx.Limits(max_connections=1000, max_keepalive_connections=100))
+                self._add_cleanup(client.aclose if key == "http_async_client" else client.close)
+            clients[key] = client
+        clients["openai_proxy"] = None
+        return clients
 
     def _add_retry_policy(self, client):
         """
@@ -137,8 +140,13 @@ class LangchainModel(Model):
             
         Returns:
             The model's response, or an error dict ({"content": "", "error": ...,
-            "error_type": ...}) if the request fails after retries — never raises.
+            "error_type": ...}) if the request fails after retries.
+
+        Raises:
+            RuntimeError: The model is closed. Request failures are returned as
+                error dictionaries; lifecycle errors propagate before dispatch.
         """
+        self._ensure_open()
         try:
             return dict(self.client.invoke(prompt))
         except Exception as e:
@@ -154,7 +162,12 @@ class LangchainModel(Model):
 
         Returns:
             The model's response, or an error dict ({"content": "", "error": ...,
-            "error_type": ...}) if the request fails after retries — never raises.
+            "error_type": ...}) if the request fails after retries.
+
+        Raises:
+            RuntimeError: The model is closed or belongs to another event loop.
+                Request failures are returned as error dictionaries; lifecycle
+                errors propagate before dispatch.
         """
         async with self._concurrency_slot():
             try:
@@ -173,6 +186,7 @@ class LangchainModel(Model):
         Returns:
             A list of model responses
         """
+        self._ensure_open()
         if self.max_concurrency == 0:
             return [dict(response) for response in self.client.batch(prompts)]
         else:
@@ -186,8 +200,13 @@ class LangchainModel(Model):
             prompts: A list of prompts to send to the model
 
         Returns:
-            A list of model responses
+            A list of responses, including per-prompt request error dictionaries.
+
+        Raises:
+            RuntimeError: Closed model or wrong event loop; aborts the batch.
         """
+        # Lifecycle errors from ainvoke intentionally abort the batch;
+        # request failures remain per-prompt error dictionaries.
         # Concurrency is enforced inside ainvoke via self._concurrency_slot();
         # asyncio.gather lets every prompt acquire a slot independently and
         # the cap holds whether or not other batches are running concurrently.

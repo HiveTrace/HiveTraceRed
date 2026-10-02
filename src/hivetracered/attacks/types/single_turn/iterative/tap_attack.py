@@ -161,7 +161,8 @@ class TAPAttack(IterativeAttack):
         return node
 
     def run_attack(self, goal: str) -> IterativeAttackResult:
-        return asyncio.run(self.run_attack_async(goal))
+        """Reuse the synchronous loop; use ``with attack`` or close after the last goal."""
+        return self._run_attack_sync(goal)
 
     async def _explore_branch(
         self,

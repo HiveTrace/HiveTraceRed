@@ -2,13 +2,13 @@
 """verify_ssl wiring tests for httpx-based models.
 
 Pins that verify_ssl=False / CA-bundle-path reaches the underlying HTTP client
-for every model that supports it, and that the default (True) leaves the SDK's
-own client construction untouched.
+for every model that supports it. All TLS modes must use owned clients.
 """
 
 from __future__ import annotations
 
 import ssl
+import asyncio
 from unittest.mock import MagicMock
 
 import certifi
@@ -18,15 +18,20 @@ import pytest
 from hivetracered.models.langchain_model import LangchainModel
 
 
-def test_httpx_clients_default_is_empty():
-    assert LangchainModel._httpx_clients(True) == {}
+class _TransportFactory(LangchainModel):
+    def __init__(self):
+        pass
 
 
-@pytest.mark.parametrize("verify", [False, certifi.where()])
-def test_httpx_clients_builds_clients(verify):
-    clients = LangchainModel._httpx_clients(verify)
+@pytest.mark.parametrize("verify", [True, False, certifi.where()])
+def test_httpx_clients_builds_owned_clients_for_every_tls_mode(verify):
+    model = _TransportFactory()
+    clients = model._httpx_clients(verify)
     assert isinstance(clients["http_client"], httpx.Client)
     assert isinstance(clients["http_async_client"], httpx.AsyncClient)
+    asyncio.run(model.aclose())
+    assert clients["http_client"].is_closed
+    assert clients["http_async_client"].is_closed
 
 
 def test_ssl_verify_normalizes_ca_path_to_context():
@@ -54,16 +59,18 @@ def test_chatopenai_models_pass_httpx_clients(monkeypatch, mod_name):
         if isinstance(v, type) and issubclass(v, LangchainModel) and v is not LangchainModel
     )
 
-    model_cls(model="m", api_key="k", verify_ssl=False)
+    model = model_cls(model="m", api_key="k", verify_ssl=False)
     kwargs = cls.call_args.kwargs
     assert isinstance(kwargs["http_client"], httpx.Client)
     assert isinstance(kwargs["http_async_client"], httpx.AsyncClient)
 
+    asyncio.run(model.aclose())
     cls.reset_mock()
-    model_cls(model="m", api_key="k")
+    model = model_cls(model="m", api_key="k")
     kwargs = cls.call_args.kwargs
-    assert "http_client" not in kwargs
-    assert "http_async_client" not in kwargs
+    assert isinstance(kwargs["http_client"], httpx.Client)
+    assert isinstance(kwargs["http_async_client"], httpx.AsyncClient)
+    asyncio.run(model.aclose())
 
 
 def test_gemini_model_passes_client_args(monkeypatch):

@@ -15,6 +15,7 @@ from collections.abc import AsyncGenerator
 from hivetracered.attacks.base_attack import AttackModelError, BaseAttack
 from hivetracered.evaluators.base_evaluator import BaseEvaluator
 from hivetracered.models.base_model import Model
+from hivetracered.models.resources import ModelResources, register_model
 
 logger = logging.getLogger(__name__)
 
@@ -112,6 +113,85 @@ class IterativeAttack(BaseAttack):
         self.language_config = language_config or RUSSIAN_LANGUAGE_CONFIG
         self._name = name
         self._description = description
+        self._sync_loop = None
+        self._sync_closed = False
+
+    def _run_attack_sync(self, goal: str) -> IterativeAttackResult:
+        """Reuse one private loop across synchronous goals (Python 3.10+).
+
+        Use ``with attack:`` or call ``attack.close()`` after the final goal.
+        Inside an async application, await ``run_attack_async`` instead.
+        """
+        if self._sync_closed:
+            raise RuntimeError("Synchronous attack is closed; create a new attack")
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            pass
+        else:
+            raise RuntimeError("Use run_attack_async inside a running event loop")
+        if self._sync_loop is None:
+            self._sync_loop = asyncio.new_event_loop()
+        if self._sync_loop.is_running():
+            raise RuntimeError("Synchronous attack calls must not overlap")
+        return self._sync_loop.run_until_complete(self.run_attack_async(goal))
+
+    def close(self):
+        """Close the synchronous loop and the models it used, including the judge.
+
+        Models supplied to a synchronous attack share its lifetime: they are
+        closed here before the loop exits. Models belonging to another loop
+        are left untouched. Async-only attacks remain caller-managed.
+        """
+        if self._sync_closed:
+            return
+        loop = self._sync_loop
+        if loop is None:
+            self._sync_closed = True
+            return
+        try:
+            asyncio.get_running_loop()
+        except RuntimeError:
+            pass
+        else:
+            raise RuntimeError("Close the synchronous attack outside a running event loop")
+        self._sync_closed = True
+        models = [self.attacker_model, self.target_model, getattr(self.evaluator, "model", None)]
+        models = list({id(m): m for m in models if isinstance(m, Model)}.values())
+
+        async def cleanup():
+            # A failed TAP branch may leave other branches running.
+            tasks = [task for task in asyncio.all_tasks() if task is not asyncio.current_task()]
+            for task in tasks:
+                task.cancel()
+            if tasks:
+                await asyncio.gather(*tasks, return_exceptions=True)
+            async with ModelResources():
+                for model in models:
+                    if model._request_loop is None or model._request_loop is loop:
+                        register_model(model)
+
+        try:
+            loop.run_until_complete(cleanup())
+        finally:
+            try:
+                loop.run_until_complete(loop.shutdown_asyncgens())
+                loop.run_until_complete(loop.shutdown_default_executor())
+            finally:
+                loop.close()
+
+    def __enter__(self):
+        if self._sync_closed:
+            raise RuntimeError("Synchronous attack is closed; create a new attack")
+        return self
+
+    def __exit__(self, exc_type, exc, tb):
+        try:
+            self.close()
+        except Exception:
+            if exc is None:
+                raise
+            logger.exception("Attack cleanup failed while handling an attack error")
 
     @staticmethod
     def _content_or_raise(response: dict) -> str:
@@ -166,11 +246,14 @@ class IterativeAttack(BaseAttack):
 
     async def _evaluate_response_async(self, goal: str, target_response: str) -> dict[str, Any]:
         """Evaluate the target's response via the evaluator and return success, score, and raw result."""
+        result = {"success": False, "score": 0.0, "raw": {}}
+        # Consume the one-item stream fully so its generator cleanup completes
+        # before returning to a synchronous caller and pausing the private loop.
         async for eval_result in self.evaluator.stream_abatch([goal], [target_response]):
             success = eval_result.get("success", False)
             score = eval_result.get("score", 1.0 if success else 0.0)
-            return {"success": success, "score": score, "raw": eval_result}
-        return {"success": False, "score": 0.0, "raw": {}}
+            result = {"success": success, "score": score, "raw": eval_result}
+        return result
 
     def _extract_goal(self, prompt: str | list[dict[str, str]]) -> str:
         """Extract the goal string from a prompt (string or message list)."""

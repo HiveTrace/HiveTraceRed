@@ -113,4 +113,8 @@ class LlamaCppModel(LangchainModel):
             n_threads=n_threads,
             **self.kwargs,
         )
+        native_client = getattr(self.client, "client", None)
+        close = getattr(native_client, "close", None)
+        if close is not None:
+            self._add_cleanup(close)
         self.client = self._add_retry_policy(self.client)

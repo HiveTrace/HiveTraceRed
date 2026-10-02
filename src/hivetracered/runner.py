@@ -17,6 +17,7 @@ from typing import Any
 import yaml
 import pandas as pd
 from hivetracered.statistics import error_mask, valid_results
+from hivetracered.models.resources import with_model_resources
 
 from hivetracered.pipeline import (
     attack_repeats,
@@ -48,6 +49,7 @@ from hivetracered.setup import (
 logger = logging.getLogger(__name__)
 
 
+@with_model_resources
 async def create_attack_prompts(
     config: dict[str, Any], run_dir: str, output_format: str = "csv"
 ) -> list[dict[str, Any]]:
@@ -104,6 +106,7 @@ async def create_attack_prompts(
     return attack_prompts
 
 
+@with_model_resources
 async def get_model_responses(
     config: dict[str, Any],
     attack_prompts: list[dict[str, Any]],
@@ -141,6 +144,7 @@ def _success_summary(evaluation_results: list[dict[str, Any]]) -> tuple[int, flo
     return int(valid["success"].sum()), float(valid["success"].mean() * 100)
 
 
+@with_model_resources
 async def evaluate_responses(
     config: dict[str, Any],
     model_responses: list[dict[str, Any]],
@@ -589,6 +593,7 @@ def _log_summary(
         logger.info("Report: %s", report_path)
 
 
+@with_model_resources
 async def run_pipeline(config: dict[str, Any]) -> bool:
     """Run the complete testing pipeline, controlling stages via config.
 

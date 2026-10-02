@@ -61,6 +61,22 @@ class YandexGPTModel(Model):
             auth=api_key or os.getenv("YANDEX_GPT_API_KEY"),
             retry_policy=retry_policy,  # Pass retry policy to SDK
         )
+        async def close_channels():
+            # AIStudio keeps gRPC channels on its own shared background loop.
+            # Close only this SDK instance's channels, never that shared loop.
+            cloud_client = getattr(sdk, "_client", None)
+            channels = getattr(cloud_client, "_channels", {})
+            if not channels:
+                return
+            async def close_on_sdk_loop():
+                await asyncio.gather(*(channel.close() for channel in channels.values()))
+                channels.clear()
+            sdk_loop = sdk._get_event_loop()
+            if sdk_loop is asyncio.get_running_loop():
+                await close_on_sdk_loop()
+            else:
+                await asyncio.wrap_future(asyncio.run_coroutine_threadsafe(close_on_sdk_loop(), sdk_loop))
+        self._add_cleanup(close_channels)
         self.client = sdk.models.completions(self.model_name).configure(
             **self.kwargs
         )

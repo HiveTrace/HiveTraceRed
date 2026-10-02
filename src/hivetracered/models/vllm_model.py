@@ -61,7 +61,7 @@ class VLLMModel(LangchainModel):
             model=model,
             base_url=base_url,
             api_key=api_key,
-            **self._httpx_clients(verify_ssl),
+            **self._httpx_clients(verify_ssl, self.kwargs),
             **self.kwargs,
         )
         self.client = self._add_retry_policy(self.client)

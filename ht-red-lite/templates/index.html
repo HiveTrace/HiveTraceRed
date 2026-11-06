@@ -1,0 +1,15 @@
+<!DOCTYPE html>
+<html>
+<head><title>HiveTrace Lite</title></head>
+<body>
+  <h1>Запуски HiveTrace Red</h1>
+  <ul>
+  {% for run in runs %}
+    <li>
+      <a href="/ui/runs/{{ run.uuid }}">{{ run.uuid }}</a> —
+      {{ run.status }} — {{ run.created_at }}
+    </li>
+  {% endfor %}
+  </ul>
+</body>
+</html>

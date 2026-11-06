@@ -59,6 +59,11 @@ The `hivetracered-report` command generates comprehensive HTML reports with:
 - Data explorer with filtering capabilities
 - Sample prompts and responses for detailed inspection
 
+### UI Local Start
+
+1. **Install dependencies**: ```pip install -r ht-red-lite/requirements.txt```
+2. **Start server**: ```uvicorn app:app --host 0.0.0.0 --port 8000 --reload```
+
 ### Results Example
 
 The framework provides detailed attack analysis showing success rates across different attack types and individual attack techniques:

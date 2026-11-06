@@ -1,0 +1,16 @@
+<!DOCTYPE html>
+<html>
+<head><title>Запуск {{ run.uuid }}</title></head>
+<body>
+  <h1>Запуск {{ run.uuid }}</h1>
+  <p><b>Статус:</b> {{ run.status }}</p>
+  {% if run.error_message %}<p><b>Ошибка:</b> {{ run.error_message }}</p>{% endif %}
+  {% if run.report_path %}
+    <p><a href="/api/runs/{{ run.uuid }}/report">Скачать HTML-отчёт</a></p>
+  {% endif %}
+  {% if run.results_json %}
+    <h2>Результаты</h2>
+    <pre>{{ run.results_json | tojson(indent=2) }}</pre>
+  {% endif %}
+</body>
+</html>

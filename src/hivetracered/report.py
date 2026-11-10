@@ -1306,7 +1306,7 @@ def _build_body_html(df, metrics, charts, data_tables, ns, generated_at):
         fw_defs = FRAMEWORKS.get(fw_key, {}).get("categories", {})
         badges = []
         for cat in cats:
-            cat_id = cat.split(":")[0].strip()
+            cat_id = cat.partition(": ")[0].strip()
             desc = fw_defs.get(cat_id, {}).get("description", "")
             badges.append(
                 f'<div class="badge" style="background:{bg}; border-color:{border}; color:{color};" title="{desc}">{cat}</div>'

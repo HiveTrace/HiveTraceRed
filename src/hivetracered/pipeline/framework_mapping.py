@@ -7,7 +7,7 @@ and FSTEK Russia Order No. 117 (April 11, 2025).
 
 Key design principle: ALL 11 attack types in HiveTraceRed are prompt injection
 techniques — they differ in HOW they inject, not WHAT they target. Therefore:
-- Attack types → always LLM01 (Prompt Injection)
+- Attack types → always LLM01:2026 (Prompt Injection)
 - Dataset categories (category/subcategory) → determine which vulnerability is tested
 """
 
@@ -25,47 +25,47 @@ P_61B = "п.61б"
 
 FRAMEWORKS: dict[str, dict] = {
     "OWASP_LLM_TOP_10": {
-        "name": "OWASP Top 10 for LLM 2025",
+        "name": "OWASP Top 10 for LLM Applications 2026",
         "categories": {
-            "LLM01": {
+            "LLM01:2026": {
                 "name": "Prompt Injection",
-                "description": "Manipulating LLM inputs to bypass safety measures",
+                "description": "Direct or indirect instructions (user input, documents, images, tool output, memory) that alter model behaviour and bypass safety measures",
             },
-            "LLM02": {
+            "LLM02:2026": {
                 "name": "Sensitive Information Disclosure",
-                "description": "Extracting confidential or private data",
+                "description": "Leakage of confidential or private data via responses, logs, tool-call records, embeddings or reasoning traces",
             },
-            "LLM03": {
-                "name": "Supply Chain",
-                "description": "Vulnerabilities in model supply chain",
-            },
-            "LLM04": {
-                "name": "Data and Model Poisoning",
-                "description": "Tampering with training data or model",
-            },
-            "LLM05": {
-                "name": "Improper Output Handling",
-                "description": "Insufficient validation of LLM outputs",
-            },
-            "LLM06": {
+            "LLM03:2026": {
                 "name": "Excessive Agency",
-                "description": "LLM given too much autonomy or permissions",
+                "description": "Damaging actions caused by excessive functionality, permissions or autonomy granted to the LLM",
             },
-            "LLM07": {
-                "name": "System Prompt Leakage",
-                "description": "Exposing system instructions or prompts",
+            "LLM04:2026": {
+                "name": "Supply Chain",
+                "description": "Compromised third-party models, datasets, adapters, packages or templates and weak artifact provenance",
             },
-            "LLM08": {
-                "name": "Vector and Embedding Weaknesses",
-                "description": "Vulnerabilities in RAG systems",
+            "LLM05:2026": {
+                "name": "Data and Model Poisoning",
+                "description": "Durable corruption of training, fine-tuning, RAG or embedding data that changes model behaviour",
             },
-            "LLM09": {
-                "name": "Misinformation",
-                "description": "LLM generating false or misleading content",
-            },
-            "LLM10": {
+            "LLM06:2026": {
                 "name": "Unbounded Consumption",
-                "description": "Resource exhaustion attacks",
+                "description": "Uncontrolled inference leading to service disruption, denial of wallet or model extraction",
+            },
+            "LLM07:2026": {
+                "name": "Misinformation",
+                "description": "Credible but false, incomplete or unsupported output that drives decisions or automated actions",
+            },
+            "LLM08:2026": {
+                "name": "Hidden Context Exposure",
+                "description": "Disclosure of system prompts, tool schemas, retrieved policy text or other context hidden from the user",
+            },
+            "LLM09:2026": {
+                "name": "Vector and Embedding Weaknesses",
+                "description": "Cross-tenant leakage, retrieval manipulation and inversion in RAG, semantic caches and vector memory",
+            },
+            "LLM10:2026": {
+                "name": "Improper Output Handling",
+                "description": "Unvalidated LLM output executed or rendered downstream (shell, SQL, browser, automatic fetches)",
             },
         },
     },
@@ -175,7 +175,7 @@ FRAMEWORKS: dict[str, dict] = {
 # ---------------------------------------------------------------------------
 
 _PROMPT_INJECTION_BASE: dict[str, list[str]] = {
-    "OWASP_LLM_TOP_10": ["LLM01"],
+    "OWASP_LLM_TOP_10": ["LLM01:2026"],
     "MITRE_ATLAS": ["AML.TA0005", "AML.TA0012", "AML.TA0007"],  # Execution + Privilege Escalation + Defense Evasion
     "FSTEK_117": [P_61A, P_61B, "п.66"],
 }
@@ -212,17 +212,17 @@ ATTACK_NAME_FRAMEWORK_MAP: dict[str, dict[str, list[str]]] = {
 
 BASE_CATEGORY_FRAMEWORK_MAP: dict[str, dict[str, list[str]]] = {
     "Harmful Content Generation": {
-        "OWASP_LLM_TOP_10": ["LLM04"],
+        "OWASP_LLM_TOP_10": ["LLM05:2026"],
         "MITRE_ATLAS": ["AML.TA0003", "AML.TA0011"],  # Resource Development + Impact
         "FSTEK_117": [P_61A, P_61B],
     },
     "Internal Information Exposure": {
-        "OWASP_LLM_TOP_10": ["LLM02"],
+        "OWASP_LLM_TOP_10": ["LLM02:2026"],
         "MITRE_ATLAS": [AML_TA0002, AML_TA0010],  # Reconnaissance + Exfiltration
         "FSTEK_117": ["п.60", "п.66"],
     },
     "System Prompt Extraction": {
-        "OWASP_LLM_TOP_10": ["LLM07"],
+        "OWASP_LLM_TOP_10": ["LLM08:2026"],
         "MITRE_ATLAS": [AML_TA0002, AML_TA0010],  # Reconnaissance + Exfiltration
         "FSTEK_117": ["п.60", "п.66"],
     },
@@ -230,7 +230,7 @@ BASE_CATEGORY_FRAMEWORK_MAP: dict[str, dict[str, list[str]]] = {
 
 SUBCATEGORY_FRAMEWORK_MAP: dict[str, dict[str, list[str]]] = {
     "System Prompt Extraction": {
-        "OWASP_LLM_TOP_10": ["LLM07"],
+        "OWASP_LLM_TOP_10": ["LLM08:2026"],
         "MITRE_ATLAS": [AML_TA0002, AML_TA0010],  # Reconnaissance + Exfiltration
         "FSTEK_117": ["п.60", "п.66"],
     },

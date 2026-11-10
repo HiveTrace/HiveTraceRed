@@ -363,30 +363,50 @@ def test_merge_mappings_uses_attack_type_when_columns_present(sample_df):
         subcategories=None,
     )
 
-    # OWASP LLM01 (Prompt Injection) is mapped to every attack type by spec.
+    # OWASP LLM01:2026 (Prompt Injection) is mapped to every attack type by spec.
     assert "OWASP_LLM_TOP_10" in merged
-    assert "LLM01" in merged["OWASP_LLM_TOP_10"]
+    assert "LLM01:2026" in merged["OWASP_LLM_TOP_10"]
+
+
+@pytest.mark.parametrize(
+    ("category", "category_id"),
+    [
+        ("Harmful Content Generation", "LLM05:2026"),
+        ("System Prompt Extraction", "LLM08:2026"),
+    ],
+)
+def test_metrics_and_report_preserve_owasp_edition(sample_df, category, category_id):
+    df = sample_df.copy()
+    df["category"] = category
+    metrics = calculate_metrics(df)
+
+    assert category_id in metrics["framework_mappings"]["OWASP_LLM_TOP_10"]
+    name = FRAMEWORKS["OWASP_LLM_TOP_10"]["categories"][category_id]["name"]
+    html = build_html_report(df, metrics, _empty_charts(), _empty_data_tables())
+    assert f"{category_id}: {name}" in html
+    description = FRAMEWORKS["OWASP_LLM_TOP_10"]["categories"][category_id]["description"]
+    assert f'title="{description}"' in html
 
 
 def test_framework_categories_formats_id_colon_name_strings_sorted():
-    # Use OWASP LLM01 + LLM02 in a deterministic order.
-    merged = {"OWASP_LLM_TOP_10": {"LLM02", "LLM01"}}
+    # Use OWASP LLM01:2026 + LLM02:2026 in a deterministic order.
+    merged = {"OWASP_LLM_TOP_10": {"LLM02:2026", "LLM01:2026"}}
 
     out = _framework_categories(merged)
 
     expected = [
-        "LLM01: " + FRAMEWORKS["OWASP_LLM_TOP_10"]["categories"]["LLM01"]["name"],
-        "LLM02: " + FRAMEWORKS["OWASP_LLM_TOP_10"]["categories"]["LLM02"]["name"],
+        "LLM01:2026: " + FRAMEWORKS["OWASP_LLM_TOP_10"]["categories"]["LLM01:2026"]["name"],
+        "LLM02:2026: " + FRAMEWORKS["OWASP_LLM_TOP_10"]["categories"]["LLM02:2026"]["name"],
     ]
     assert out["OWASP_LLM_TOP_10"] == sorted(expected)
 
 
 def test_framework_categories_skips_unknown_category_ids():
-    merged = {"OWASP_LLM_TOP_10": {"LLM01", "DOES_NOT_EXIST"}}
+    merged = {"OWASP_LLM_TOP_10": {"LLM01:2026", "DOES_NOT_EXIST"}}
 
     out = _framework_categories(merged)
 
-    assert all("LLM01" in c or "DOES_NOT_EXIST" not in c for c in out["OWASP_LLM_TOP_10"])
+    assert all("LLM01:2026" in c or "DOES_NOT_EXIST" not in c for c in out["OWASP_LLM_TOP_10"])
     assert len(out["OWASP_LLM_TOP_10"]) == 1
 
 
@@ -810,7 +830,7 @@ def test_build_html_report_renders_mitigation_items_when_provided():
 def test_build_html_report_renders_framework_badges_for_known_frameworks():
     metrics = _minimal_metrics()
     metrics["framework_categories"] = {
-        "OWASP_LLM_TOP_10": ["LLM01: Prompt Injection"],
+        "OWASP_LLM_TOP_10": ["LLM01:2026: Prompt Injection"],
         "MITRE_ATLAS": ["AML.TA0002: Reconnaissance"],
     }
 
@@ -818,7 +838,13 @@ def test_build_html_report_renders_framework_badges_for_known_frameworks():
 
     assert "OWASP LLM Top 10" in html
     assert "MITRE ATLAS" in html
-    assert "LLM01: Prompt Injection" in html
+    assert "LLM01:2026: Prompt Injection" in html
+    for framework, category_id in [
+        ("OWASP_LLM_TOP_10", "LLM01:2026"),
+        ("MITRE_ATLAS", "AML.TA0002"),
+    ]:
+        description = FRAMEWORKS[framework]["categories"][category_id]["description"]
+        assert f'title="{description}"' in html
 
 
 def test_build_html_report_includes_record_count_and_model_in_footer(sample_df):

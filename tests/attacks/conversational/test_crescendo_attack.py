@@ -228,8 +228,8 @@ def test_SPEC_005_get_framework_mappings_returns_nonempty_sets_for_conversationa
     result = get_framework_mappings(attack_type="conversational")
 
     assert result, "result must be a non-empty dict"
-    assert "LLM01" in result["OWASP_LLM_TOP_10"], (
-        "'LLM01' must be in result['OWASP_LLM_TOP_10']"
+    assert "LLM01:2026" in result["OWASP_LLM_TOP_10"], (
+        "'LLM01:2026' must be in result['OWASP_LLM_TOP_10']"
     )
     assert len(result["MITRE_ATLAS"]) >= 1, "MITRE_ATLAS set must be non-empty"
     assert len(result["FSTEK_117"]) >= 1, "FSTEK_117 set must be non-empty"

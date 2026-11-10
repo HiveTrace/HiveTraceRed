@@ -25,9 +25,9 @@ def test_get_framework_mappings_no_args_returns_empty_dict():
 
 
 def test_get_framework_mappings_roleplay_returns_prompt_injection_base():
-    # Spec from module docstring: "Attack types -> always LLM01 (Prompt Injection)"
+    # Spec from module docstring: "Attack types -> always LLM01:2026 (Prompt Injection)"
     # plus _PROMPT_INJECTION_BASE definition.
-    expected_owasp = {"LLM01"}
+    expected_owasp = {"LLM01:2026"}
     expected_atlas = {"AML.TA0005", "AML.TA0012", "AML.TA0007"}
     expected_fstek = {"п.61а", "п.61б", "п.66"}
 
@@ -48,8 +48,8 @@ def test_get_framework_mappings_none_attack_overrides_attack_type():
 
 
 def test_get_framework_mappings_base_category_merges_additively():
-    # roleplay -> {LLM01}; "Harmful Content Generation" adds {LLM04}.
-    expected_owasp = {"LLM01", "LLM04"}
+    # roleplay -> {LLM01:2026}; "Harmful Content Generation" adds {LLM05:2026} (Data and Model Poisoning).
+    expected_owasp = {"LLM01:2026", "LLM05:2026"}
 
     result = get_framework_mappings(
         attack_type="roleplay", base_category="Harmful Content Generation",
@@ -59,14 +59,23 @@ def test_get_framework_mappings_base_category_merges_additively():
 
 
 def test_get_framework_mappings_subcategory_overlay_adds_categories():
-    # "System Prompt Extraction" subcategory adds LLM07 to LLM01 from roleplay.
-    expected_owasp = {"LLM01", "LLM07"}
+    # "System Prompt Extraction" subcategory adds LLM08:2026 (Hidden Context Exposure) to LLM01:2026 from roleplay.
+    expected_owasp = {"LLM01:2026", "LLM08:2026"}
 
     result = get_framework_mappings(
         attack_type="roleplay", subcategories=["System Prompt Extraction"],
     )
 
     assert result["OWASP_LLM_TOP_10"] == expected_owasp
+
+
+def test_system_prompt_base_category_uses_2026_hidden_context_exposure():
+    result = get_framework_mappings(base_category="System Prompt Extraction")
+
+    assert result["OWASP_LLM_TOP_10"] == {"LLM08:2026"}
+    assert get_dataset_categories_for_framework_category(
+        "OWASP_LLM_TOP_10", "LLM08:2026",
+    ) == ["System Prompt Extraction"]
 
 
 @pytest.mark.parametrize(
@@ -103,10 +112,10 @@ def test_get_framework_coverage_full_llm01_covers_only_owasp():
     owasp_total = len(FRAMEWORKS["OWASP_LLM_TOP_10"]["categories"])  # = 10
     expected_pct = round(1 / owasp_total * 100, 1)  # = 10.0
 
-    result = get_framework_coverage({"OWASP_LLM_TOP_10": {"LLM01"}})
+    result = get_framework_coverage({"OWASP_LLM_TOP_10": {"LLM01:2026"}})
 
     assert result["OWASP_LLM_TOP_10"]["covered"] == 1
-    assert result["OWASP_LLM_TOP_10"]["covered_list"] == ["LLM01"]
+    assert result["OWASP_LLM_TOP_10"]["covered_list"] == ["LLM01:2026"]
     assert result["OWASP_LLM_TOP_10"]["coverage_pct"] == expected_pct
     assert result["MITRE_ATLAS"]["covered"] == 0
 
@@ -132,17 +141,17 @@ def test_get_framework_coverage_pct_rounded_to_one_decimal():
 
 
 def test_get_attack_types_for_category_llm01_returns_all_eleven_sorted():
-    # All 11 attack types in ATTACK_TYPE_FRAMEWORK_MAP map to LLM01.
+    # All 11 attack types in ATTACK_TYPE_FRAMEWORK_MAP map to LLM01:2026.
     expected = sorted(ATTACK_TYPE_FRAMEWORK_MAP.keys())  # = 11 entries
 
-    result = get_attack_types_for_category("OWASP_LLM_TOP_10", "LLM01")
+    result = get_attack_types_for_category("OWASP_LLM_TOP_10", "LLM01:2026")
 
     assert result == expected
     assert len(result) == len(ATTACK_TYPE_FRAMEWORK_MAP)
 
 
 def test_get_attack_types_for_category_unknown_category_returns_empty():
-    result = get_attack_types_for_category("OWASP_LLM_TOP_10", "LLM07")
+    result = get_attack_types_for_category("OWASP_LLM_TOP_10", "UNKNOWN")
 
     assert result == []
 
@@ -151,10 +160,10 @@ def test_get_attack_types_for_category_unknown_category_returns_empty():
 
 
 def test_get_dataset_categories_for_framework_category_llm02_returns_internal_info():
-    # Per BASE_CATEGORY_FRAMEWORK_MAP: only "Internal Information Exposure" maps to LLM02.
+    # Per BASE_CATEGORY_FRAMEWORK_MAP: only "Internal Information Exposure" maps to LLM02:2026.
     expected = ["Internal Information Exposure"]
 
-    result = get_dataset_categories_for_framework_category("OWASP_LLM_TOP_10", "LLM02")
+    result = get_dataset_categories_for_framework_category("OWASP_LLM_TOP_10", "LLM02:2026")
 
     assert result == expected
 
@@ -168,3 +177,23 @@ def test_get_all_frameworks_contains_three_top_level_keys():
     result = get_all_frameworks()
 
     assert set(result.keys()) == expected_keys
+
+
+def test_owasp_categories_follow_2026_edition():
+    expected = {
+        "LLM01:2026": "Prompt Injection",
+        "LLM02:2026": "Sensitive Information Disclosure",
+        "LLM03:2026": "Excessive Agency",
+        "LLM04:2026": "Supply Chain",
+        "LLM05:2026": "Data and Model Poisoning",
+        "LLM06:2026": "Unbounded Consumption",
+        "LLM07:2026": "Misinformation",
+        "LLM08:2026": "Hidden Context Exposure",
+        "LLM09:2026": "Vector and Embedding Weaknesses",
+        "LLM10:2026": "Improper Output Handling",
+    }
+
+    owasp = FRAMEWORKS["OWASP_LLM_TOP_10"]
+
+    assert owasp["name"] == "OWASP Top 10 for LLM Applications 2026"
+    assert {cid: cat["name"] for cid, cat in owasp["categories"].items()} == expected

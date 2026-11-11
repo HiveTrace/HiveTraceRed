@@ -516,3 +516,37 @@ See Also
 * :doc:`../api/models` - API documentation
 * :doc:`running-pipeline` - Pipeline usage
 * :doc:`web-models` - Web-based models and action recorder guide
+
+Per-request generation options
+------------------------------
+
+``LangchainModel`` supports keyword options on ``invoke``, ``ainvoke``,
+``batch``, ``abatch`` and ``stream_abatch``. They are forwarded to the existing
+client for that call only; constructor defaults, retry policy and concurrency
+limits remain in effect. Existing calls without options are unchanged.
+
+For example, the same OpenAI-compatible model can generate native JSON Schema
+output and then ordinary output without rebuilding or mutating its client:
+
+.. code-block:: python
+
+   result = await model.abatch([prompt], response_format={
+       "type": "json_schema",
+       "json_schema": {"name": "answer", "strict": True, "schema": schema},
+   })
+   ordinary = await model.abatch([prompt], response_format=None)
+
+``response_format=None`` explicitly omits the field from OpenAI-compatible
+HTTP requests, including configured static formats in ``extra_body``; other
+vendor settings are retained. OpenAIModel, OpenRouterModel, VLLMModel and
+CloudRuModel advertise ``SUPPORTS_RESPONSE_FORMAT=True``. This declares transport
+support, not a guarantee about every model/endpoint. Other backends may reject
+unsupported request options and do not advertise this capability.
+
+Request errors retain the legacy ``error`` and ``error_type`` fields and may
+also expose ``status_code`` and ``error_body`` from the SDK/HTTP response.
+``hivetracered.models.errors.is_response_format_unsupported`` recognizes explicit
+format rejection from those details. Schema, billing, context and authentication
+errors must not be confused with unsupported format. The caller decides whether
+to retry using another output contract; model transports do not silently change
+request semantics.

@@ -17,12 +17,18 @@ class Model(ABC):
     Defines the standard interface for interacting with various LLM providers,
     supporting both synchronous and asynchronous operations for single requests and batches.
     """
+    # Per-request options are supported by LangchainModel and forwarded to its
+    # client without mutating constructor defaults. Other backends may reject
+    # options they cannot implement. Omitting kwargs preserves legacy calls.
     model_name: str
     max_concurrency: int = 0
 
     # False for providers whose temperature range excludes 0 (the judge then
     # gets TEMPERATURE_EPSILON instead of 0.0). See config._force_judge_temperature.
     SUPPORTS_ZERO_TEMPERATURE: bool = True
+
+    # Transport capability only; an endpoint/model may still reject JSON Schema.
+    SUPPORTS_RESPONSE_FORMAT: bool = False
 
     # Stateful SDK transports may only be used and closed on one event loop.
     _loop_affine_resources = False
@@ -110,7 +116,7 @@ class Model(ABC):
             self._pending_requests.discard(task)
 
     @abstractmethod
-    def invoke(self, prompt: str | list[dict[str, str]]) -> dict:
+    def invoke(self, prompt: str | list[dict[str, str]], **request_kwargs) -> dict:
         """
         Send a single request to the model synchronously.
         
@@ -123,7 +129,7 @@ class Model(ABC):
         pass
     
     @abstractmethod
-    async def ainvoke(self, prompt: str | list[dict[str, str]]) -> dict:
+    async def ainvoke(self, prompt: str | list[dict[str, str]], **request_kwargs) -> dict:
         """
         Send a single request to the model asynchronously.
         
@@ -136,7 +142,7 @@ class Model(ABC):
         pass
     
     @abstractmethod
-    def batch(self, prompts: list[str | list[dict[str, str]]]) -> list[dict]:
+    def batch(self, prompts: list[str | list[dict[str, str]]], **request_kwargs) -> list[dict]:
         """
         Send multiple requests to the model synchronously.
         
@@ -149,7 +155,7 @@ class Model(ABC):
         pass
     
     @abstractmethod
-    async def abatch(self, prompts: list[str | list[dict[str, str]]]) -> list[dict]:
+    async def abatch(self, prompts: list[str | list[dict[str, str]]], **request_kwargs) -> list[dict]:
         """
         Send multiple requests to the model asynchronously.
         
@@ -222,7 +228,7 @@ class Model(ABC):
         return max_concurrency
 
     @abstractmethod
-    async def stream_abatch(self, prompts: list[str | list[dict[str, str]]]) -> AsyncGenerator[dict, None]:
+    async def stream_abatch(self, prompts: list[str | list[dict[str, str]]], **request_kwargs) -> AsyncGenerator[dict, None]:
         """
         Send multiple requests to the model asynchronously and yield results as they complete.
         

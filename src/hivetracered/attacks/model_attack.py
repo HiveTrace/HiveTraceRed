@@ -5,6 +5,10 @@ from hivetracered.attacks.base_attack import AttackModelError, BaseAttack
 from hivetracered.models.structured_output import OutputRequest, object_format
 from hivetracered.models.base_model import Model
 
+def _output_template(template, instruction, prefix):
+    return template.replace('{output_instruction}', instruction).replace('{output_prefix}', prefix)
+
+
 class ModelAttack(BaseAttack):
     """
     Attack that uses a language model to transform prompts based on an attacker prompt template.
@@ -17,7 +21,10 @@ class ModelAttack(BaseAttack):
                  model_kwargs: dict[str, Any] | None = None,
                  name: str | None = None, 
                  description: str | None = None,
-                 structured_output: bool = True):
+                 structured_output: bool = True,
+                 output_instruction: str = '',
+                 output_prefix: str = '',
+                 structured_output_instruction: str = ''):
         """
         Initialize the model attack with a specific model and attacker prompt.
         
@@ -30,7 +37,8 @@ class ModelAttack(BaseAttack):
         """
         self.structured_output = structured_output
         self.model = model
-        self.attacker_prompt = attacker_prompt
+        self.attacker_prompt = _output_template(attacker_prompt, output_instruction, output_prefix)
+        self.structured_attacker_prompt = _output_template(attacker_prompt, structured_output_instruction, '')
         self.model_kwargs = model_kwargs or {}
         self._name = name
         self._description = description
@@ -70,17 +78,21 @@ class ModelAttack(BaseAttack):
         return response
     
     def _output_request(self):
-        format_ = object_format({'prompt': {'type': 'string'}}) if self.structured_output else None
+        format_ = object_format({'prompt': {'type': 'string', 'description': 'The requested result text, without an introductory label, response prefix, or explanation.'}}) if self.structured_output else None
         return OutputRequest(self.model, format_, **self.model_kwargs)
 
-    def _format_prompt(self, prompt):
+    def _format_prompt(self, prompt, native=False):
         if isinstance(prompt, str):
             text = prompt
         elif isinstance(prompt, list) and prompt and prompt[-1].get('role') == 'human':
             text = prompt[-1]['content']
         else:
             raise ValueError('Prompt must be a string or a list with the last message from human')
-        return self.attacker_prompt.format(prompt=text)
+        template = self.structured_attacker_prompt if native else self.attacker_prompt
+        result = template.format(prompt=text)
+        if native:
+            result += '\nReturn only JSON matching the response schema. Put only the requested result in "prompt", without an introductory label, response prefix, or explanation.'
+        return result
 
     def _restore_prompt(self, prompt, content):
         return content if isinstance(prompt, str) else prompt[:-1] + [{'role': 'human', 'content': content}]
@@ -90,7 +102,7 @@ class ModelAttack(BaseAttack):
         if response.get('error'):
             raise AttackModelError(response['error'])
         content = response['structured_output']['prompt'] if native else response.get('content', '')
-        return self.post_process_response(content)
+        return content if native else self.post_process_response(content)
 
     def apply(self, prompt):
         if not isinstance(prompt, (str, list)):
@@ -99,7 +111,7 @@ class ModelAttack(BaseAttack):
             raise ValueError('Last message in prompt is not a human message')
         ordinary = self._format_prompt(prompt)
         response, native = self._output_request().invoke(
-            ordinary + '\nReturn only JSON matching the response schema.', ordinary)
+            self._format_prompt(prompt, native=True), ordinary)
         return self._restore_prompt(prompt, self._decode(response, native))
 
     async def batch(self, prompts):
@@ -107,7 +119,7 @@ class ModelAttack(BaseAttack):
 
     async def stream_abatch(self, prompts):
         ordinary = [self._format_prompt(prompt) for prompt in prompts]
-        structured = [prompt + '\nReturn only JSON matching the response schema.' for prompt in ordinary]
+        structured = [self._format_prompt(prompt, native=True) for prompt in prompts]
         async with aclosing(self._output_request().stream(structured, ordinary)) as responses:
             index = 0
             async for response, native in responses:

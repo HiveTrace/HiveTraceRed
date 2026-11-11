@@ -32,12 +32,16 @@ def _make_template(spec):
 def _make_model(spec):
     prompt = spec["prompt"].rstrip("\n")
     name, description = spec["name"], spec["description"]
+    output_instruction = spec.get("output_instruction", "")
+    output_prefix = spec.get("output_prefix", "")
 
     def __init__(self, model, model_kwargs=None, structured_output: bool = True):
         ModelAttack.__init__(
             self, model=model, attacker_prompt=prompt,
             model_kwargs=model_kwargs, name=name, description=description,
             structured_output=structured_output,
+            output_instruction=output_instruction,
+            output_prefix=output_prefix,
         )
 
     return type(spec["class_name"], (ModelAttack,), {"__init__": __init__})

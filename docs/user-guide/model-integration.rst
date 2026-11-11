@@ -582,3 +582,25 @@ Custom scoring/parsing logic can continue to implement ModelEvaluator directly.
 
 The branch retains version 1.0.23. Install the modified local checkout explicitly;
 a published package with the same version does not contain these changes.
+
+Attack template formatting
+--------------------------
+
+ModelAttack renders ordinary and structured prompts separately. Templates use
+``{output_instruction}`` for the ordinary response-format instruction and
+``{output_prefix}`` for its final text cue. YAML model attacks declare those two
+values alongside ``prompt``. The constructor renders both variants once; the
+ordinary variant preserves the original prompt, while the structured variant
+uses an empty prefix and the JSON response contract.
+
+``structured_output_instruction`` can provide a result-selection instruction
+for the structured variant, such as selecting the first unsafe word or the
+no-match sentinel. Examples and substantive transformation instructions remain
+in the shared template. Custom templates with hard-coded response framing should
+move that framing into these explicit placeholders.
+
+Native values from the ``prompt`` field are forwarded verbatim after validation.
+``post_process_response`` handles ordinary text responses, including fallback;
+semantic attack composition, such as TextContinuing's target instruction, is
+applied to either mode. Text labels within examples or within the requested
+result are not removed from native content.

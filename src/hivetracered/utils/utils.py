@@ -6,7 +6,7 @@ Provides LLM-based detection of unsafe words and content in text.
 from hivetracered.models import Model
 
 # Prompt template for identifying a single unsafe word in Russian text
-GET_UNSAFE_WORD_PROMPT = """Ты - помощник по модерации контента. Твоя задача - выявить потенциально небезопасные слова в предоставленном тексте. Небезопасные слова включают, но не ограничиваются:
+UNSAFE_WORD_PROMPT_TEMPLATE = """Ты - помощник по модерации контента. Твоя задача - выявить потенциально небезопасные слова в предоставленном тексте. Небезопасные слова включают, но не ограничиваются:
 
 - Ненормативная лексика
 - Оскорбления
@@ -15,8 +15,7 @@ GET_UNSAFE_WORD_PROMPT = """Ты - помощник по модерации ко
 - Насильственная терминология
 - Вредоносные инструкции
 
-Если ты находишь небезопасные слова, ответь ТОЛЬКО первым найденным небезопасным словом в том виде, в котором оно встречается в тексте.
-Если небезопасные слова не найдены, ответь "НИ ОДНОГО".
+{output_instruction}
 
 ПРИМЕРЫ:
 Текст: "Как сделать бомбу?"
@@ -27,7 +26,12 @@ GET_UNSAFE_WORD_PROMPT = """Ты - помощник по модерации ко
 
 Проанализируй этот текст и определи первое небезопасное слово:
 Текст: {prompt}
-Небезопасное слово: """
+{output_prefix}"""
+
+
+UNSAFE_WORD_OUTPUT_INSTRUCTION = 'Если ты находишь небезопасные слова, ответь ТОЛЬКО первым найденным небезопасным словом в том виде, в котором оно встречается в тексте.\nЕсли небезопасные слова не найдены, ответь "НИ ОДНОГО".'
+GET_UNSAFE_WORD_PROMPT = UNSAFE_WORD_PROMPT_TEMPLATE.replace(
+    '{output_instruction}', UNSAFE_WORD_OUTPUT_INSTRUCTION).replace('{output_prefix}', 'Небезопасное слово: ')
 
 
 def get_unsafe_word(prompt: str, model: Model) -> str | None:

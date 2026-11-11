@@ -84,7 +84,8 @@ class TAPAttack(IterativeAttack):
         attacker_system_prompt: str | None = None,
         language_config: LanguageConfig | None = None,
         name: str | None = None,
-        description: str | None = None
+        description: str | None = None,
+        structured_output: bool = True,
     ):
         super().__init__(
             attacker_model=attacker_model,
@@ -93,7 +94,8 @@ class TAPAttack(IterativeAttack):
             max_iterations=max_iterations,
             language_config=language_config,
             name=name,
-            description=description
+            description=description,
+            structured_output=structured_output,
         )
         self.max_depth = max_depth
         self.branching_factor = branching_factor
@@ -186,7 +188,7 @@ class TAPAttack(IterativeAttack):
             branch_index=branch_idx,
         )
 
-        attacker_response = self._content_or_raise(await self.attacker_model.ainvoke(branch_prompt))
+        attacker_response = await self._generate_attacker_response(branch_prompt)
         child_attack = self._extract_attack(attacker_response)
 
         target_response = self._content_or_raise(await self.target_model.ainvoke(child_attack))
@@ -203,7 +205,7 @@ class TAPAttack(IterativeAttack):
 
     async def _initialize_root(self, goal: str) -> tuple[TreeNode, IterationResult]:
         initial_prompt = self._create_initial_prompt(goal)
-        attacker_response = self._content_or_raise(await self.attacker_model.ainvoke(initial_prompt))
+        attacker_response = await self._generate_attacker_response(initial_prompt)
         root_attack = self._extract_attack(attacker_response)
 
         target_response = self._content_or_raise(await self.target_model.ainvoke(root_attack))

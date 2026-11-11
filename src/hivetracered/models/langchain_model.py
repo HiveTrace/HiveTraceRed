@@ -1,6 +1,7 @@
 import logging
 from typing import Any
 from hivetracered.models.base_model import Model
+from hivetracered.models.errors import request_error
 from collections.abc import AsyncGenerator
 import asyncio
 from tqdm import tqdm
@@ -131,7 +132,36 @@ class LangchainModel(Model):
             retry_if_exception_type=retryable,
         )
 
-    def invoke(self, prompt: str | list[dict[str, str]]) -> dict:
+    def _client_kwargs(self):
+        options = dict(self.kwargs)
+        if isinstance(options.get("model_kwargs"), dict):
+            options["model_kwargs"] = dict(options["model_kwargs"])
+        return options
+
+    def _request_kwargs(self, options):
+        if "response_format" not in options or not self.SUPPORTS_RESPONSE_FORMAT:
+            return options
+        from openai import NOT_GIVEN
+        result = dict(options)
+        if result["response_format"] is None:
+            result["response_format"] = NOT_GIVEN
+        extra = self._request_extra_body(options)
+        if extra is not None:
+            result["extra_body"] = extra
+        return result
+
+    def _request_extra_body(self, options):
+        defaults = getattr(self, "kwargs", {})
+        model_kwargs = defaults.get("model_kwargs") or {}
+        extra = dict(defaults.get("extra_body") or model_kwargs.get("extra_body") or {})
+        if isinstance(options.get("extra_body"), dict):
+            extra.update(options["extra_body"])
+        extra.pop("response_format", None)
+        if extra or any("extra_body" in source for source in (defaults, model_kwargs, options)):
+            return extra
+        return None
+
+    def invoke(self, prompt: str | list[dict[str, str]], **request_kwargs) -> dict:
         """
         Send a single request to the model synchronously.
         
@@ -148,12 +178,12 @@ class LangchainModel(Model):
         """
         self._ensure_open()
         try:
-            return dict(self.client.invoke(prompt))
+            return dict(self.client.invoke(prompt, **self._request_kwargs(request_kwargs)))
         except Exception as e:
             logger.warning("%s request failed: %s", self.model_name, e)
-            return {"content": "", "error": str(e), "error_type": type(e).__name__}
+            return request_error(e)
 
-    async def ainvoke(self, prompt: str | list[dict[str, str]]) -> dict:
+    async def ainvoke(self, prompt: str | list[dict[str, str]], **request_kwargs) -> dict:
         """
         Send a single request to the model asynchronously.
 
@@ -171,12 +201,12 @@ class LangchainModel(Model):
         """
         async with self._concurrency_slot():
             try:
-                return dict(await self.client.ainvoke(prompt))
+                return dict(await self.client.ainvoke(prompt, **self._request_kwargs(request_kwargs)))
             except Exception as e:
                 logger.warning("%s request failed: %s", self.model_name, e)
-                return {"content": "", "error": str(e), "error_type": type(e).__name__}
+                return request_error(e)
     
-    def batch(self, prompts: list[str | list[dict[str, str]]]) -> list[dict]:
+    def batch(self, prompts: list[str | list[dict[str, str]]], **request_kwargs) -> list[dict]:
         """
         Send multiple requests to the model synchronously.
 
@@ -188,11 +218,11 @@ class LangchainModel(Model):
         """
         self._ensure_open()
         if self.max_concurrency == 0:
-            return [dict(response) for response in self.client.batch(prompts)]
+            return [dict(response) for response in self.client.batch(prompts, **self._request_kwargs(request_kwargs))]
         else:
-            return [dict(response) for response in self.client.batch(prompts, config={"max_concurrency": self.max_concurrency})]
+            return [dict(response) for response in self.client.batch(prompts, config={"max_concurrency": self.max_concurrency}, **self._request_kwargs(request_kwargs))]
     
-    async def abatch(self, prompts: list[str | list[dict[str, str]]]) -> list[dict]:
+    async def abatch(self, prompts: list[str | list[dict[str, str]]], **request_kwargs) -> list[dict]:
         """
         Send multiple requests to the model asynchronously.
 
@@ -210,7 +240,7 @@ class LangchainModel(Model):
         # Concurrency is enforced inside ainvoke via self._concurrency_slot();
         # asyncio.gather lets every prompt acquire a slot independently and
         # the cap holds whether or not other batches are running concurrently.
-        return list(await asyncio.gather(*(self.ainvoke(p) for p in prompts)))
+        return list(await asyncio.gather(*(self.ainvoke(p, **request_kwargs) for p in prompts)))
 
     def is_answer_blocked(self, answer: dict) -> bool:
         """
@@ -237,7 +267,7 @@ class LangchainModel(Model):
             "batch_size": self.batch_size
         }
     
-    async def stream_abatch(self, prompts: list[str | list[dict[str, str]]]) -> AsyncGenerator[dict, None]:
+    async def stream_abatch(self, prompts: list[str | list[dict[str, str]]], **request_kwargs) -> AsyncGenerator[dict, None]:
         """
         Send multiple requests to the model asynchronously and yield results as they complete.
 
@@ -250,14 +280,10 @@ class LangchainModel(Model):
         async def task(idx, prompt):
             # Concurrency is enforced inside ainvoke via self._concurrency_slot().
             try:
-                result = await self.ainvoke(prompt)
+                result = await self.ainvoke(prompt, **request_kwargs)
                 return idx, result, None
             except Exception as e:
-                error_response = {
-                    "content": "",
-                    "error": str(e),
-                    "error_type": type(e).__name__,
-                }
+                error_response = request_error(e)
                 return idx, error_response, e
 
         tasks = [asyncio.create_task(task(i, inp)) for i, inp in enumerate(prompts)]

@@ -14,6 +14,8 @@ class CloudRuModel(LangchainModel):
     Routes requests to Cloud.ru Foundation Models OpenAI API.
     """
 
+    SUPPORTS_RESPONSE_FORMAT = True
+
     def __init__(
         self,
         model: str = "openai/gpt-oss-120b",
@@ -66,6 +68,6 @@ class CloudRuModel(LangchainModel):
             base_url=base_url,
             rate_limiter=rate_limiter,
             **self._httpx_clients(verify_ssl, self.kwargs),
-            **self.kwargs,
+            **self._client_kwargs(),
         )
         self.client = self._add_retry_policy(self.client)

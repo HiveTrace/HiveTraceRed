@@ -19,6 +19,8 @@ class VLLMModel(LangchainModel):
     The model parameter must match the model name the server was started with.
     """
 
+    SUPPORTS_RESPONSE_FORMAT = True
+
     def __init__(
         self,
         model: str,
@@ -62,6 +64,6 @@ class VLLMModel(LangchainModel):
             base_url=base_url,
             api_key=api_key,
             **self._httpx_clients(verify_ssl, self.kwargs),
-            **self.kwargs,
+            **self._client_kwargs(),
         )
         self.client = self._add_retry_policy(self.client)

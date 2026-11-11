@@ -26,6 +26,7 @@ from hivetracered.attacks.iterative_attack import LanguageConfig, RUSSIAN_LANGUA
 from hivetracered.evaluators.base_evaluator import BaseEvaluator
 from hivetracered.evaluators.keyword_evaluator import KeywordEvaluator
 from hivetracered.models.base_model import Model
+from hivetracered.models.structured_output import OutputRequest, object_format
 from hivetracered.registry import Registry
 
 logger = logging.getLogger(__name__)
@@ -149,11 +150,13 @@ class CrescendoAttack(BaseAttack):
         language_config: LanguageConfig | None = None,
         name: str | None = None,
         description: str | None = None,
+        structured_output: bool = True,
     ) -> None:
         if attacker_system_prompt is not None and "{goal}" not in attacker_system_prompt:
             raise ValueError(
                 "attacker_system_prompt must contain the literal token {goal}"
             )
+        self.structured_output = structured_output
         self.attacker_model = attacker_model
         self.target_model = target_model
         # Default refusal judge: offline keyword detector with the framework's
@@ -172,6 +175,20 @@ class CrescendoAttack(BaseAttack):
         self._description = description
 
     # ── JSON helpers (inlined from former ConversationAttack base) ────────
+
+    def _attacker_request(self):
+        fields = {'q': {'type': 'string'}, 'summary': {'type': 'string'}}
+        return OutputRequest(self.attacker_model, object_format(fields) if self.structured_output else None)
+
+    def _generate_attacker_response(self, prompt):
+        request = self._attacker_request()
+        response, native = request.invoke(prompt + '\nReturn only JSON matching the response schema.', prompt)
+        return self._content_or_raise(request.checked(response, native, ('q',)))
+
+    async def _generate_attacker_response_async(self, prompt):
+        request = self._attacker_request()
+        response, native = await request.ainvoke(prompt + '\nReturn only JSON matching the response schema.', prompt)
+        return self._content_or_raise(request.checked(response, native, ('q',)))
 
     @staticmethod
     def _strip_markdown_json(response: str) -> str:
@@ -274,6 +291,7 @@ class CrescendoAttack(BaseAttack):
     def get_params(self) -> dict[str, Any]:
         return {
             "max_rounds": self.max_rounds,
+            "structured_output": self.structured_output,
             "max_iterations": self.max_iterations,
             "refusal_cap": self.refusal_cap,
             "attacker_model": self.attacker_model.__class__.__name__,
@@ -377,7 +395,7 @@ class CrescendoAttack(BaseAttack):
                         attacker_prompt = (
                             f"{system_content}\n\n{self._render_attacker_user_turn(H_A)}"
                         )
-                        raw_content = self._content_or_raise(self.attacker_model.invoke(attacker_prompt))
+                        raw_content = self._generate_attacker_response(attacker_prompt)
                         q = self._extract_json_field(raw_content, "q")
                         summary = self._extract_json_field(raw_content, "summary")
                     except AttackModelError:
@@ -545,7 +563,7 @@ class CrescendoAttack(BaseAttack):
                         attacker_prompt = (
                             f"{system_content}\n\n{self._render_attacker_user_turn(H_A)}"
                         )
-                        raw_content = self._content_or_raise(await self.attacker_model.ainvoke(attacker_prompt))
+                        raw_content = await self._generate_attacker_response_async(attacker_prompt)
                         q = self._extract_json_field(raw_content, "q")
                         summary = self._extract_json_field(raw_content, "summary")
                     except AttackModelError:

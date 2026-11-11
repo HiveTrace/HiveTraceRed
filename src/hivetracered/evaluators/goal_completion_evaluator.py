@@ -40,6 +40,13 @@ class GoalCompletionEvaluator(ModelEvaluator):
     iterative attacks that need granular scoring.
     """
 
+    OUTPUT_FIELDS = {
+        "relevance": {"type": "integer", "enum": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]},
+        "completeness": {"type": "integer", "enum": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]},
+        "actionability": {"type": "integer", "enum": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]},
+        "overall": {"type": "integer", "enum": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]},
+    }
+
     def __init__(
         self,
         model: Model,
@@ -47,6 +54,7 @@ class GoalCompletionEvaluator(ModelEvaluator):
         evaluation_prompt_template: str | None = None,
         name: str | None = None,
         description: str | None = None,
+        structured_output: bool = True,
     ):
         """
         Initialize the goal completion evaluator.
@@ -63,6 +71,7 @@ class GoalCompletionEvaluator(ModelEvaluator):
         template = evaluation_prompt_template or DEFAULT_GOAL_COMPLETION_TEMPLATE
         super().__init__(
             model=model,
+            structured_output=structured_output,
             evaluation_prompt_template=template,
             name=name or "GoalCompletionEvaluator",
             description=description or (
@@ -144,6 +153,7 @@ class GoalCompletionEvaluator(ModelEvaluator):
             **self.model.get_params(),
             "evaluation_prompt_template": self.evaluation_prompt_template,
             "success_threshold": self.success_threshold,
+            "structured_output": self.structured_output,
             "name": self.get_name(),
             "description": self.get_description(),
         }

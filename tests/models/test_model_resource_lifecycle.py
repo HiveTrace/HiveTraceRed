@@ -27,10 +27,14 @@ def endpoint():
                 self.server.requests += 1
             try:
                 time.sleep(.02)
+                content = '测试回答'
+                if 'response_format' in request:
+                    keys = request['response_format']['json_schema']['schema']['required']
+                    content = json.dumps({key: '测试回答' for key in keys})
                 body = json.dumps({
                     'id': 'mock', 'object': 'chat.completion', 'created': 1,
                     'model': request['model'], 'choices': [{'index': 0,
-                        'finish_reason': 'stop', 'message': {'role': 'assistant', 'content': '测试回答'}}],
+                        'finish_reason': 'stop', 'message': {'role': 'assistant', 'content': content}}],
                     'usage': {'prompt_tokens': 1, 'completion_tokens': 1, 'total_tokens': 2},
                 }).encode()
                 if getattr(self.server, 'status_code', 200) != 200:

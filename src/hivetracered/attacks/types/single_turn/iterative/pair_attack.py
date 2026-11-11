@@ -78,7 +78,8 @@ class PAIRAttack(IterativeAttack):
         attacker_system_prompt: str | None = None,
         language_config: LanguageConfig | None = None,
         name: str | None = None,
-        description: str | None = None
+        description: str | None = None,
+        structured_output: bool = True,
     ):
         super().__init__(
             attacker_model=attacker_model,
@@ -87,7 +88,8 @@ class PAIRAttack(IterativeAttack):
             max_iterations=max_iterations,
             language_config=language_config,
             name=name,
-            description=description
+            description=description,
+            structured_output=structured_output,
         )
         self.target_str = target_str or self.language_config.target_str
         self.attacker_system_prompt = attacker_system_prompt
@@ -148,7 +150,7 @@ class PAIRAttack(IterativeAttack):
 
         for i in range(self.max_iterations):
             attacker_prompt = self._build_attacker_prompt(goal, i, iterations)
-            attacker_response = self._content_or_raise(await self.attacker_model.ainvoke(attacker_prompt))
+            attacker_response = await self._generate_attacker_response(attacker_prompt)
             attack_prompt = self._extract_attack(attacker_response)
             target_content = self._content_or_raise(await self.target_model.ainvoke(attack_prompt))
             eval_result = await self._evaluate_response_async(goal, target_content)

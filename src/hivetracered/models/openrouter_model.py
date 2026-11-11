@@ -14,6 +14,8 @@ class OpenRouterModel(LangchainModel):
     both synchronous and asynchronous processing capabilities.
     """
 
+    SUPPORTS_RESPONSE_FORMAT = True
+
     def __init__(self, model: str = "openai/gpt-4.1-nano", base_url = "https://openrouter.ai/api/v1", max_concurrency: int | None = None, batch_size: int | None = None, rpm: int = 300, api_key: str | None = None, max_retries: int = 3, verify_ssl: bool | str = True, **kwargs):
 
         """
@@ -46,5 +48,5 @@ class OpenRouterModel(LangchainModel):
 
         self.kwargs = kwargs or {}
         rate_limiter = self._make_rate_limiter(rpm)
-        self.client = ChatOpenAI(model=model, rate_limiter=rate_limiter, base_url=base_url, openai_api_key=api_key, **self._httpx_clients(verify_ssl, self.kwargs), **self.kwargs)
+        self.client = ChatOpenAI(model=model, rate_limiter=rate_limiter, base_url=base_url, openai_api_key=api_key, **self._httpx_clients(verify_ssl, self.kwargs), **self._client_kwargs())
         self.client = self._add_retry_policy(self.client)

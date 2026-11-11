@@ -516,3 +516,91 @@ See Also
 * :doc:`../api/models` - API documentation
 * :doc:`running-pipeline` - Pipeline usage
 * :doc:`web-models` - Web-based models and action recorder guide
+
+Per-request generation options
+------------------------------
+
+``LangchainModel`` supports keyword options on ``invoke``, ``ainvoke``,
+``batch``, ``abatch`` and ``stream_abatch``. They are forwarded to the existing
+client for that call only; constructor defaults, retry policy and concurrency
+limits remain in effect. Existing calls without options are unchanged.
+
+For example, the same OpenAI-compatible model can generate native JSON Schema
+output and then ordinary output without rebuilding or mutating its client:
+
+.. code-block:: python
+
+   result = await model.abatch([prompt], response_format={
+       "type": "json_schema",
+       "json_schema": {"name": "answer", "strict": True, "schema": schema},
+   })
+   ordinary = await model.abatch([prompt], response_format=None)
+
+``response_format=None`` explicitly omits the field from OpenAI-compatible
+HTTP requests, including configured static formats in ``extra_body``; other
+vendor settings are retained. OpenAIModel, OpenRouterModel, VLLMModel and
+CloudRuModel advertise ``SUPPORTS_RESPONSE_FORMAT=True``. This declares transport
+support, not a guarantee about every model/endpoint. Other backends may reject
+unsupported request options and do not advertise this capability.
+
+Request errors retain the legacy ``error`` and ``error_type`` fields and may
+also expose ``status_code`` and ``error_body`` from the SDK/HTTP response.
+``hivetracered.models.errors.is_response_format_unsupported`` recognizes explicit
+format rejection from those details. Schema, billing, context and authentication
+errors must not be confused with unsupported format. The caller decides whether
+to retry using another output contract; model transports do not silently change
+request semantics.
+
+Structured attack and evaluator output
+-------------------------------------
+
+ModelAttack, its registered model subclasses, PAIR, TAP and Crescendo request
+native JSON Schema output by default. Use ``structured_output=False`` on the
+attack constructor for the original output mode. ModelAttack unwraps the
+``prompt`` field before forwarding the attack. PAIR/TAP use ``improvement`` and
+``prompt``; Crescendo uses ``q`` and ``summary``. Target-model requests keep their
+original format.
+
+Built-in model evaluators also default to ``structured_output=True``. WildGuard
+judges use explicit answer choices; scoring and goal-completion judges accept
+integer ratings from 1 through 10. Existing verdict and score calculations are
+preserved. Invalid native output, refusal and truncation produce an attack or
+evaluation error rather than a usable prompt or verdict.
+
+``models.structured_output.OutputRequest`` owns format selection and explicit
+unsupported-format fallback for sync, async and streamed requests. A rejected
+format is remembered on the model instance, including requests from another
+component using the same model. No additional client or global capability cache
+is created. Other provider errors do not select ordinary output. Manual ordinary
+mode clears static response formats on compatible transports.
+
+A custom ModelEvaluator can declare ``OUTPUT_FIELDS`` as a mapping of JSON field
+names to flat scalar schemas. Without a declared contract it keeps the original
+parser and ordinary model calls. ChoiceEvaluator provides common numbered/JSON
+answer parsing and declarative ``SUCCESS_WHEN`` and ``ANY_SUCCESS`` conditions.
+Custom scoring/parsing logic can continue to implement ModelEvaluator directly.
+
+The branch retains version 1.0.23. Install the modified local checkout explicitly;
+a published package with the same version does not contain these changes.
+
+Attack template formatting
+--------------------------
+
+ModelAttack renders ordinary and structured prompts separately. Templates use
+``{output_instruction}`` for the ordinary response-format instruction and
+``{output_prefix}`` for its final text cue. YAML model attacks declare those two
+values alongside ``prompt``. The constructor renders both variants once; the
+ordinary variant preserves the original prompt, while the structured variant
+uses an empty prefix and the JSON response contract.
+
+``structured_output_instruction`` can provide a result-selection instruction
+for the structured variant, such as selecting the first unsafe word or the
+no-match sentinel. Examples and substantive transformation instructions remain
+in the shared template. Custom templates with hard-coded response framing should
+move that framing into these explicit placeholders.
+
+Native values from the ``prompt`` field are forwarded verbatim after validation.
+``post_process_response`` handles ordinary text responses, including fallback;
+semantic attack composition, such as TextContinuing's target instruction, is
+applied to either mode. Text labels within examples or within the requested
+result are not removed from native content.

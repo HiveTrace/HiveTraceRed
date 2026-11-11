@@ -18,7 +18,8 @@ class PastTenseAttack(ModelAttack):
                  model: Model,
                  model_kwargs: dict[str, Any] | None = None,
                  name: str | None = None, 
-                 description: str | None = None):
+                 description: str | None = None,
+                 structured_output: bool = True):
         """
         Initialize the Past Tense Attack.
         
@@ -51,6 +52,7 @@ class PastTenseAttack(ModelAttack):
             model=model,
             attacker_prompt=attacker_prompt,
             model_kwargs=model_kwargs,
+            structured_output=structured_output,
             name=name or "Past Tense Attack",
             description=description or "Converts the prompt to past tense to potentially bypass content filters while preserving semantic meaning."
         )

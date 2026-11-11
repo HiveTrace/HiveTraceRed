@@ -15,6 +15,7 @@ from collections.abc import AsyncGenerator
 from hivetracered.attacks.base_attack import AttackModelError, BaseAttack
 from hivetracered.evaluators.base_evaluator import BaseEvaluator
 from hivetracered.models.base_model import Model
+from hivetracered.models.structured_output import OutputRequest, object_format
 from hivetracered.models.resources import ModelResources, register_model
 
 logger = logging.getLogger(__name__)
@@ -104,8 +105,10 @@ class IterativeAttack(BaseAttack):
         max_iterations: int = 10,
         language_config: LanguageConfig | None = None,
         name: str | None = None,
-        description: str | None = None
+        description: str | None = None,
+        structured_output: bool = True,
     ):
+        self.structured_output = structured_output
         self.attacker_model = attacker_model
         self.target_model = target_model
         self.evaluator = evaluator
@@ -115,6 +118,12 @@ class IterativeAttack(BaseAttack):
         self._description = description
         self._sync_loop = None
         self._sync_closed = False
+
+    async def _generate_attacker_response(self, prompt):
+        fields = {'improvement': {'type': 'string'}, 'prompt': {'type': 'string'}}
+        request = OutputRequest(self.attacker_model, object_format(fields) if self.structured_output else None)
+        response, native = await request.ainvoke(prompt + '\nReturn only JSON matching the response schema.', prompt)
+        return self._content_or_raise(request.checked(response, native, ('prompt',)))
 
     def _run_attack_sync(self, goal: str) -> IterativeAttackResult:
         """Reuse one private loop across synchronous goals (Python 3.10+).
@@ -339,6 +348,7 @@ class IterativeAttack(BaseAttack):
     def get_params(self) -> dict[str, Any]:
         return {
             "max_iterations": self.max_iterations,
+            "structured_output": self.structured_output,
             "attacker_model": self.attacker_model.__class__.__name__,
             "target_model": self.target_model.__class__.__name__,
             "evaluator": self.evaluator.get_name(),

@@ -1,4 +1,5 @@
 from typing import Any
+from contextlib import aclosing
 from collections.abc import AsyncGenerator
 
 from hivetracered.attacks.base_attack import BaseAttack
@@ -110,6 +111,7 @@ class UnsafeWordVariableFullAttack(ModelAttack):
         self,
         model: Model,
         model_kwargs: dict[str, Any] | None = None,
+        structured_output: bool = True,
     ):
         """
         Initialize the UnsafeWordVariableFullAttack.
@@ -122,6 +124,7 @@ class UnsafeWordVariableFullAttack(ModelAttack):
             model=model,
             attacker_prompt=GET_UNSAFE_WORD_PROMPT,
             model_kwargs=model_kwargs,
+            structured_output=structured_output,
             name="Unsafe Word Variable Full Attack",
             description="Identifies unsafe words in prompts, assigns them to variables, and reformulates queries to bypass content filters."
         )
@@ -163,43 +166,17 @@ class UnsafeWordVariableFullAttack(ModelAttack):
         else:
             raise ValueError("Prompt is not a string or list of messages")
     
-    async def stream_abatch(self, prompts: list[str | list[dict[str, str]]]) -> AsyncGenerator[list[str | list[dict[str, str]]], None]:
-        """
-        Apply the model attack to the list of prompts asynchronously.
-        
-        Args:
-            prompts: A list of prompts to apply the attack to.
-        Returns:
-            The transformed prompts with the model attack applied
-        """
-        formatted_prompts = []
-        
-        # Process each prompt according to its type and format with attacker prompt
-        for prompt in prompts:
-            if isinstance(prompt, str):
-                # Format the attacker prompt with the user prompt
-                formatted_prompts.append(self.attacker_prompt.format(prompt=prompt))
-            elif isinstance(prompt, list) and prompt and prompt[-1].get("role") == "human":
-                # Format the attacker prompt with the last message content
-                formatted_prompts.append(self.attacker_prompt.format(prompt=prompt[-1]["content"]))
-            else:
-                raise ValueError("Prompt must be either a string or a list with the last message from human")
-        
-        i = 0
-        async for response in self.model.stream_abatch(formatted_prompts):
-            if isinstance(prompts[i], str):
-                # For string prompts, return the model response content with post-processing
-                yield self.unsafe_word_attack.apply(prompts[i], self.post_process_response(response["content"]))
-            elif isinstance(prompts[i], list):
-                # For list prompts, keep all messages except the last and append the transformed message
-                transformed_messages = prompts[i][:-1]
-                # Post-process the response
-                processed_response = self.unsafe_word_attack.apply(prompts[i], self.post_process_response(response["content"]))
-                transformed_messages.append({"role": "human", "content": processed_response})
-                yield transformed_messages
-            i += 1
-            
-            
+    async def stream_abatch(self, prompts):
+        index = 0
+        async with aclosing(super().stream_abatch(prompts)) as values:
+            async for value in values:
+                if isinstance(value, tuple):
+                    yield value
+                else:
+                    word = value if isinstance(value, str) else value[-1]['content']
+                    yield self.unsafe_word_attack.apply(prompts[index], word)
+                index += 1
+
     def post_process_response(self, response: str) -> str:
         """
         Post-process the model's response to clean it and handle refusals.

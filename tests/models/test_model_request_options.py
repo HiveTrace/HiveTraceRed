@@ -1,4 +1,3 @@
-"""Per-call options use the existing client, retry and concurrency machinery."""
 import asyncio
 import json
 

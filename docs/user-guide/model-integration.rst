@@ -550,3 +550,35 @@ format rejection from those details. Schema, billing, context and authentication
 errors must not be confused with unsupported format. The caller decides whether
 to retry using another output contract; model transports do not silently change
 request semantics.
+
+Structured attack and evaluator output
+-------------------------------------
+
+ModelAttack, its registered model subclasses, PAIR, TAP and Crescendo request
+native JSON Schema output by default. Use ``structured_output=False`` on the
+attack constructor for the original output mode. ModelAttack unwraps the
+``prompt`` field before forwarding the attack. PAIR/TAP use ``improvement`` and
+``prompt``; Crescendo uses ``q`` and ``summary``. Target-model requests keep their
+original format.
+
+Built-in model evaluators also default to ``structured_output=True``. WildGuard
+judges use explicit answer choices; scoring and goal-completion judges accept
+integer ratings from 1 through 10. Existing verdict and score calculations are
+preserved. Invalid native output, refusal and truncation produce an attack or
+evaluation error rather than a usable prompt or verdict.
+
+``models.structured_output.OutputRequest`` owns format selection and explicit
+unsupported-format fallback for sync, async and streamed requests. A rejected
+format is remembered on the model instance, including requests from another
+component using the same model. No additional client or global capability cache
+is created. Other provider errors do not select ordinary output. Manual ordinary
+mode clears static response formats on compatible transports.
+
+A custom ModelEvaluator can declare ``OUTPUT_FIELDS`` as a mapping of JSON field
+names to flat scalar schemas. Without a declared contract it keeps the original
+parser and ordinary model calls. ChoiceEvaluator provides common numbered/JSON
+answer parsing and declarative ``SUCCESS_WHEN`` and ``ANY_SUCCESS`` conditions.
+Custom scoring/parsing logic can continue to implement ModelEvaluator directly.
+
+The branch retains version 1.0.23. Install the modified local checkout explicitly;
+a published package with the same version does not contain these changes.

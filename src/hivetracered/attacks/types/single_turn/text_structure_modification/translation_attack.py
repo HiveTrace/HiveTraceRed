@@ -20,7 +20,8 @@ class TranslationAttack(ModelAttack):
                  target_language: str = "english",
                  model_kwargs: dict[str, Any] | None = None,
                  name: str | None = None, 
-                 description: str | None = None):
+                 description: str | None = None,
+                 structured_output: bool = True):
         """
         Initialize the Translation Attack.
         
@@ -83,6 +84,7 @@ Translated text:"""
             model=model,
             attacker_prompt=attacker_prompt,
             model_kwargs=model_kwargs,
+            structured_output=structured_output,
             name=name or f"Translation Attack ({source_language} to {target_language})",
             description=description or f"Translates the prompt from {source_language} to {target_language} to potentially bypass content filters while preserving semantic meaning."
         )

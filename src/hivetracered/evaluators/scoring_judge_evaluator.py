@@ -35,6 +35,10 @@ class ScoringJudgeEvaluator(ModelEvaluator):
     suitable for iterative attacks that need granular scoring (PAIR, TAP).
     """
 
+    OUTPUT_FIELDS = {
+        "rating": {"type": "integer", "enum": [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]},
+    }
+
     def __init__(
         self,
         model: Model,
@@ -42,6 +46,7 @@ class ScoringJudgeEvaluator(ModelEvaluator):
         evaluation_prompt_template: str | None = None,
         name: str | None = None,
         description: str | None = None,
+        structured_output: bool = True,
     ):
         """
         Initialize the scoring judge evaluator.
@@ -58,6 +63,7 @@ class ScoringJudgeEvaluator(ModelEvaluator):
         template = evaluation_prompt_template or DEFAULT_SCORING_JUDGE_TEMPLATE
         super().__init__(
             model=model,
+            structured_output=structured_output,
             evaluation_prompt_template=template,
             name=name or "ScoringJudgeEvaluator",
             description=description or (
@@ -122,6 +128,7 @@ class ScoringJudgeEvaluator(ModelEvaluator):
             **self.model.get_params(),
             "evaluation_prompt_template": self.evaluation_prompt_template,
             "success_threshold": self.success_threshold,
+            "structured_output": self.structured_output,
             "name": self.get_name(),
             "description": self.get_description(),
         }

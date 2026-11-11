@@ -1,6 +1,8 @@
 from typing import Any
 from collections.abc import AsyncGenerator
-from hivetracered.attacks.base_attack import BaseAttack
+from contextlib import aclosing
+from hivetracered.attacks.base_attack import AttackModelError, BaseAttack
+from hivetracered.models.structured_output import OutputRequest, object_format
 from hivetracered.models.base_model import Model
 
 class ModelAttack(BaseAttack):
@@ -14,7 +16,8 @@ class ModelAttack(BaseAttack):
                  attacker_prompt: str, 
                  model_kwargs: dict[str, Any] | None = None,
                  name: str | None = None, 
-                 description: str | None = None):
+                 description: str | None = None,
+                 structured_output: bool = True):
         """
         Initialize the model attack with a specific model and attacker prompt.
         
@@ -25,6 +28,7 @@ class ModelAttack(BaseAttack):
             name: Optional name for the attack (defaults to class name)
             description: Optional description for the attack
         """
+        self.structured_output = structured_output
         self.model = model
         self.attacker_prompt = attacker_prompt
         self.model_kwargs = model_kwargs or {}
@@ -65,137 +69,54 @@ class ModelAttack(BaseAttack):
 
         return response
     
-    def apply(self, prompt: str | list[dict[str, str]]) -> str | list[dict[str, str]]:
-        """
-        Apply the model attack to the given prompt.
-        
-        Args:
-            prompt: A string or list of messages to apply the attack to
-            
-        Returns:
-            The transformed prompt with the model attack applied
-            
-        Raises:
-            ValueError: If the prompt format is invalid
-        """
+    def _output_request(self):
+        format_ = object_format({'prompt': {'type': 'string'}}) if self.structured_output else None
+        return OutputRequest(self.model, format_, **self.model_kwargs)
+
+    def _format_prompt(self, prompt):
         if isinstance(prompt, str):
-            # Format the attacker prompt with the user prompt
-            formatted_prompt = self.attacker_prompt.format(prompt=prompt)
-            # Get the model's response
-            response = self.model.invoke(formatted_prompt, **self.model_kwargs)["content"]
-            # Post-process the response
-            response = self.post_process_response(response)
-            return response
-        
-        elif isinstance(prompt, list):
-            transformed_messages = prompt[:-1]
-
-            if prompt[-1].get("role") == "human":
-                # Format the attacker prompt with the last message content
-                formatted_prompt = self.attacker_prompt.format(prompt=prompt[-1]["content"])
-                # Get the model's response
-                response = self.model.invoke(formatted_prompt, **self.model_kwargs)["content"]
-                # Post-process the response
-                response = self.post_process_response(response)
-                transformed_messages.append({"role": "human", "content": response})
-            else:
-                raise ValueError("Last message in prompt is not a human message")
-
-            return transformed_messages
+            text = prompt
+        elif isinstance(prompt, list) and prompt and prompt[-1].get('role') == 'human':
+            text = prompt[-1]['content']
         else:
-            raise ValueError("Prompt is not a string or list of messages")
-    
-    async def batch(self, prompts: list[str | list[dict[str, str]]]) -> list[str | list[dict[str, str]]]:
-        """
-        Apply the model attack to a batch of prompts in a non-streaming manner.
-        
-        Args:
-            prompts: A list of prompts to apply the attack to
-            
-        Returns:
-            List of transformed prompts with the model attack applied
-            
-        Raises:
-            ValueError: If any prompt has an invalid format
-        """
-        formatted_prompts = []
-        
-        # Process each prompt according to its role and format with attacker prompt
-        for prompt in prompts:
-            if isinstance(prompt, str):
-                # Format the attacker prompt with the user prompt
-                formatted_prompts.append(self.attacker_prompt.format(prompt=prompt))
-            elif isinstance(prompt, list) and prompt and prompt[-1].get("role") == "human":
-                # Format the attacker prompt with the last message content
-                formatted_prompts.append(self.attacker_prompt.format(prompt=prompt[-1]["content"]))
-            else:
-                raise ValueError("Prompt must be either a string or a list with the last message from human")
-        
-        # Use the model's abatch method to process all prompts at once
-        responses = await self.model.abatch(formatted_prompts)
-        
-        # Format the responses back according to their original type
-        transformed_prompts = []
-        for i, prompt in enumerate(prompts):
-            if isinstance(prompt, str):
-                # For string prompts, return the model response content with post-processing
-                transformed_prompts.append(self.post_process_response(responses[i]["content"]))
-            elif isinstance(prompt, list):
-                # For list prompts, keep all messages except the last and append the transformed message
-                transformed_messages = prompt[:-1]
-                # Post-process the response
-                processed_response = self.post_process_response(responses[i]["content"])
-                transformed_messages.append({"role": "human", "content": processed_response})
-                transformed_prompts.append(transformed_messages)
-        
-        return transformed_prompts
-    
-    async def stream_abatch(self, prompts: list[str | list[dict[str, str]]]) -> AsyncGenerator[list[str | list[dict[str, str]]], None]:
-        """
-        Apply the model attack to a batch of prompts asynchronously.
-        
-        Args:
-            prompts: A list of prompts to apply the attack to
-            
-        Returns:
-            An async generator yielding transformed prompts as they are processed
-            
-        Raises:
-            ValueError: If any prompt has an invalid format
-        """
-        formatted_prompts = []
-        
-        # Process each prompt according to its role and format with attacker prompt
-        for prompt in prompts:
-            if isinstance(prompt, str):
-                # Format the attacker prompt with the user prompt
-                formatted_prompts.append(self.attacker_prompt.format(prompt=prompt))
-            elif isinstance(prompt, list) and prompt and prompt[-1].get("role") == "human":
-                # Format the attacker prompt with the last message content
-                formatted_prompts.append(self.attacker_prompt.format(prompt=prompt[-1]["content"]))
-            else:
-                raise ValueError("Prompt must be either a string or a list with the last message from human")
-        
-        i = 0
-        async for response in self.model.stream_abatch(formatted_prompts):
-            processed_response = self.post_process_response(response.get("content", ""))
-            if isinstance(prompts[i], str):
-                # For string prompts, return the model response content with post-processing
-                value = processed_response
-            elif isinstance(prompts[i], list):
-                # For list prompts, keep all messages except the last and append the transformed message
-                transformed_messages = prompts[i][:-1]
-                transformed_messages.append({"role": "human", "content": processed_response})
-                value = transformed_messages
+            raise ValueError('Prompt must be a string or a list with the last message from human')
+        return self.attacker_prompt.format(prompt=text)
 
-            # If the attacker model failed, surface the error so downstream stages
-            # don't send the (empty) transformed prompt to the target model.
-            if response.get("error"):
-                yield (value, {"attack_error": response["error"]})
-            else:
-                yield value
-            i += 1
-            
+    def _restore_prompt(self, prompt, content):
+        return content if isinstance(prompt, str) else prompt[:-1] + [{'role': 'human', 'content': content}]
+
+    def _decode(self, response, native):
+        response = self._output_request().checked(response, native, ('prompt',))
+        if response.get('error'):
+            raise AttackModelError(response['error'])
+        content = response['structured_output']['prompt'] if native else response.get('content', '')
+        return self.post_process_response(content)
+
+    def apply(self, prompt):
+        if not isinstance(prompt, (str, list)):
+            raise ValueError('Prompt is not a string or list of messages')
+        if isinstance(prompt, list) and (not prompt or prompt[-1].get('role') != 'human'):
+            raise ValueError('Last message in prompt is not a human message')
+        ordinary = self._format_prompt(prompt)
+        response, native = self._output_request().invoke(
+            ordinary + '\nReturn only JSON matching the response schema.', ordinary)
+        return self._restore_prompt(prompt, self._decode(response, native))
+
+    async def batch(self, prompts):
+        return [value async for value in self.stream_abatch(prompts)]
+
+    async def stream_abatch(self, prompts):
+        ordinary = [self._format_prompt(prompt) for prompt in prompts]
+        structured = [prompt + '\nReturn only JSON matching the response schema.' for prompt in ordinary]
+        async with aclosing(self._output_request().stream(structured, ordinary)) as responses:
+            index = 0
+            async for response, native in responses:
+                try:
+                    yield self._restore_prompt(prompts[index], self._decode(response, native))
+                except AttackModelError as exc:
+                    yield self._restore_prompt(prompts[index], ''), {'attack_error': exc.error}
+                index += 1
+
     def get_name(self) -> str:
         """
         Get the name of the attack.

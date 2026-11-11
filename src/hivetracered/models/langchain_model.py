@@ -133,19 +133,12 @@ class LangchainModel(Model):
         )
 
     def _client_kwargs(self):
-        """Keep constructor defaults intact when LangChain normalizes model_kwargs."""
         options = dict(self.kwargs)
         if isinstance(options.get("model_kwargs"), dict):
             options["model_kwargs"] = dict(options["model_kwargs"])
         return options
 
     def _request_kwargs(self, options):
-        """None explicitly disables a configured OpenAI response_format for one call.
-
-        The SDK sentinel omits the field from HTTP, instead of sending null.
-        extra_body is copied so its static format cannot override this call's
-        format, while all unrelated vendor options remain intact.
-        """
         if "response_format" not in options or not self.SUPPORTS_RESPONSE_FORMAT:
             return options
         from openai import NOT_GIVEN

@@ -1,18 +1,16 @@
-"""Structured transport errors, including explicit response-format rejection."""
 
 import re
 
 
 def request_error(exc):
-    """Preserve machine-readable SDK details alongside the legacy error string."""
     result = {"content": "", "error": str(exc), "error_type": type(exc).__name__}
     status = getattr(exc, "status_code", None)
     body = getattr(exc, "body", None)
     response = getattr(exc, "response", None)
     if response is not None:
         try:
-            # SDK .body can unwrap "error" and lose sibling fields (Venice
-            # details/issues). Preserve the complete HTTP envelope when present.
+
+
             body = response.json()
         except (ValueError, RuntimeError):
             pass
@@ -49,7 +47,6 @@ def _invalid_error(node):
 
 
 def _error_messages(value):
-    """Collect explicit messages; schema and unrelated parameter errors veto fallback."""
     messages = []
     invalid = False
     for node in _error_nodes(value):
@@ -62,11 +59,6 @@ def _error_messages(value):
 
 
 def is_response_format_unsupported(error) -> bool:
-    """Conservative full-message matching; unrelated errors always stay fatal.
-
-    Code/param metadata wins over a generic message. Unknown provider phrasing
-    deliberately does not trigger fallback.
-    """
     if not isinstance(error, dict):
         error = request_error(error)
     kind = str(error.get("error_type", ""))

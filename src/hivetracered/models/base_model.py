@@ -17,9 +17,9 @@ class Model(ABC):
     Defines the standard interface for interacting with various LLM providers,
     supporting both synchronous and asynchronous operations for single requests and batches.
     """
-    # Per-request options are supported by LangchainModel and forwarded to its
-    # client without mutating constructor defaults. Other backends may reject
-    # options they cannot implement. Omitting kwargs preserves legacy calls.
+
+
+
     model_name: str
     max_concurrency: int = 0
 
@@ -27,7 +27,7 @@ class Model(ABC):
     # gets TEMPERATURE_EPSILON instead of 0.0). See config._force_judge_temperature.
     SUPPORTS_ZERO_TEMPERATURE: bool = True
 
-    # Transport capability only; an endpoint/model may still reject JSON Schema.
+
     SUPPORTS_RESPONSE_FORMAT: bool = False
 
     # Stateful SDK transports may only be used and closed on one event loop.

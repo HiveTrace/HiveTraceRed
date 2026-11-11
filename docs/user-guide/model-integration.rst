@@ -580,9 +580,6 @@ parser and ordinary model calls. ChoiceEvaluator provides common numbered/JSON
 answer parsing and declarative ``SUCCESS_WHEN`` and ``ANY_SUCCESS`` conditions.
 Custom scoring/parsing logic can continue to implement ModelEvaluator directly.
 
-The branch retains version 1.0.23. Install the modified local checkout explicitly;
-a published package with the same version does not contain these changes.
-
 Attack template formatting
 --------------------------
 
